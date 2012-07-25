@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hbase.htrace;
 
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -32,17 +31,8 @@ public interface SpanReceiver {
   /**
    * Called when a Span is stopped and can now be stored.
    * 
-   * @param traceId
-   * @param spanId
-   * @param parentId
-   * @param start
-   * @param stop
-   * @param description
-   * @param annotations
-   * @param processId
+   * @param span
    */
-  public void span(long traceId, long spanId, long parentId, long start,
-      long stop,
- String description, Map<byte[], byte[]> annotations, String processId);
+  public void receiveSpan(Span span);
 
 }

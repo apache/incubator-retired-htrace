@@ -20,10 +20,10 @@ import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.htrace.Span;
 import org.apache.hadoop.hbase.htrace.SpanReceiver;
 
 /**
@@ -45,15 +45,15 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
   }
 
   @Override
-  public void span(long traceId, long spanId, long parentId, long start,
-      long stop, String description, Map<byte[], byte[]> annotations,
-      String processId) {
+  public void receiveSpan(Span span) {
     try {
       // writes in this weird delimited format, mainly for demonstration
       // purposes.
       // doesn't write out data (annotations) to the file
       _bwriter.write(String.format("%d/<,%d/<,%d/<,%d/<,%d/<,%s\\\\;;;;",
-          traceId, spanId, parentId, start, stop, description));
+          span.getTraceId(), span.getSpanId(), span.getParentId(),
+          span.getStartTimeMillis(), span.getStopTimeMillis(),
+          span.getDescription()));
       _bwriter.flush();
     } catch (IOException e) {
       e.printStackTrace();

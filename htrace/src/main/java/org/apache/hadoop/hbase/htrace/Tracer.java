@@ -122,9 +122,7 @@ public class Tracer {
 
   protected void deliver(Span span) {
     for (SpanReceiver receiver : receivers) {
-      receiver.span(span.getTraceId(), span.getSpanId(), span.getParentId(),
-          span.getStartTimeMillis(), span.getStopTimeMillis(),
-          span.getDescription(), span.getAnnotations(), processId);
+      receiver.receiveSpan(span);
     }
   }
 
