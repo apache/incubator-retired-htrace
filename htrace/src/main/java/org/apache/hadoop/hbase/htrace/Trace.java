@@ -89,9 +89,8 @@ public class Trace {
       Sampler sampler) {
     if (sampler != null && sampler.next()) {
       return startTraceIfNotStarted(description);
-    } else {
-      return NullSpan.getInstance();
     }
+    return NullSpan.getInstance();
   }
 
   /**
@@ -112,9 +111,8 @@ public class Trace {
       Object info, Sampler sampler) {
     if (sampler != null && sampler.next(info)) {
       return startTraceIfNotStarted(description);
-    } else {
-      return NullSpan.getInstance();
     }
+    return NullSpan.getInstance();
   }
 
   /**
