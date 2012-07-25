@@ -132,7 +132,7 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public void data(String key, String value) {
+  public void addData(String key, String value) {
     if (traceInfo == null)
       traceInfo = new HashMap<String, String>();
     traceInfo.put(key, value);

@@ -82,7 +82,7 @@ public interface Span {
   long parentId();
 
   /** Add data associated with this span */
-  void data(String key, String value);
+  void addData(String key, String value);
 
   /** Get data associated with this span (read only) */
   Map<String, String> getData();

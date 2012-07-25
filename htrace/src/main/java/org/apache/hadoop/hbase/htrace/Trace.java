@@ -145,7 +145,7 @@ public class Trace {
    */
   public static void data(String key, String value) {
     if (isTracing()) {
-      currentTrace().data(key, value);
+      currentTrace().addData(key, value);
     }
   }
 
