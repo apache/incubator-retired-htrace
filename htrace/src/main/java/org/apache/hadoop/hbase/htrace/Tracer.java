@@ -39,7 +39,7 @@ public class Tracer {
   private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
   private static final ThreadLocal<TraceInfo> rpcInfo = new ThreadLocal<TraceInfo>();
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>();
-  private static final TraceInfo dontTrace = new TraceInfo(0, 0);
+  private static final TraceInfo DONT_TRACE = new TraceInfo(0, 0);
   protected static String processId;
 
   private Sampler sampler;
@@ -79,7 +79,7 @@ public class Tracer {
     if (span != null) {
       return new TraceInfo(span.traceId(), span.spanId());
     }
-    return dontTrace;
+    return DONT_TRACE;
   }
 
   protected Span start(String description) {
