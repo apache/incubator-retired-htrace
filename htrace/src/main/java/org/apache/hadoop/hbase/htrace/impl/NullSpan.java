@@ -32,13 +32,10 @@ import org.apache.hadoop.hbase.htrace.Span;
 @InterfaceStability.Evolving
 public class NullSpan implements Span {
 
-  private static NullSpan instance;
+  private static NullSpan instance = new NullSpan();
 
   // No need to ever have more than one NullSpan.
   public static NullSpan getInstance() {
-    if (instance == null) {
-      instance = new NullSpan();
-    }
     return instance;
   }
 
