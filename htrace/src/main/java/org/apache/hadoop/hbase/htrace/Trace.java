@@ -155,7 +155,7 @@ public class Trace {
    * 
    * @return TINfo current trace or the sentinel no-trace (0,0) if tracing off
    */
-  public static TInfo traceInfo() {
+  public static TraceInfo traceInfo() {
     return Tracer.traceInfo();
   }
 
@@ -243,7 +243,7 @@ public class Trace {
    */
   public static Span continueTrace(long traceId, long parentId,
       String description) {
-    return continueTrace(new TInfo(traceId, parentId), description);
+    return continueTrace(new TraceInfo(traceId, parentId), description);
   }
 
   /**
@@ -253,7 +253,7 @@ public class Trace {
    * @param description
    * @return The Span just started.
    */
-  public static Span continueTrace(TInfo info, String description) {
+  public static Span continueTrace(TraceInfo info, String description) {
     if (info.traceId == 0) {
       return NullSpan.getInstance();
     }

@@ -21,16 +21,16 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class TInfo {
+public class TraceInfo {
   public long traceId;
   public long parentId;
 
-  public TInfo(long traceId, long spanId) {
+  public TraceInfo(long traceId, long spanId) {
     this.traceId = traceId;
     this.parentId = spanId;
   }
 
-  public TInfo() {
+  public TraceInfo() {
     this(0, 0);
   }
 }

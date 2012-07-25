@@ -37,9 +37,9 @@ import org.apache.hadoop.hbase.htrace.impl.RootMilliSpan;
 public class Tracer {
   private final static Random random = new SecureRandom();
   private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
-  private static final ThreadLocal<TInfo> rpcInfo = new ThreadLocal<TInfo>();
+  private static final ThreadLocal<TraceInfo> rpcInfo = new ThreadLocal<TraceInfo>();
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>();
-  private static final TInfo dontTrace = new TInfo(0, 0);
+  private static final TraceInfo dontTrace = new TraceInfo(0, 0);
   protected static String processId;
 
   private Sampler sampler;
@@ -58,11 +58,11 @@ public class Tracer {
     return sampler;
   }
 
-  protected static TInfo getRpcInfo() {
+  protected static TraceInfo getRpcInfo() {
     return rpcInfo.get();
   }
 
-  protected static void setRpcInfo(TInfo info) {
+  protected static void setRpcInfo(TraceInfo info) {
     rpcInfo.set(info);
   }
 
@@ -74,10 +74,10 @@ public class Tracer {
     return instance;
   }
 
-  protected static TInfo traceInfo() {
+  protected static TraceInfo traceInfo() {
     Span span = currentTrace.get();
     if (span != null) {
-      return new TInfo(span.traceId(), span.spanId());
+      return new TraceInfo(span.traceId(), span.spanId());
     }
     return dontTrace;
   }

@@ -24,7 +24,7 @@ import java.lang.reflect.Proxy;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Span;
-import org.apache.hadoop.hbase.htrace.TInfo;
+import org.apache.hadoop.hbase.htrace.TraceInfo;
 import org.apache.hadoop.hbase.htrace.Trace;
 
 /**
@@ -58,10 +58,10 @@ public class TraceWrap {
       public Object invoke(Object obj, Method method, Object[] args)
           throws Throwable {
         if (args == null || args.length < 1 || args[0] == null
-            || !(args[0] instanceof TInfo)) {
+            || !(args[0] instanceof TraceInfo)) {
           return method.invoke(instance, args);
         }
-        Span span = Trace.continueTrace((TInfo) args[0], method.getName());
+        Span span = Trace.continueTrace((TraceInfo) args[0], method.getName());
         try {
           return method.invoke(instance, args);
         } catch (InvocationTargetException ex) {
@@ -85,7 +85,7 @@ public class TraceWrap {
           return method.invoke(instance, args);
         }
         Class<?> klass = method.getParameterTypes()[0];
-        if (TInfo.class.isAssignableFrom(klass)) {
+        if (TraceInfo.class.isAssignableFrom(klass)) {
           args[0] = Trace.traceInfo();
         }
         Span span = Trace.startSpanInCurrentTrace("client:" + method.getName());
