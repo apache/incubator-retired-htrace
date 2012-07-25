@@ -21,13 +21,7 @@ language governing permissions and limitations under the License. -->
     <build>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <configuration>
-                        <outputDirectory>./lib</outputDirectory>
-                    </configuration>
-                </plugin>
-                <plugin>
+          	    <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
                         <source>1.6</source>
