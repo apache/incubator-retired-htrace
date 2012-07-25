@@ -28,8 +28,25 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface SpanReceiver {
-  void span(long traceId, long spanId, long parentId, long start, long stop,
+
+  /**
+   * Called when a Span is stopped and can now be stored.
+   * 
+   * @param traceId
+   * @param spanId
+   * @param parentId
+   * @param start
+   * @param stop
+   * @param description
+   * @param data
+   * @param processId
+   */
+  public void span(long traceId, long spanId, long parentId, long start,
+      long stop,
       String description, Map<String, String> data, String processId);
 
-  void flush();
+  /**
+   * Called when a trace is finished.
+   */
+  public void flush();
 }
