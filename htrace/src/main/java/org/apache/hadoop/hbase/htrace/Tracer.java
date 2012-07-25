@@ -161,12 +161,6 @@ public class Tracer {
         parentId));
   }
 
-  protected void flush() {
-    for (SpanReceiver receiver : receivers) {
-      receiver.flush();
-    }
-  }
-
   protected int numReceivers() {
     return receivers.size();
   }

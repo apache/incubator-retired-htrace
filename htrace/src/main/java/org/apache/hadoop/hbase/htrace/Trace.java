@@ -181,25 +181,10 @@ public class Trace {
   }
 
   /**
-   * Stops the current trace, sets the current trace to 'null', and calls flush
-   * on all registered SpanReceiver's.
+   * Stops the current trace, sets the current trace to 'null'.
    */
   public static void off() {
-    off(true);
-  }
-
-  /**
-   * Stops the current trace, and sets the current trace to 'null'.
-   * 
-   * @param shouldFlush
-   *          True if 'flush' should be called on registered SpanReceivers,
-   *          false otherwise.
-   */
-  public static void off(boolean shouldFlush) {
     Tracer.getInstance().stop();
-    if (shouldFlush) {
-      Tracer.getInstance().flush();
-    }
   }
 
   /**

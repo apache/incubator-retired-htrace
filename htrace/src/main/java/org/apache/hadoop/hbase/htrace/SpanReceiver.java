@@ -45,8 +45,4 @@ public interface SpanReceiver {
       long stop,
  String description, Map<byte[], byte[]> annotations, String processId);
 
-  /**
-   * Called when a trace is finished.
-   */
-  public void flush();
 }

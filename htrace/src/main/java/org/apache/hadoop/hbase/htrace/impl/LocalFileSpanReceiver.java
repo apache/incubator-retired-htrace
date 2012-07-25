@@ -61,10 +61,6 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
   }
 
   @Override
-  public void flush() {
-  }
-
-  @Override
   public void close() throws IOException {
     try {
       _fwriter.close();
