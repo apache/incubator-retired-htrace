@@ -32,7 +32,7 @@ public interface SpanStruct {
 
   public long traceId();
 
-  public Map<String, String> getData();
+  public Map<byte[], byte[]> getData();
 
   public long start();
 

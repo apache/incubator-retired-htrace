@@ -31,7 +31,7 @@ public class RootMilliSpan extends MilliSpan {
   final long parentId;
 
   @Override
-  public long traceId() {
+  public long getTraceId() {
     return traceId;
   }
 
@@ -42,7 +42,7 @@ public class RootMilliSpan extends MilliSpan {
     this.parentId = parentId;
   }
 
-  public long parentId() {
+  public long getParentId() {
     return parentId;
   }
 

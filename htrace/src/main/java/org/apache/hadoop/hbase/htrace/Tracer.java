@@ -77,7 +77,7 @@ public class Tracer {
   protected static TraceInfo traceInfo() {
     Span span = currentTrace.get();
     if (span != null) {
-      return new TraceInfo(span.traceId(), span.spanId());
+      return new TraceInfo(span.getTraceId(), span.getSpanId());
     }
     return DONT_TRACE;
   }
@@ -122,9 +122,9 @@ public class Tracer {
 
   protected void deliver(Span span) {
     for (SpanReceiver receiver : receivers) {
-      receiver.span(span.traceId(), span.spanId(), span.parentId(),
+      receiver.span(span.getTraceId(), span.getSpanId(), span.getParentId(),
           span.getStartTimeMillis(), span.getStopTimeMillis(),
-          span.description(), span.getData(), processId);
+          span.getDescription(), span.getAnnotations(), processId);
     }
   }
 
@@ -147,7 +147,7 @@ public class Tracer {
   protected void pop(Span span) {
     if (span != null) {
       deliver(span);
-      currentTrace.set(span.parent());
+      currentTrace.set(span.getParent());
     } else
       currentTrace.set(null);
   }

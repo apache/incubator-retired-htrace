@@ -38,12 +38,12 @@ public interface SpanReceiver {
    * @param start
    * @param stop
    * @param description
-   * @param data
+   * @param annotations
    * @param processId
    */
   public void span(long traceId, long spanId, long parentId, long start,
       long stop,
-      String description, Map<String, String> data, String processId);
+ String description, Map<byte[], byte[]> annotations, String processId);
 
   /**
    * Called when a trace is finished.

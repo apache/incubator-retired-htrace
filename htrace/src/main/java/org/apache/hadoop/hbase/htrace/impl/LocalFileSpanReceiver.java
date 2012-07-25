@@ -46,7 +46,8 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
 
   @Override
   public void span(long traceId, long spanId, long parentId, long start,
-      long stop, String description, Map<String, String> data, String processId) {
+      long stop, String description, Map<byte[], byte[]> annotations,
+      String processId) {
     try {
       // writes in this weird delimited format, mainly for demonstration
       // purposes.

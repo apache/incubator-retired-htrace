@@ -29,19 +29,20 @@ public class SpanStructImpl implements SpanStruct {
   private long _traceId;
   private long _parentId;
   private String _description;
-  private Map<String, String> _data;
+  private Map<byte[], byte[]> _annotations;
   private long _start;
   private long _stop;
   private String _processId;
 
   public SpanStructImpl(long spanId, long traceId, long parentid,
-      String description, Map<String, String> data, long start, long stop,
+      String description, Map<byte[], byte[]> annotations, long start,
+      long stop,
       String processId) {
     _spanId = spanId;
     _traceId = traceId;
     _parentId = parentid;
     _description = description;
-    _data = data;
+    _annotations = annotations;
     _start = start;
     _stop = stop;
     _processId = processId;
@@ -68,8 +69,8 @@ public class SpanStructImpl implements SpanStruct {
   }
 
   @Override
-  public Map<String, String> getData() {
-    return _data;
+  public Map<byte[], byte[]> getData() {
+    return _annotations;
   }
 
   @Override

@@ -43,12 +43,12 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public long accumulatedMillis() {
+  public long getAccumulatedMillis() {
     return 0;
   }
 
   @Override
-  public String description() {
+  public String getDescription() {
     return "NullSpan";
   }
 
@@ -63,22 +63,22 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public Span parent() {
+  public Span getParent() {
     return null;
   }
 
   @Override
-  public long parentId() {
+  public long getParentId() {
     return -1;
   }
 
   @Override
-  public boolean running() {
+  public boolean isRunning() {
     return false;
   }
 
   @Override
-  public long spanId() {
+  public long getSpanId() {
     return -1;
   }
 
@@ -91,7 +91,7 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public long traceId() {
+  public long getTraceId() {
     return -1;
   }
 
@@ -101,7 +101,7 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public void addData(String key, String value) {
+  public void addAnnotation(byte[] key, byte[] value) {
   }
 
   @Override
@@ -110,7 +110,7 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public Map<String, String> getData() {
+  public Map<byte[], byte[]> getAnnotations() {
     return Collections.emptyMap();
   }
 

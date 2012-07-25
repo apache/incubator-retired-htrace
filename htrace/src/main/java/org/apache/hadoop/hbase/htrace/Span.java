@@ -49,25 +49,25 @@ public interface Span {
    * Return the total amount of time elapsed since start was called, if running,
    * or difference between stop and start
    */
-  long accumulatedMillis();
+  long getAccumulatedMillis();
 
   /** Has the span been started and not yet stopped? */
-  boolean running();
+  boolean isRunning();
 
   /** Return a textual description of this span */
-  String description();
+  String getDescription();
 
   /** A pseudo-unique (random) number assigned to this span instance */
-  long spanId();
+  long getSpanId();
 
   /** The parent span: returns null if this is the root span */
-  Span parent();
+  Span getParent();
 
   /**
    * A pseudo-unique (random) number assigned to the trace associated with this
    * span
    */
-  long traceId();
+  long getTraceId();
 
   /** Create a child span of this span with the given description */
   Span child(String description);
@@ -79,11 +79,11 @@ public interface Span {
    * Return the pseudo-unique (random) number of the parent span, returns
    * ROOT_SPAN_ID if this is the root span
    */
-  long parentId();
+  long getParentId();
 
-  /** Add data associated with this span */
-  void addData(String key, String value);
+  /** Add a data annotation associated with this span */
+  void addAnnotation(byte[] key, byte[] value);
 
   /** Get data associated with this span (read only) */
-  Map<String, String> getData();
+  Map<byte[], byte[]> getAnnotations();
 }

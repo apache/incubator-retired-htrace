@@ -141,9 +141,9 @@ public class Trace {
    * @param key
    * @param value
    */
-  public static void data(String key, String value) {
+  public static void addAnnotation(byte[] key, byte[] value) {
     if (isTracing()) {
-      currentTrace().addData(key, value);
+      currentTrace().addAnnotation(key, value);
     }
   }
 
@@ -267,7 +267,7 @@ public class Trace {
    * @return The Span just started.
    */
   public static Span continueTrace(Span parent, String description) {
-    if (parent.traceId() == 0) {
+    if (parent.getTraceId() == 0) {
       return NullSpan.getInstance();
     }
     return Tracer.getInstance().continueTrace(parent, description);

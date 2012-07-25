@@ -41,7 +41,7 @@ public class MilliSpan implements Span {
   final private Span parent;
   final private String description;
   final private long spanId;
-  private Map<String, String> traceInfo = null;
+  private Map<byte[], byte[]> traceInfo = null;
 
   public Span child(String description) {
     return new MilliSpan(description, next.nextLong(), this);
@@ -74,11 +74,11 @@ public class MilliSpan implements Span {
     return System.currentTimeMillis();
   }
 
-  public synchronized boolean running() {
+  public synchronized boolean isRunning() {
     return start != 0 && stop == 0;
   }
 
-  public synchronized long accumulatedMillis() {
+  public synchronized long getAccumulatedMillis() {
     if (start == 0)
       return 0;
     if (stop > 0)
@@ -87,38 +87,38 @@ public class MilliSpan implements Span {
   }
 
   public String toString() {
-    long parentId = parentId();
-    return ("\"" + description() + "\" trace:" + Long.toHexString(traceId())
+    long parentId = getParentId();
+    return ("\"" + getDescription() + "\" trace:" + Long.toHexString(getTraceId())
         + " span:" + spanId + (parentId > 0 ? " parent:" + parentId : "")
-        + " start:" + start + " ms: " + Long.toString(accumulatedMillis()) + (running() ? "..."
+        + " start:" + start + " ms: " + Long.toString(getAccumulatedMillis()) + (isRunning() ? "..."
           : ""));
 
   }
 
-  public String description() {
+  public String getDescription() {
     return description;
   }
 
   @Override
-  public long spanId() {
+  public long getSpanId() {
     return spanId;
   }
 
   @Override
-  public Span parent() {
+  public Span getParent() {
     return parent;
   }
 
   @Override
-  public long parentId() {
+  public long getParentId() {
     if (parent == null)
       return -1;
-    return parent.spanId();
+    return parent.getSpanId();
   }
 
   @Override
-  public long traceId() {
-    return parent.traceId();
+  public long getTraceId() {
+    return parent.getTraceId();
   }
 
   @Override
@@ -132,14 +132,14 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public void addData(String key, String value) {
+  public void addAnnotation(byte[] key, byte[] value) {
     if (traceInfo == null)
-      traceInfo = new HashMap<String, String>();
+      traceInfo = new HashMap<byte[], byte[]>();
     traceInfo.put(key, value);
   }
 
   @Override
-  public Map<String, String> getData() {
+  public Map<byte[], byte[]> getAnnotations() {
     if (traceInfo == null)
       return Collections.emptyMap();
     return Collections.unmodifiableMap(traceInfo);
