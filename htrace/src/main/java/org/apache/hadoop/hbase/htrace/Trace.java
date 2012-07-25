@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.htrace;
 
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.impl.NullSpan;
 import org.apache.hadoop.hbase.htrace.wrappers.TraceCallable;
 import org.apache.hadoop.hbase.htrace.wrappers.TraceRunnable;
@@ -27,6 +29,8 @@ import org.apache.hadoop.hbase.htrace.wrappers.TraceRunnable;
  * of tracing has yet to be completely decided (color of the bike shed).
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Trace {
 
   /**

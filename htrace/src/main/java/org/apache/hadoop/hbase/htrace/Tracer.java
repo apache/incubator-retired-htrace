@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.impl.CountSampler;
 import org.apache.hadoop.hbase.htrace.impl.NullSpan;
 import org.apache.hadoop.hbase.htrace.impl.RootMilliSpan;
@@ -30,6 +32,8 @@ import org.apache.hadoop.hbase.htrace.impl.RootMilliSpan;
  * within a process.
  */
 @SuppressWarnings("rawtypes")
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class Tracer {
   private final static Random random = new SecureRandom();
   private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();

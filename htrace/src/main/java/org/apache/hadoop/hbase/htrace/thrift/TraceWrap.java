@@ -21,6 +21,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Span;
 import org.apache.hadoop.hbase.htrace.TInfo;
 import org.apache.hadoop.hbase.htrace.Trace;
@@ -45,6 +47,8 @@ import org.apache.hadoop.hbase.htrace.Trace;
  * basic interfaces, but is not your concrete instance.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TraceWrap {
 
   @SuppressWarnings("unchecked")

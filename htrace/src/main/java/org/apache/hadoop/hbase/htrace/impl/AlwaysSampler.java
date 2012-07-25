@@ -16,9 +16,13 @@
  */
 package org.apache.hadoop.hbase.htrace.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Sampler;
 
 @SuppressWarnings("rawtypes")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class AlwaysSampler implements Sampler {
 
   private static AlwaysSampler instance;

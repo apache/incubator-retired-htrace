@@ -18,10 +18,15 @@ package org.apache.hadoop.hbase.htrace;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * The collector within a process that is the destination of Spans when a trace
  * is running.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface SpanReceiver {
   void span(long traceId, long spanId, long parentId, long start, long stop,
       String description, Map<String, String> data, String processId);

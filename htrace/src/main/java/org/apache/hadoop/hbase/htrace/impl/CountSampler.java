@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.htrace.impl;
 
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Sampler;
 
 /**
@@ -25,6 +27,8 @@ import org.apache.hadoop.hbase.htrace.Sampler;
  * 
  */
 @SuppressWarnings("rawtypes")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CountSampler implements Sampler {
 
   final static Random random = new Random();

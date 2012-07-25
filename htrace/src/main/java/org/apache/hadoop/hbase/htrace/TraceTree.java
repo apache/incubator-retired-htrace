@@ -21,6 +21,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TraceTree {
   private Map<Long, Collection<SpanStruct>> _pc; // parent->children map
   private Collection<SpanStruct> _spans;

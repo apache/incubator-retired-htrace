@@ -18,10 +18,15 @@ package org.apache.hadoop.hbase.htrace;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Base interface for gathering and reporting statistics about a block of
  * execution.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Span {
   public static final long ROOT_SPAN_ID = 0;
 

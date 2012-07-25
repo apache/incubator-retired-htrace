@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.htrace.wrappers;
 
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Span;
 import org.apache.hadoop.hbase.htrace.Trace;
 
@@ -25,6 +27,8 @@ import org.apache.hadoop.hbase.htrace.Trace;
  * Wrap a Callable with a Span that survives a change in threads.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TraceCallable<V> implements Callable<V> {
   private final Callable<V> impl;
   private final Span parent;

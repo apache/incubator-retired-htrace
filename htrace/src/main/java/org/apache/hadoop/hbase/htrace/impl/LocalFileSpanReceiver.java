@@ -22,6 +22,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.SpanReceiver;
 
 /**
@@ -29,7 +31,8 @@ import org.apache.hadoop.hbase.htrace.SpanReceiver;
  * (annotations) portion of the spans. A production LocalFileSpanReceiver should
  * use a real CSV format.
  */
-
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
   private String _file;
   private FileWriter _fwriter;

@@ -16,10 +16,15 @@
  */
 package org.apache.hadoop.hbase.htrace.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Span that roots the span tree in a process, but perhaps not the whole trace.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RootMilliSpan extends MilliSpan {
 
   final long traceId;

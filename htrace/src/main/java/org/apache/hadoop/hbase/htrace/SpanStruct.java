@@ -18,6 +18,11 @@ package org.apache.hadoop.hbase.htrace;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface SpanStruct {
   public String description();
 

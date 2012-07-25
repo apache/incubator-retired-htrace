@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hbase.htrace.wrappers;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Span;
 import org.apache.hadoop.hbase.htrace.Trace;
 
@@ -23,6 +25,8 @@ import org.apache.hadoop.hbase.htrace.Trace;
  * Wrap a Runnable with a Span that survives a change in threads.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TraceRunnable implements Runnable, Comparable<TraceRunnable> {
 
   private final Span parent;

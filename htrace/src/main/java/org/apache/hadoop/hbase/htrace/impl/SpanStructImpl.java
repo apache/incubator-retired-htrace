@@ -18,8 +18,12 @@ package org.apache.hadoop.hbase.htrace.impl;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.SpanStruct;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class SpanStructImpl implements SpanStruct {
   private long _spanId;
   private long _traceId;

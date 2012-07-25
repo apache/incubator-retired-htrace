@@ -16,12 +16,15 @@
  */
 package org.apache.hadoop.hbase.htrace;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Extremely simple callback to determine the frequency that an action should be
  * performed.
- * 
- * @see Trace#wrapAll
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Sampler<T> {
 
   public boolean next();

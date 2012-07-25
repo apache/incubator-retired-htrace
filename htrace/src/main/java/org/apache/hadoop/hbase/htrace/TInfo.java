@@ -16,6 +16,11 @@
  */
 package org.apache.hadoop.hbase.htrace;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TInfo {
   public long traceId;
   public long parentId;
