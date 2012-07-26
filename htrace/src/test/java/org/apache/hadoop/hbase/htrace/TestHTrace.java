@@ -29,9 +29,9 @@ public class TestHTrace {
     LocalFileSpanReceiver rec = null;
 
     try {
-      File f = new File("test/htrace-test-output-spans.txt");
+      File f = new File("test-output-spans.txt");
       f.delete();
-      rec = new LocalFileSpanReceiver("test/htrace-test-output-spans.txt");
+      rec = new LocalFileSpanReceiver("test-output-spans.txt");
     } catch (IOException e1) {
       System.out.println("Error constructing LocalFileSpanReceiver: "
           + e1.getMessage());
