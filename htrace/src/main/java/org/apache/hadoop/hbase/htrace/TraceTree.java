@@ -41,7 +41,7 @@ public class TraceTree {
     this.processIdMap = new HashMap<String, Collection<SpanStruct>>();
 
     for (SpanStruct s : spans) {
-      if (s.getProcessId() != null) {
+      if (!s.getProcessId().equals("")) {
         if (!processIdMap.containsKey(s.getProcessId())) {
           processIdMap.put(s.getProcessId(), new HashSet<SpanStruct>());
         }
