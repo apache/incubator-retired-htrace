@@ -44,6 +44,7 @@ public class MilliSpan implements Span {
   private Map<byte[], byte[]> traceInfo = null;
   private String processId;
 
+  @Override
   public Span child(String description) {
     return new MilliSpan(description, next.nextLong(), this, processId);
   }
@@ -57,6 +58,7 @@ public class MilliSpan implements Span {
     this.processId = processId;
   }
 
+  @Override
   public synchronized void start() {
     if (start > 0)
       throw new IllegalStateException("Span for " + description
@@ -64,6 +66,7 @@ public class MilliSpan implements Span {
     start = System.currentTimeMillis();
   }
 
+  @Override
   public synchronized void stop() {
     if (start == 0)
       throw new IllegalStateException("Span for " + description
@@ -76,10 +79,12 @@ public class MilliSpan implements Span {
     return System.currentTimeMillis();
   }
 
+  @Override
   public synchronized boolean isRunning() {
     return start != 0 && stop == 0;
   }
 
+  @Override
   public synchronized long getAccumulatedMillis() {
     if (start == 0)
       return 0;
@@ -88,6 +93,7 @@ public class MilliSpan implements Span {
     return currentTimeMillis() - start;
   }
 
+  @Override
   public String toString() {
     long parentId = getParentId();
     return ("\"" + getDescription() + "\" trace:" + Long.toHexString(getTraceId())
@@ -97,6 +103,7 @@ public class MilliSpan implements Span {
 
   }
 
+  @Override
   public String getDescription() {
     return description;
   }

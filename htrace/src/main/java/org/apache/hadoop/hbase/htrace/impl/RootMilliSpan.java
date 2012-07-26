@@ -43,6 +43,7 @@ public class RootMilliSpan extends MilliSpan {
     this.parentId = parentId;
   }
 
+  @Override
   public long getParentId() {
     return parentId;
   }
