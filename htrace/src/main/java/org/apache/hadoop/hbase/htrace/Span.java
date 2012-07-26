@@ -86,4 +86,12 @@ public interface Span {
 
   /** Get data associated with this span (read only) */
   Map<byte[], byte[]> getAnnotations();
+
+  /**
+   * Return a unique id for the node or process from which this Span originated.
+   * IP address is a reasonable choice.
+   * 
+   * @return
+   */
+  String getProcessId();
 }

@@ -27,17 +27,18 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class RootMilliSpan extends MilliSpan {
 
-  final long traceId;
-  final long parentId;
-
+  private final long traceId;
+  private final long parentId;
+ 
   @Override
   public long getTraceId() {
     return traceId;
   }
 
   public RootMilliSpan(String description, long traceId, long spanId,
-      long parentId) {
-    super(description, spanId, null);
+      long parentId,
+      String processId) {
+    super(description, spanId, null, processId);
     this.traceId = traceId;
     this.parentId = parentId;
   }
@@ -45,5 +46,4 @@ public class RootMilliSpan extends MilliSpan {
   public long getParentId() {
     return parentId;
   }
-
 }

@@ -40,8 +40,7 @@ public class Tracer {
   private static final ThreadLocal<TraceInfo> rpcInfo = new ThreadLocal<TraceInfo>();
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>();
   private static final TraceInfo DONT_TRACE = new TraceInfo(0, 0);
-  protected static String processId;
-
+  protected static String processId = "";
   private Sampler sampler;
 
   private static Tracer instance = null;
@@ -94,7 +93,7 @@ public class Tracer {
     Span root;
     if (parent == null) {
       root = new RootMilliSpan(description, random.nextLong(),
-          random.nextLong(), Span.ROOT_SPAN_ID);
+          random.nextLong(), Span.ROOT_SPAN_ID, processId);
     } else {
       root = parent.child(description);
     }
@@ -156,7 +155,7 @@ public class Tracer {
 
   protected Span continueTrace(String description, long traceId, long parentId) {
     return push(new RootMilliSpan(description, traceId, random.nextLong(),
-        parentId));
+        parentId, processId));
   }
 
   protected int numReceivers() {

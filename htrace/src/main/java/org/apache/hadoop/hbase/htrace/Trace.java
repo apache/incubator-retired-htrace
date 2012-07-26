@@ -34,6 +34,16 @@ import org.apache.hadoop.hbase.htrace.wrappers.TraceRunnable;
 public class Trace {
 
   /**
+   * Set the processId to be used for all Spans created by this Tracer.
+   * 
+   * @see Span.java
+   * @param processId
+   */
+  public static void setProcessId(String processId) {
+    Tracer.processId = processId;
+  }
+
+  /**
    * Sets the sampler that will be used when calling a *withSampling method with
    * no explicit Sampler passed in.
    * 
@@ -114,6 +124,8 @@ public class Trace {
     }
     return NullSpan.getInstance();
   }
+
+  // public static void setProcessId(//String processId)
 
   /**
    * Starts tracing in the current thread if it has not already been started. If
@@ -284,15 +296,5 @@ public class Trace {
     } else {
       return runnable;
     }
-  }
-
-  /**
-   * Trace's can have process id's, which are set on a per-Tracer basis. The id
-   * can be an ip address or a host name, etc.
-   * 
-   * @param processId
-   */
-  public static void setProcessId(String processId) {
-    Tracer.processId = processId;
   }
 }

@@ -114,4 +114,9 @@ public class NullSpan implements Span {
     return Collections.emptyMap();
   }
 
+  @Override
+  public String getProcessId() {
+    return "";
+  }
+
 }

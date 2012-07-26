@@ -42,17 +42,19 @@ public class MilliSpan implements Span {
   final private String description;
   final private long spanId;
   private Map<byte[], byte[]> traceInfo = null;
+  private String processId;
 
   public Span child(String description) {
-    return new MilliSpan(description, next.nextLong(), this);
+    return new MilliSpan(description, next.nextLong(), this, processId);
   }
 
-  public MilliSpan(String description, long id, Span parent) {
+  public MilliSpan(String description, long id, Span parent, String processId) {
     this.description = description;
     this.spanId = id;
     this.parent = parent;
     this.start = 0;
     this.stop = 0;
+    this.processId = processId;
   }
 
   public synchronized void start() {
@@ -143,5 +145,10 @@ public class MilliSpan implements Span {
     if (traceInfo == null)
       return Collections.emptyMap();
     return Collections.unmodifiableMap(traceInfo);
+  }
+
+  @Override
+  public String getProcessId() {
+    return processId;
   }
 }
