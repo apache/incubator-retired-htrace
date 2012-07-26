@@ -62,7 +62,7 @@ public class MilliSpan implements Span {
   public synchronized void start() {
     if (start > 0)
       throw new IllegalStateException("Span for " + description
-          + " has already been started");
+          + " has already been started at " + start);
     start = System.currentTimeMillis();
   }
 
