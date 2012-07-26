@@ -125,8 +125,6 @@ public class Trace {
     return NullSpan.getInstance();
   }
 
-  // public static void setProcessId(//String processId)
-
   /**
    * Starts tracing in the current thread if it has not already been started. If
    * a trace has already started, just begins a new Span in the current trace.
