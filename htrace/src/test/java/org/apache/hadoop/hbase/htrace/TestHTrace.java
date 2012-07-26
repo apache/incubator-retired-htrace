@@ -25,7 +25,7 @@ import org.junit.Test;
 public class TestHTrace {
 
   @Test
-  public void testHtrace() {
+  public void testHtrace() throws Exception {
     LocalFileSpanReceiver rec = null;
 
     try {
@@ -43,6 +43,7 @@ public class TestHTrace {
       tc.createDemoTrace();
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       try {
         rec.close();
