@@ -22,6 +22,26 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Extremely simple callback to determine the frequency that an action should be
  * performed.
+ * 
+ * 'T' is the object type you require to create a more advanced sampling
+ * function. For example if there is some RPC information in a 'Call' object,
+ * you might implement Sampler<Call>. Then when the RPC is received you can call
+ * one of the Trace.java functions that takes the extra 'info' parameter, which
+ * will be passed into the next function you implemented.
+ * 
+ * For the example above, the next(T info) function may look like this
+ * 
+ * public boolean next(Call info){
+ * 
+ *    if (info.getName().equals("get")) {
+ *        return Math.random() > 0.5;
+ *    } else if (info.getName().equals("put")) {
+ *        return Math.random() > 0.25;
+ *    } else {
+ *      return false;
+ *    }
+ * }
+ * 
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
