@@ -21,6 +21,8 @@ import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.htrace.Span;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.htrace.SpanReceiver;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
+  public static final Log LOG = LogFactory
+      .getLog("org.apache.hadoop.hbase.LocalFileSpanReceiver");
   private String _file;
   private FileWriter _fwriter;
   private BufferedWriter _bwriter;
@@ -56,7 +60,7 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
           span.getDescription()));
       _bwriter.flush();
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.error("Error when writing to file: " + _file, e);
     }
   }
 
@@ -65,12 +69,12 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
     try {
       _fwriter.close();
     } catch (IOException e) {
-      // TODO: log the exception
+      LOG.error("Error closing filewriter for file: " + _file, e);
     }
     try {
       _bwriter.close();
     } catch (IOException e) {
-      // TODO: log the exception
+      LOG.error("Error closing bufferedwriter for file: " + _file, e);
     }
   }
 }
