@@ -49,6 +49,7 @@ public class TestHTrace {
         rec.close();
       } catch (IOException e) {
         e.printStackTrace();
+        throw e;
       }
     }
   }
