@@ -20,37 +20,40 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.htrace.impl.LocalFileSpanReceiver;
+import org.apache.hadoop.hbase.htrace.impl.StandardOutSpanReceiver;
 import org.junit.Test;
 
 public class TestHTrace {
 
   @Test
   public void testHtrace() throws Exception {
-    LocalFileSpanReceiver rec = null;
+    String fileName = System.getProperty("spanFile");
+    LocalFileSpanReceiver lfsr = null;
+    StandardOutSpanReceiver sosr = null;
 
-    try {
-      File f = new File("test-output-spans.txt");
-      f.delete();
-      rec = new LocalFileSpanReceiver("test-output-spans.txt");
-    } catch (IOException e1) {
-      System.out.println("Error constructing LocalFileSpanReceiver: "
-          + e1.getMessage());
-      System.exit(1);
-    }
-
-    try {
-      TraceCreator tc = new TraceCreator(rec);
-      tc.createDemoTrace();
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw e;
-    } finally {
+    // writes spans to a file if one is provided to maven with
+    // -DspanFile="FILENAME", otherwise writes to standard out.
+    if (fileName != null) {
       try {
-        rec.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-        throw e;
+        File f = new File(fileName);
+        File parent = f.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+          throw new IllegalArgumentException("Couldn't create file: "
+              + fileName);
+        }
+        lfsr = new LocalFileSpanReceiver(fileName);
+      } catch (IOException e1) {
+        System.out.println("Error constructing LocalFileSpanReceiver: "
+            + e1.getMessage());
+        throw e1;
       }
+      TraceCreator tc = new TraceCreator(lfsr);
+      tc.createDemoTrace();
+      lfsr.close();
+    } else {
+      sosr = new StandardOutSpanReceiver();
+      TraceCreator tc = new TraceCreator(sosr);
+      tc.createDemoTrace();
     }
   }
 }
