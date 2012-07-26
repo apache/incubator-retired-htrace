@@ -24,7 +24,8 @@ import java.util.Random;
 public class TraceCreator {
 
   /**
-   * Takes as a
+   * Takes as input the SpanReceiver that should used as the sink for Spans when
+   * createDemoTrace() is called.
    * 
    * @param receiver
    */
@@ -33,9 +34,9 @@ public class TraceCreator {
   }
 
   /**
-   * Starts the demo tracer.
+   * Creates the demo trace (will create a different traces from call to call).
    */
-  public void start() {
+  public void createDemoTrace() {
     Trace.startTraceIfNotStarted("beginning the trace");
     try {
       Random r = new Random();

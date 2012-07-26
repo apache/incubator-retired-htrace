@@ -40,7 +40,7 @@ public class TestHTrace {
 
     try {
       TraceCreator tc = new TraceCreator(rec);
-      tc.start();
+      tc.createDemoTrace();
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
