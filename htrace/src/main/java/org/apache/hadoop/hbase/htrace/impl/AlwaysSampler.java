@@ -39,11 +39,6 @@ public final class AlwaysSampler implements Sampler {
   }
 
   @Override
-  public boolean next() {
-    return true;
-  }
-
-  @Override
   public boolean next(Object info) {
     return true;
   }

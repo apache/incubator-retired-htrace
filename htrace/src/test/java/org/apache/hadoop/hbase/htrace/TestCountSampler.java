@@ -30,9 +30,9 @@ public class TestCountSampler {
     int halfCount = 0;
     int hundredCount = 0;
     for (int i = 0; i < 200; i++) {
-      if (half.next())
+      if (half.next(null))
         halfCount++;
-      if (hundred.next())
+      if (hundred.next(null))
         hundredCount++;
     }
     assertEquals(2, hundredCount);

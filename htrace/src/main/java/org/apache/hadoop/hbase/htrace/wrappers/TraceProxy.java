@@ -57,7 +57,7 @@ public class TraceProxy {
       @Override
       public Object invoke(Object obj, Method method, Object[] args)
           throws Throwable {
-        if (!sampler.next()) {
+        if (!sampler.next(null)) {
           return method.invoke(instance, args);
         }
         Span span = Trace.startTraceIfNotStarted(method.getName());

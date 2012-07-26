@@ -56,7 +56,7 @@ public class Trace {
   /**
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if the current Trace's sampler is not null and
-   * returns true on a next() call.
+   * returns true on a next(null) call.
    * 
    * @param description
    * @return The Span just started if this trace is to be sampled, otherwise the
@@ -88,7 +88,7 @@ public class Trace {
   /**
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if 'sampler' is not null and returns true on a
-   * next() call.
+   * next(null) call.
    * 
    * @param description
    * @param sampler
@@ -97,7 +97,7 @@ public class Trace {
    */
   public static Span startTraceIfNotStartedWithSampling(String description,
       Sampler sampler) {
-    if (sampler != null && sampler.next()) {
+    if (sampler != null && sampler.next(null)) {
       return startTraceIfNotStarted(description);
     }
     return NullSpan.getInstance();

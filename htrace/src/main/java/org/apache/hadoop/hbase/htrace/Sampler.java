@@ -47,8 +47,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public interface Sampler<T> {
 
-  public boolean next();
-
   public boolean next(T info);
 
 }

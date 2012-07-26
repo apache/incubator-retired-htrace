@@ -41,12 +41,7 @@ public class CountSampler implements Sampler {
   }
 
   @Override
-  public boolean next() {
-    return (count++ % frequency) == 0;
-  }
-
-  @Override
   public boolean next(Object info) {
-    return next();
+    return (count++ % frequency) == 0;
   }
 }

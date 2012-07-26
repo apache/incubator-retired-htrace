@@ -35,13 +35,8 @@ public class ProbabilitySampler implements Sampler {
   }
 
   @Override
-  public boolean next() {
-    return _random.nextDouble() > _threshold;
-  }
-
-  @Override
   public boolean next(Object info) {
-    return next();
+    return _random.nextDouble() > _threshold;
   }
 
 }

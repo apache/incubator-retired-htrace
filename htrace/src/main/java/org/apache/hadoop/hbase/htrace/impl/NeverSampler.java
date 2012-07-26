@@ -39,11 +39,6 @@ public final class NeverSampler implements Sampler {
   }
 
   @Override
-  public boolean next() {
-    return false;
-  }
-
-  @Override
   public boolean next(Object info) {
     return false;
   }
