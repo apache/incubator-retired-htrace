@@ -47,7 +47,6 @@ public class CountSampler implements Sampler {
 
   @Override
   public boolean next(Object info) {
-    return true;
-    // return next();
+    return next();
   }
 }
