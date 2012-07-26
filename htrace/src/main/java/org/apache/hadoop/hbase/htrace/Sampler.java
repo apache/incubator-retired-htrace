@@ -41,7 +41,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *      return false;
  *    }
  * }
- * This would trace half of all gets, 75% of all puts and would not trace any other requests.
+ * This would trace 50% of all gets, 75% of all puts and would not trace any other requests.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
