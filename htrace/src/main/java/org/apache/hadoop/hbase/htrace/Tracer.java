@@ -23,7 +23,6 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.htrace.impl.CountSampler;
 import org.apache.hadoop.hbase.htrace.impl.NullSpan;
 import org.apache.hadoop.hbase.htrace.impl.RootMilliSpan;
 
@@ -59,7 +58,6 @@ public class Tracer {
   synchronized protected static Tracer getInstance() {
     if (instance == null) {
       instance = new Tracer();
-      instance.setSampler(new CountSampler(1000));
     }
     return instance;
   }
