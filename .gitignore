@@ -1,0 +1,10 @@
+.project
+*.settings/
+.classpath
+/build
+/.idea/
+/logs
+*target/
+*.iml
+*.orig
+*~
