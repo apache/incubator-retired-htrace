@@ -31,9 +31,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * 
  * For the example above, the next(T info) function may look like this
  * 
- * public boolean next(Call info){
- * 
- *    if (info.getName().equals("get")) {
+ * public boolean next(T info){
+ *    if (info == null) {
+ *      return false;
+ *    } else if (info.getName().equals("get")) {
  *        return Math.random() > 0.5;
  *    } else if (info.getName().equals("put")) {
  *        return Math.random() > 0.25;
