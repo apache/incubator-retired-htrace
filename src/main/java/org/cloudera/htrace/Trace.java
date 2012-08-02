@@ -35,7 +35,7 @@ public class Trace {
 
   /**
    * Set the processId to be used for all Spans created by this Tracer.
-   * 
+   *
    * @see Span.java
    * @param processId
    */
@@ -46,7 +46,7 @@ public class Trace {
   /**
    * Sets the sampler that will be used when calling a *withSampling method with
    * no explicit Sampler passed in.
-   * 
+   *
    * @param sampler
    */
   public static void setSampler(Sampler sampler) {
@@ -57,7 +57,7 @@ public class Trace {
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if the current Trace's sampler is not null and
    * returns true on a next(null) call.
-   * 
+   *
    * @param description
    * @return The Span just started if this trace is to be sampled, otherwise the
    *         NullSpan
@@ -71,7 +71,7 @@ public class Trace {
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if the current Trace's sampler is not null and
    * returns true on a next(info) call.
-   * 
+   *
    * @param description
    * @param info
    *          Information necessary for the Sampler to decide whether or not to
@@ -89,7 +89,7 @@ public class Trace {
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if 'sampler' is not null and returns true on a
    * next(null) call.
-   * 
+   *
    * @param description
    * @param sampler
    * @return The Span just started if this trace is to be sampled, otherwise the
@@ -107,7 +107,7 @@ public class Trace {
    * Equivalent to 'startTraceIfNotStarted', but only calls
    * 'startTraceIfNotStarted' if 'sampler' is not null and returns true on a
    * next(info) call.
-   * 
+   *
    * @param description
    * @param info
    *          Information necessary for the Sampler to decide whether or not to
@@ -128,7 +128,7 @@ public class Trace {
   /**
    * Starts tracing in the current thread if it has not already been started. If
    * a trace has already started, just begins a new Span in the current trace.
-   * 
+   *
    * @return Span The span that has just been started.
    */
   public static Span startTraceIfNotStarted(String description) {
@@ -138,7 +138,7 @@ public class Trace {
   /**
    * Adds the given SpanReceiver to the current Tracer instance's list of
    * SpanReceivers.
-   * 
+   *
    * @param rcvr
    */
   public static void addReceiver(SpanReceiver rcvr) {
@@ -147,7 +147,7 @@ public class Trace {
 
   /**
    * Adds a data annotation to the current span if tracing is currently on.
-   * 
+   *
    * @param key
    * @param value
    */
@@ -160,7 +160,7 @@ public class Trace {
   /**
    * Provides the current trace's span ID and parent ID, or the TInfo: (0,0) if
    * tracing is currently off.
-   * 
+   *
    * @return TINfo current trace or the sentinel no-trace (0,0) if tracing off
    */
   public static TraceInfo traceInfo() {
@@ -171,7 +171,7 @@ public class Trace {
    * If 'span' is not null, it is delivered to any registered SpanReceiver's,
    * and sets the current span to 'span's' parent. If 'span' is null, the
    * current trace is set to null.
-   * 
+   *
    * @param span
    *          The Span to be popped
    */
@@ -182,7 +182,7 @@ public class Trace {
   /**
    * Stop a trace in this thread, simply sets current trace to null if 'span' is
    * null.
-   * 
+   *
    * @param span
    *          The Span to stop.
    */
@@ -199,7 +199,7 @@ public class Trace {
 
   /**
    * Returns true if the current thread is a part of a trace, false otherwise.
-   * 
+   *
    * @return
    */
   public static boolean isTracing() {
@@ -208,7 +208,7 @@ public class Trace {
 
   /**
    * If we are tracing, return the current span, else null
-   * 
+   *
    * @return Span representing the current trace, or null if not tracing.
    */
   public static Span currentTrace() {
@@ -217,7 +217,7 @@ public class Trace {
 
   /**
    * Create a new time span (if tracing is on), with the given description.
-   * 
+   *
    * @param description
    *          Description of the trace to be started.
    * @return If tracing is on, the Span just started, otherwise the NULL Span.
@@ -228,7 +228,7 @@ public class Trace {
 
   /**
    * Start a trace in the current thread from information passed via RPC.
-   * 
+   *
    * @param traceId
    * @param parentId
    * @param description
@@ -241,7 +241,7 @@ public class Trace {
 
   /**
    * Continue a trace with info from RPC.
-   * 
+   *
    * @param info
    * @param description
    * @return The Span just started.
@@ -256,7 +256,7 @@ public class Trace {
 
   /**
    * Continue a trace with info from a Span parent.
-   * 
+   *
    * @param parent
    * @param description
    * @return The Span just started.
@@ -270,7 +270,7 @@ public class Trace {
 
   /**
    * Wrap the callable in a TraceCallable, if tracing.
-   * 
+   *
    * @param callable
    * @return The callable provided, wrapped if tracing, 'callable' if not.
    */
@@ -284,7 +284,7 @@ public class Trace {
 
   /**
    * Wrap the runnable in a TraceRunnable, if tracing
-   * 
+   *
    * @param runnable
    * @return The runnable provided, wrapped if tracing, 'runnable' if not.
    */
