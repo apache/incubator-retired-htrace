@@ -76,6 +76,27 @@ language governing permissions and limitations under the License. -->
                         <encoding>UTF-8</encoding>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <aritifactId>maven-javadoc-plugin</aritifactId>
+                    <executions>
+                        <id>attach-javadocs</id>
+                        <phase>deply</phase>
+                        <goals><goal>jar</goal></goals>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
