@@ -22,15 +22,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TraceInfo {
-  public long traceId;
-  public long parentId;
+  public final long traceId;
+  public final long parentId;
 
   public TraceInfo(long traceId, long spanId) {
     this.traceId = traceId;
     this.parentId = spanId;
-  }
-
-  public TraceInfo() {
-    this(0, 0);
   }
 }
