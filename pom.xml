@@ -35,7 +35,7 @@ language governing permissions and limitations under the License. -->
     </licenses>
     <scm>
         <connection>scm:git://github.com/cloudera/htrace.git</connection>
-        <developerConnection>scm:git@github.com:cloudera/htrace.git</developerConnection>
+        <developerConnection>scm:git://github.com/cloudera/htrace.git</developerConnection>
         <url>https://github.com/cloudera/htrace</url>
     </scm>
     <developers>
