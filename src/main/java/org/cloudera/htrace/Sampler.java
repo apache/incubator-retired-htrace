@@ -18,6 +18,8 @@ package org.cloudera.htrace;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.cloudera.htrace.impl.AlwaysSampler;
+import org.cloudera.htrace.impl.NeverSampler;
 
 /**
  * Extremely simple callback to determine the frequency that an action should be
@@ -47,6 +49,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Sampler<T> {
+
+  public static final Sampler ALWAYS = AlwaysSampler.getInstance();
+  public static final Sampler NEVER = NeverSampler.getInstance();
 
   public boolean next(T info);
 

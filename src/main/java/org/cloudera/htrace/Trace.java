@@ -16,11 +16,15 @@
  */
 package org.cloudera.htrace;
 
+import java.security.SecureRandom;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.impl.NullSpan;
+import org.cloudera.htrace.impl.RootMilliSpan;
+import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
 
@@ -32,6 +36,81 @@ import org.cloudera.htrace.wrappers.TraceRunnable;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Trace {
+  private final static Random random = new SecureRandom();
+
+  public static Span startSpan(String description) {
+    return startSpan(description, TrueIfTracingSampler.getInstance());
+  }
+
+  public static Span startSpan(String description, Span parent) {
+    return startSpan(description, parent, TrueIfTracingSampler.getInstance());
+  }
+
+  public static Span startSpan(String description, TraceInfo tinfo) {
+    return startSpan(description, tinfo, TrueIfTracingSampler.getInstance());
+  }
+  
+  public static Span startSpan(String description, long traceId, long parentId) {
+    return startSpan(description, traceId, parentId,
+        TrueIfTracingSampler.getInstance());
+  }
+  
+  public static Span startSpan(String description, Sampler s) {
+    return startSpan(description, s, null);
+  }
+
+  public static Span startSpan(String description, Span parent, Sampler s) {
+    return startSpan(description, parent, s, null);
+  }
+
+  public static Span startSpan(String description, TraceInfo tinfo, Sampler s) {
+    return startSpan(description, tinfo, s, null);
+  }
+
+  public static Span startSpan(String description, long traceId, long parentId,
+      Sampler s) {
+    return startSpan(description, traceId, parentId, s, null);
+  }
+
+  public static Span startSpan(String description, Sampler s, Object info) {
+    if (s.next(info)) {
+      /*
+       * return Tracer.getInstance().push( new RootMilliSpan(description,
+       * random.nextLong(), random.nextLong(), Span.ROOT_SPAN_ID,
+       * Tracer.processId));
+       */
+      return Tracer.getInstance().on(description);
+    }
+    return NullSpan.getInstance();
+  }
+
+  public static Span startSpan(String description, Span parent, Sampler s,
+      Object info) {
+    if (s.next(info)) {
+      return Tracer.getInstance().push(parent.child(description));
+    }
+    return NullSpan.getInstance();
+  }
+
+  public static Span startSpan(String description, TraceInfo tinfo, Sampler s,
+      Object info) {
+    if (s.next(info)) {
+      return Tracer.getInstance().push(
+          new RootMilliSpan(description, tinfo.traceId, random.nextLong(),
+              tinfo.parentId, Tracer.processId));
+    }
+    return NullSpan.getInstance();
+  }
+
+  public static Span startSpan(String description, long traceId, long parentId,
+      Sampler s, Object info) {
+    if (s.next(info)) {
+      return Tracer.getInstance().push(
+          new RootMilliSpan(description, traceId, random.nextLong(), parentId,
+              Tracer.processId));
+    }
+    return NullSpan.getInstance();
+  }
 
   /**
    * Set the processId to be used for all Spans created by this Tracer.
@@ -43,97 +122,6 @@ public class Trace {
     Tracer.processId = processId;
   }
 
-  /**
-   * Sets the sampler that will be used when calling a *withSampling method with
-   * no explicit Sampler passed in.
-   *
-   * @param sampler
-   */
-  public static void setSampler(Sampler sampler) {
-    Tracer.getInstance().setSampler(sampler);
-  }
-
-  /**
-   * Equivalent to 'startTraceIfNotStarted', but only calls
-   * 'startTraceIfNotStarted' if the current Trace's sampler is not null and
-   * returns true on a next(null) call.
-   *
-   * @param description
-   * @return The Span just started if this trace is to be sampled, otherwise the
-   *         NullSpan
-   */
-  public static Span startTraceIfNotStartedWithSampling(String description) {
-    return startTraceIfNotStartedWithSampling(description, Tracer.getInstance()
-        .getSampler());
-  }
-
-  /**
-   * Equivalent to 'startTraceIfNotStarted', but only calls
-   * 'startTraceIfNotStarted' if the current Trace's sampler is not null and
-   * returns true on a next(info) call.
-   *
-   * @param description
-   * @param info
-   *          Information necessary for the Sampler to decide whether or not to
-   *          sample a trace.
-   * @return The Span just started if this trace is to be sampled, otherwise the
-   *         NullSpan
-   */
-  public static Span startTraceIfNotStartedWithSampling(String description,
-      Object info) {
-    return startTraceIfNotStartedWithSampling(description, info, Tracer
-        .getInstance().getSampler());
-  }
-
-  /**
-   * Equivalent to 'startTraceIfNotStarted', but only calls
-   * 'startTraceIfNotStarted' if 'sampler' is not null and returns true on a
-   * next(null) call.
-   *
-   * @param description
-   * @param sampler
-   * @return The Span just started if this trace is to be sampled, otherwise the
-   *         NullSpan
-   */
-  public static Span startTraceIfNotStartedWithSampling(String description,
-      Sampler sampler) {
-    if (sampler != null && sampler.next(null)) {
-      return startTraceIfNotStarted(description);
-    }
-    return NullSpan.getInstance();
-  }
-
-  /**
-   * Equivalent to 'startTraceIfNotStarted', but only calls
-   * 'startTraceIfNotStarted' if 'sampler' is not null and returns true on a
-   * next(info) call.
-   *
-   * @param description
-   * @param info
-   *          Information necessary for the Sampler to decide whether or not to
-   *          sample a trace.
-   * @param sampler
-   * @return The Span just started if this trace is to be sampled, otherwise the
-   *         NullSpan
-   */
-
-  public static Span startTraceIfNotStartedWithSampling(String description,
-      Object info, Sampler sampler) {
-    if (sampler != null && sampler.next(info)) {
-      return startTraceIfNotStarted(description);
-    }
-    return NullSpan.getInstance();
-  }
-
-  /**
-   * Starts tracing in the current thread if it has not already been started. If
-   * a trace has already started, just begins a new Span in the current trace.
-   *
-   * @return Span The span that has just been started.
-   */
-  public static Span startTraceIfNotStarted(String description) {
-    return Tracer.getInstance().on(description);
-  }
 
   /**
    * Adds the given SpanReceiver to the current Tracer instance's list of
@@ -180,24 +168,6 @@ public class Trace {
   }
 
   /**
-   * Stop a trace in this thread, simply sets current trace to null if 'span' is
-   * null.
-   *
-   * @param span
-   *          The Span to stop.
-   */
-  public static void off(Span span) {
-    Tracer.getInstance().stop(span);
-  }
-
-  /**
-   * Stops the current trace, sets the current trace to 'null'.
-   */
-  public static void off() {
-    Tracer.getInstance().stop();
-  }
-
-  /**
    * Returns true if the current thread is a part of a trace, false otherwise.
    *
    * @return
@@ -213,59 +183,6 @@ public class Trace {
    */
   public static Span currentTrace() {
     return Tracer.getInstance().currentTrace();
-  }
-
-  /**
-   * Create a new time span (if tracing is on), with the given description.
-   *
-   * @param description
-   *          Description of the trace to be started.
-   * @return If tracing is on, the Span just started, otherwise the NULL Span.
-   */
-  public static Span startSpanInCurrentTrace(String description) {
-    return Tracer.getInstance().start(description);
-  }
-
-  /**
-   * Start a trace in the current thread from information passed via RPC.
-   *
-   * @param traceId
-   * @param parentId
-   * @param description
-   * @return The Span just started.
-   */
-  public static Span continueTrace(long traceId, long parentId,
-      String description) {
-    return continueTrace(new TraceInfo(traceId, parentId), description);
-  }
-
-  /**
-   * Continue a trace with info from RPC.
-   *
-   * @param info
-   * @param description
-   * @return The Span just started.
-   */
-  public static Span continueTrace(TraceInfo info, String description) {
-    if (info.traceId == 0) {
-      return NullSpan.getInstance();
-    }
-    return Tracer.getInstance().continueTrace(description, info.traceId,
-        info.parentId);
-  }
-
-  /**
-   * Continue a trace with info from a Span parent.
-   *
-   * @param parent
-   * @param description
-   * @return The Span just started.
-   */
-  public static Span continueTrace(Span parent, String description) {
-    if (parent.getTraceId() == 0) {
-      return NullSpan.getInstance();
-    }
-    return Tracer.getInstance().continueTrace(parent, description);
   }
 
   /**

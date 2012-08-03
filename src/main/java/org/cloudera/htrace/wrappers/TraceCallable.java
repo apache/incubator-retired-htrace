@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
@@ -45,12 +46,13 @@ public class TraceCallable<V> implements Callable<V> {
   @Override
   public V call() throws Exception {
     if (parent != null) {
-      Span chunk = Trace
-          .continueTrace(parent, Thread.currentThread().getName());
+      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
+          Sampler.ALWAYS);
+
       try {
         return impl.call();
       } finally {
-        Trace.off(chunk);
+        chunk.stop();
       }
     } else {
       return impl.call();

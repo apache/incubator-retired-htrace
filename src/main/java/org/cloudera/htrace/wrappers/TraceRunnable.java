@@ -18,6 +18,7 @@ package org.cloudera.htrace.wrappers;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
@@ -44,12 +45,13 @@ public class TraceRunnable implements Runnable, Comparable<TraceRunnable> {
   @Override
   public void run() {
     if (parent != null) {
-      Span chunk = Trace
-          .continueTrace(parent, Thread.currentThread().getName());
+      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
+          Sampler.ALWAYS);
+
       try {
         runnable.run();
       } finally {
-        Trace.off(chunk);
+        chunk.stop();
       }
     } else {
       runnable.run();

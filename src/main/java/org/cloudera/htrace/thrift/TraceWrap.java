@@ -61,7 +61,9 @@ public class TraceWrap {
             || !(args[0] instanceof TraceInfo)) {
           return method.invoke(instance, args);
         }
-        Span span = Trace.continueTrace((TraceInfo) args[0], method.getName());
+        // Span span = Trace.continueTrace((TraceInfo) args[0],
+        // method.getName());
+        Span span = Trace.startSpan(method.getName(), (TraceInfo) args[0]);
         try {
           return method.invoke(instance, args);
         } catch (InvocationTargetException ex) {
@@ -88,7 +90,9 @@ public class TraceWrap {
         if (TraceInfo.class.isAssignableFrom(klass)) {
           args[0] = Trace.traceInfo();
         }
-        Span span = Trace.startSpanInCurrentTrace("client:" + method.getName());
+        // Span span = Trace.startSpanInCurrentTrace("client:" +
+        // method.getName());
+        Span span = Trace.startSpan("client: " + method.getName());
         try {
           return method.invoke(instance, args);
         } catch (InvocationTargetException ex) {

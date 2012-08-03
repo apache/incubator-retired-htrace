@@ -18,10 +18,6 @@ package org.cloudera.htrace;
 
 import java.util.Random;
 
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.SpanReceiver;
-import org.cloudera.htrace.Trace;
-
 /**
  * Does some stuff and traces it.
  */
@@ -41,7 +37,8 @@ public class TraceCreator {
    * Creates the demo trace (will create a different traces from call to call).
    */
   public void createDemoTrace() {
-    Trace.startTraceIfNotStarted("beginning the trace");
+    // Trace.startTraceIfNotStarted("beginning the trace");
+    Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
     try {
       Random r = new Random();
       int numThreads = r.nextInt(4) + 1;
@@ -61,13 +58,13 @@ public class TraceCreator {
       }
       importantWork1();
     } finally {
-      Trace.off();
+      s.stop();
     }
   }
 
   private void importantWork1() {
-    Span cur = Trace.startSpanInCurrentTrace("important work 1");
-
+    // Span cur = Trace.startSpanInCurrentTrace("important work 1");
+    Span cur = Trace.startSpan("important work 1");
     try {
       Thread.sleep((long) (5000 * Math.random()));
       importantWork2();
@@ -79,8 +76,8 @@ public class TraceCreator {
   }
 
   private void importantWork2() {
-    Span cur = Trace.startSpanInCurrentTrace("importantWork2");
-
+    // Span cur = Trace.startSpanInCurrentTrace("importantWork2");
+    Span cur = Trace.startSpan("important work 2");
     try {
       Thread.sleep((long) (5000 * Math.random()));
     } catch (InterruptedException e) {
@@ -101,8 +98,9 @@ public class TraceCreator {
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       } catch (ArithmeticException ae) {
-        Span c = Trace.startSpanInCurrentTrace("dealing with arithmetic exception.");
-
+        // Span c =
+        // Trace.startSpanInCurrentTrace("dealing with arithmetic exception.");
+        Span c = Trace.startSpan("dealing with arithmetic exception.");
         try {
           Thread.sleep((long) (5000 * Math.random()));
         } catch (InterruptedException ie1) {

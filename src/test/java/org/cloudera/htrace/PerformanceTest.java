@@ -16,8 +16,7 @@
  */
 package org.cloudera.htrace;
 
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.impl.AlwaysSampler;
 import org.junit.Test;
 
 public class PerformanceTest {
@@ -37,17 +36,17 @@ public class PerformanceTest {
     System.out.println(String.format("Trivial took %d millis", System.currentTimeMillis() - now));
     now = System.currentTimeMillis();
     for (long i = 0; i < 1000 * 1000; i++) {
-      Span s = Trace.startSpanInCurrentTrace("perf");
+      Span s = Trace.startSpan("perf");
       s.stop();
     }
     System.out.println(String.format("Span Loop took %d millis", System.currentTimeMillis() - now));
     now = System.currentTimeMillis();
-    Trace.startTraceIfNotStarted("test");
+    Span root = Trace.startSpan("test", AlwaysSampler.getInstance());
     for (long i = 0; i < 1000 * 1000; i++) {
-      Span s = Trace.startSpanInCurrentTrace("perf");
+      Span s = Trace.startSpan("perf");
       s.stop();
     }
-    Trace.off();
+    root.stop();
     System.out.println(String.format("Trace took %d millis", System.currentTimeMillis() - now));
   }
 }

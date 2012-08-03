@@ -60,7 +60,9 @@ public class TraceProxy {
         if (!sampler.next(null)) {
           return method.invoke(instance, args);
         }
-        Span span = Trace.startTraceIfNotStarted(method.getName());
+
+        Span span = Trace.startSpan(method.getName(),
+            AlwaysSampler.getInstance());
         try {
           return method.invoke(instance, args);
         } catch (Throwable ex) {

@@ -30,7 +30,6 @@ import org.cloudera.htrace.impl.RootMilliSpan;
  * A Tracer provides the implementation for collecting and distributing Spans
  * within a process.
  */
-@SuppressWarnings("rawtypes")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class Tracer {
@@ -39,20 +38,11 @@ public class Tracer {
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>();
   private static final TraceInfo DONT_TRACE = new TraceInfo(0, 0);
   protected static String processId = "";
-  private Sampler sampler;
 
   private static Tracer instance = null;
 
   synchronized protected static void setInstance(Tracer tracer) {
     instance = tracer;
-  }
-
-  protected void setSampler(Sampler sampler) {
-    this.sampler = sampler;
-  }
-
-  protected Sampler getSampler() {
-    return sampler;
   }
 
   synchronized protected static Tracer getInstance() {
@@ -134,8 +124,9 @@ public class Tracer {
     if (span != null) {
       deliver(span);
       currentTrace.set(span.getParent());
-    } else
+    } else {
       currentTrace.set(null);
+    }
   }
 
   protected Span continueTrace(Span parent, String activity) {
