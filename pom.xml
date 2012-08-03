@@ -55,7 +55,7 @@ language governing permissions and limitations under the License. -->
                 <executions>
                     <execution>
                         <id>attach-sources</id>
-                        <phase>deploy</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>jar-no-fork</goal>
                         </goals>
@@ -68,7 +68,7 @@ language governing permissions and limitations under the License. -->
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
-                        <phase>deploy</phase>
+                        <phase>package</phase>
                         <goals><goal>jar</goal></goals>
                     </execution>
                 </executions>
