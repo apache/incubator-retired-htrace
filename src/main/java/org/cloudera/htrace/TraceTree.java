@@ -27,48 +27,48 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TraceTree {
-  private Map<Long, Collection<SpanStruct>> pc; // parent->children map
-  private Collection<SpanStruct> spans;
-  private Map<String, Collection<SpanStruct>> processIdMap;
+  private Map<Long, Collection<Span>> pc; // parent->children map
+  private Collection<Span> spans;
+  private Map<String, Collection<Span>> processIdMap;
 
-  public Collection<SpanStruct> getSpans() {
+  public Collection<Span> getSpans() {
     return spans;
   }
 
-  public TraceTree(Collection<SpanStruct> spans) {
+  public TraceTree(Collection<Span> spans) {
     this.spans = spans;
-    this.pc = new HashMap<Long, Collection<SpanStruct>>();
-    this.processIdMap = new HashMap<String, Collection<SpanStruct>>();
+    this.pc = new HashMap<Long, Collection<Span>>();
+    this.processIdMap = new HashMap<String, Collection<Span>>();
 
-    for (SpanStruct s : spans) {
+    for (Span s : spans) {
       if (!s.getProcessId().equals("")) {
         if (!processIdMap.containsKey(s.getProcessId())) {
-          processIdMap.put(s.getProcessId(), new HashSet<SpanStruct>());
+          processIdMap.put(s.getProcessId(), new HashSet<Span>());
         }
         processIdMap.get(s.getProcessId()).add(s);
       }
 
-      if (!pc.containsKey(s.spanId())) {
-        pc.put(s.spanId(), new HashSet<SpanStruct>());
+      if (!pc.containsKey(s.getSpanId())) {
+        pc.put(s.getSpanId(), new HashSet<Span>());
       }
 
-      if (!pc.containsKey(s.parentId())) {
-        pc.put(s.parentId(), new HashSet<SpanStruct>());
+      if (!pc.containsKey(s.getParentId())) {
+        pc.put(s.getParentId(), new HashSet<Span>());
       }
 
-      pc.get(s.parentId()).add(s);
+      pc.get(s.getParentId()).add(s);
     }
   }
 
-  public SpanStruct getRoot() {
+  public Span getRoot() {
     return pc.get(0L).iterator().next();
   }
 
-  public Map<Long, Collection<SpanStruct>> getPc() {
+  public Map<Long, Collection<Span>> getPc() {
     return pc;
   }
 
-  public Map<String, Collection<SpanStruct>> getProcessIdMap() {
+  public Map<String, Collection<Span>> getProcessIdMap() {
     return processIdMap;
   }
 }
