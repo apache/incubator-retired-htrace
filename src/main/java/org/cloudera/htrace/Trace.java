@@ -28,11 +28,6 @@ import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
 
-/**
- * NOTE: The *withSampling functions work, but the sampling and general control
- * of tracing has yet to be completely decided (color of the bike shed).
- */
-// @SuppressWarnings({ "unchecked", "rawtypes" })
 @SuppressWarnings("unchecked")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
