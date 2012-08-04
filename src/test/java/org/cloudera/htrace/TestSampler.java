@@ -16,6 +16,13 @@ public class TestSampler {
     assertTrue(s.equals(NullSpan.getInstance()));
   }
 
+  @Test
+  public void testAlwaysSampler() {
+    Span cur = Trace.startSpan("test", new TraceInfo(0, 0),
+        Sampler.ALWAYS);
+    assertFalse(cur.equals(NullSpan.getInstance()));
+  }
+
   private class TestParamSampler implements Sampler<Integer> {
 
     @Override

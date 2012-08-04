@@ -38,7 +38,7 @@ public class RootMilliSpan extends MilliSpan {
   public RootMilliSpan(String description, long traceId, long spanId,
       long parentId,
       String processId) {
-    super(description, spanId, NullSpan.getInstance(), processId);
+    super(description, spanId, null, processId);
     this.traceId = traceId;
     this.parentId = parentId;
   }
