@@ -22,10 +22,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 
-@SuppressWarnings("rawtypes")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ProbabilitySampler implements Sampler {
+public class ProbabilitySampler implements Sampler<Object> {
   public double _threshold;
   private Random _random;
 
