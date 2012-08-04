@@ -23,10 +23,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class TraceInfo {
   public final long traceId;
-  public final long parentId;
+  public final long parentSpanId;
 
   public TraceInfo(long traceId, long spanId) {
     this.traceId = traceId;
-    this.parentId = spanId;
+    this.parentSpanId = spanId;
   }
 }

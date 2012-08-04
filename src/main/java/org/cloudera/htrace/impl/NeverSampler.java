@@ -20,10 +20,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 
-@SuppressWarnings("rawtypes")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class NeverSampler implements Sampler {
+public final class NeverSampler implements Sampler<Object> {
 
   private static NeverSampler instance;
 

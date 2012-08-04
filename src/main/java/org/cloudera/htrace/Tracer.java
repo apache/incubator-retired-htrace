@@ -62,8 +62,9 @@ public class Tracer {
 
   protected Span start(String description) {
     Span parent = currentTrace.get();
-    if (parent == null)
+    if (parent == null) {
       return NullSpan.getInstance();
+    }
     return push(parent.child(description));
   }
 
@@ -77,17 +78,6 @@ public class Tracer {
       root = parent.child(description);
     }
     return push(root);
-  }
-
-  protected void stop() {
-    stop(currentTrace());
-  }
-
-  protected void stop(Span span) {
-    if (span != null) {
-      span.stop();
-      currentTrace.set(null);
-    }
   }
 
   protected boolean isTracing() {
@@ -127,15 +117,6 @@ public class Tracer {
     } else {
       currentTrace.set(null);
     }
-  }
-
-  protected Span continueTrace(Span parent, String activity) {
-    return push(parent.child(activity));
-  }
-
-  protected Span continueTrace(String description, long traceId, long parentId) {
-    return push(new RootMilliSpan(description, traceId, random.nextLong(),
-        parentId, processId));
   }
 
   protected int numReceivers() {

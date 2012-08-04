@@ -32,7 +32,8 @@ import org.cloudera.htrace.wrappers.TraceRunnable;
  * NOTE: The *withSampling functions work, but the sampling and general control
  * of tracing has yet to be completely decided (color of the bike shed).
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+// @SuppressWarnings({ "unchecked", "rawtypes" })
+@SuppressWarnings("unchecked")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Trace {
@@ -55,55 +56,51 @@ public class Trace {
         TrueIfTracingSampler.getInstance());
   }
   
-  public static Span startSpan(String description, Sampler s) {
+  public static <T> Span startSpan(String description, Sampler<T> s) {
     return startSpan(description, s, null);
   }
 
-  public static Span startSpan(String description, Span parent, Sampler s) {
+  public static <T> Span startSpan(String description, Span parent, Sampler<T> s) {
     return startSpan(description, parent, s, null);
   }
 
-  public static Span startSpan(String description, TraceInfo tinfo, Sampler s) {
+  public static <T> Span startSpan(String description, TraceInfo tinfo,
+      Sampler<T> s) {
     return startSpan(description, tinfo, s, null);
   }
 
-  public static Span startSpan(String description, long traceId, long parentId,
-      Sampler s) {
+  public static <T> Span startSpan(String description, long traceId,
+      long parentId, Sampler<T> s) {
     return startSpan(description, traceId, parentId, s, null);
   }
 
-  public static Span startSpan(String description, Sampler s, Object info) {
+  public static <T> Span startSpan(String description, Sampler<T> s, T info) {
     if (s.next(info)) {
-      /*
-       * return Tracer.getInstance().push( new RootMilliSpan(description,
-       * random.nextLong(), random.nextLong(), Span.ROOT_SPAN_ID,
-       * Tracer.processId));
-       */
       return Tracer.getInstance().on(description);
     }
     return NullSpan.getInstance();
   }
 
-  public static Span startSpan(String description, Span parent, Sampler s,
-      Object info) {
+  public static <T> Span startSpan(String description, Span parent,
+      Sampler<T> s, T info) {
     if (s.next(info)) {
       return Tracer.getInstance().push(parent.child(description));
     }
     return NullSpan.getInstance();
   }
 
-  public static Span startSpan(String description, TraceInfo tinfo, Sampler s,
-      Object info) {
+  public static <T> Span startSpan(String description, TraceInfo tinfo,
+      Sampler<T> s, T info) {
     if (s.next(info)) {
       return Tracer.getInstance().push(
           new RootMilliSpan(description, tinfo.traceId, random.nextLong(),
-              tinfo.parentId, Tracer.processId));
+              tinfo.parentSpanId, Tracer.processId));
     }
     return NullSpan.getInstance();
   }
 
-  public static Span startSpan(String description, long traceId, long parentId,
-      Sampler s, Object info) {
+  public static <T> Span startSpan(String description, long traceId,
+      long parentId, Sampler<T> s, T info) {
     if (s.next(info)) {
       return Tracer.getInstance().push(
           new RootMilliSpan(description, traceId, random.nextLong(), parentId,
