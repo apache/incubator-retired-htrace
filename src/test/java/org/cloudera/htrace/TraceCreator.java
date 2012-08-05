@@ -37,7 +37,6 @@ public class TraceCreator {
    * Creates the demo trace (will create different traces from call to call).
    */
   public void createDemoTrace() {
-    // Trace.startTraceIfNotStarted("beginning the trace");
     Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
     try {
       Random r = new Random();
@@ -63,7 +62,6 @@ public class TraceCreator {
   }
 
   private void importantWork1() {
-    // Span cur = Trace.startSpanInCurrentTrace("important work 1");
     Span cur = Trace.startSpan("important work 1");
     try {
       Thread.sleep((long) (5000 * Math.random()));
@@ -76,7 +74,6 @@ public class TraceCreator {
   }
 
   private void importantWork2() {
-    // Span cur = Trace.startSpanInCurrentTrace("importantWork2");
     Span cur = Trace.startSpan("important work 2");
     try {
       Thread.sleep((long) (5000 * Math.random()));
@@ -98,8 +95,6 @@ public class TraceCreator {
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       } catch (ArithmeticException ae) {
-        // Span c =
-        // Trace.startSpanInCurrentTrace("dealing with arithmetic exception.");
         Span c = Trace.startSpan("dealing with arithmetic exception.");
         try {
           Thread.sleep((long) (5000 * Math.random()));
