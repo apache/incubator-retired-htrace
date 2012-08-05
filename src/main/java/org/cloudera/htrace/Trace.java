@@ -23,7 +23,7 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.impl.RootMilliSpan;
+import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
@@ -88,7 +88,7 @@ public class Trace {
       Sampler<T> s, T info) {
     if (s.next(info)) {
       return Tracer.getInstance().push(
-          new RootMilliSpan(description, tinfo.traceId, random.nextLong(),
+          new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
               tinfo.parentSpanId, Tracer.processId));
     }
     return NullSpan.getInstance();
@@ -98,7 +98,7 @@ public class Trace {
       long parentId, Sampler<T> s, T info) {
     if (s.next(info)) {
       return Tracer.getInstance().push(
-          new RootMilliSpan(description, traceId, random.nextLong(), parentId,
+          new ProcessRootMilliSpan(description, traceId, random.nextLong(), parentId,
               Tracer.processId));
     }
     return NullSpan.getInstance();

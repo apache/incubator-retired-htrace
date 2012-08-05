@@ -23,7 +23,7 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.cloudera.htrace.impl.RootMilliSpan;
+import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 
 /**
  * A Tracer provides the implementation for collecting and distributing Spans
@@ -59,7 +59,7 @@ public class Tracer {
     Span parent = currentTrace.get();
     Span root;
     if (parent == null) {
-      root = new RootMilliSpan(description, random.nextLong(),
+      root = new ProcessRootMilliSpan(description, random.nextLong(),
           random.nextLong(), Span.ROOT_SPAN_ID, processId);
     } else {
       root = parent.child(description);
