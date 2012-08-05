@@ -50,6 +50,7 @@ public class TestHTrace {
       }
       TraceCreator tc = new TraceCreator(lfsr);
       tc.createDemoTrace();
+      tc.createSimpleTrace();
       lfsr.close();
     } else {
       sosr = new StandardOutSpanReceiver();

@@ -33,6 +33,15 @@ public class TraceCreator {
     Trace.addReceiver(receiver);
   }
 
+  public void createSimpleTrace() {
+    Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
+    try {
+      importantWork1();
+    } finally {
+      s.stop();
+    }
+  }
+
   /**
    * Creates the demo trace (will create different traces from call to call).
    */
