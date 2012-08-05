@@ -23,7 +23,6 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.cloudera.htrace.impl.NullSpan;
 import org.cloudera.htrace.impl.RootMilliSpan;
 
 /**
@@ -58,14 +57,6 @@ public class Tracer {
       return new TraceInfo(span.getTraceId(), span.getSpanId());
     }
     return DONT_TRACE;
-  }
-
-  protected Span start(String description) {
-    Span parent = currentTrace.get();
-    if (parent == null) {
-      return NullSpan.getInstance();
-    }
-    return push(parent.child(description));
   }
 
   protected Span on(String description) {

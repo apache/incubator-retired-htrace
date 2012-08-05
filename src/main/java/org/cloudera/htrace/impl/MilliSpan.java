@@ -96,7 +96,7 @@ public class MilliSpan implements Span {
   @Override
   public String toString() {
     long parentId = getParentId();
-    return ("\"" + getDescription() + "\" trace:" + Long.toHexString(getTraceId())
+    return ("\"" + getDescription() + "\" trace:" + getTraceId()
         + " span:" + spanId + (parentId > 0 ? " parent:" + parentId : "")
         + " start:" + start + " ms: " + Long.toString(getAccumulatedMillis()) + (isRunning() ? "..."
           : ""));

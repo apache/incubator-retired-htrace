@@ -28,6 +28,7 @@ public class TestHTrace {
   @Test
   public void testHtrace() throws Exception {
     String fileName = System.getProperty("spanFile");
+
     LocalFileSpanReceiver lfsr = null;
     StandardOutSpanReceiver sosr = null;
 

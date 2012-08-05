@@ -12,8 +12,10 @@ public class TestSampler {
     TestParamSampler sampler = new TestParamSampler();
     Span s = Trace.startSpan("test", sampler, 1);
     assertFalse(s.equals(NullSpan.getInstance()));
+    s.stop();
     s = Trace.startSpan("test", sampler, -1);
     assertTrue(s.equals(NullSpan.getInstance()));
+    s.stop();
   }
 
   @Test
@@ -21,6 +23,7 @@ public class TestSampler {
     Span cur = Trace.startSpan("test", new TraceInfo(0, 0),
         Sampler.ALWAYS);
     assertFalse(cur.equals(NullSpan.getInstance()));
+    cur.stop();
   }
 
   private class TestParamSampler implements Sampler<Integer> {
