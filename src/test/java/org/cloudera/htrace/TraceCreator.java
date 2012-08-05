@@ -34,7 +34,7 @@ public class TraceCreator {
   }
 
   /**
-   * Creates the demo trace (will create a different traces from call to call).
+   * Creates the demo trace (will create different traces from call to call).
    */
   public void createDemoTrace() {
     // Trace.startTraceIfNotStarted("beginning the trace");
