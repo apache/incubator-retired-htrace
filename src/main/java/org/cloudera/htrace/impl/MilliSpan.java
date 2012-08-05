@@ -100,7 +100,6 @@ public class MilliSpan implements Span {
         + " span:" + spanId + (parentId > 0 ? " parent:" + parentId : "")
         + " start:" + start + " ms: " + Long.toString(getAccumulatedMillis()) + (isRunning() ? "..."
           : ""));
-
   }
 
   @Override
