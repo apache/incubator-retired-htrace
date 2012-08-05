@@ -40,10 +40,6 @@ public class Tracer {
 
   private static Tracer instance = null;
 
-  synchronized protected static void setInstance(Tracer tracer) {
-    instance = tracer;
-  }
-
   synchronized protected static Tracer getInstance() {
     if (instance == null) {
       instance = new Tracer();
