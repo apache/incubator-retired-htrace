@@ -56,6 +56,8 @@ public class TestHTrace {
     } else {
       sosr = new StandardOutSpanReceiver();
       TraceCreator tc = new TraceCreator(sosr);
+      tc.createSimpleTrace();
+      tc.createSampleRpcTrace();
       tc.createThreadedTraceTrace();
     }
   }
