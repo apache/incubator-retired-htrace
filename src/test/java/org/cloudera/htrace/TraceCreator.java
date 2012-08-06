@@ -45,7 +45,7 @@ public class TraceCreator {
   /**
    * Creates the demo trace (will create different traces from call to call).
    */
-  public void createDemoTrace() {
+  public void createThreadedTraceTrace() {
     Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
     try {
       Random r = new Random();

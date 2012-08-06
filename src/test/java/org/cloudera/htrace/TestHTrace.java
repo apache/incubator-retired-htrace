@@ -49,13 +49,13 @@ public class TestHTrace {
         throw e1;
       }
       TraceCreator tc = new TraceCreator(lfsr);
-      tc.createDemoTrace();
+      tc.createThreadedTraceTrace();
       tc.createSimpleTrace();
       lfsr.close();
     } else {
       sosr = new StandardOutSpanReceiver();
       TraceCreator tc = new TraceCreator(sosr);
-      tc.createDemoTrace();
+      tc.createThreadedTraceTrace();
     }
   }
 }
