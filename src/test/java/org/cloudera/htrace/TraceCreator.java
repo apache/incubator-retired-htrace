@@ -33,6 +33,15 @@ public class TraceCreator {
     Trace.addReceiver(receiver);
   }
 
+  public void createSampleRpcTrace() {
+    Span s = Trace.startSpan("rpc example", Sampler.ALWAYS);
+    try {
+      pretendRpcSend();
+    } finally {
+      s.stop();
+    }
+  }
+
   public void createSimpleTrace() {
     Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
     try {
@@ -113,6 +122,19 @@ public class TraceCreator {
           c.stop();
         }
       }
+    }
+  }
+
+  public void pretendRpcSend() {
+    pretendRpcReceiveWithTraceInfo(Trace.traceInfo());
+  }
+
+  public void pretendRpcReceiveWithTraceInfo(TraceInfo traceInfo) {
+    Span s = Trace.startSpan("received RPC", traceInfo, Sampler.ALWAYS);
+    try {
+      importantWork1();
+    } finally {
+      s.stop();
     }
   }
 }
