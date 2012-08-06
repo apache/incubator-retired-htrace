@@ -48,6 +48,12 @@ public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
     this._bwriter = new BufferedWriter(_fwriter);
   }
 
+  public LocalFileSpanReceiver() throws IOException {
+    this("/home/jonathan/project/spans/spanReceiverFile"
+        + System.currentTimeMillis() + Thread.currentThread().getName()
+        + ".txt");
+  }
+
   @Override
   public void receiveSpan(Span span) {
     try {
