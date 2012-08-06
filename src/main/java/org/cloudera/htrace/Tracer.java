@@ -23,6 +23,7 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.cloudera.htrace.impl.NullSpan;
 import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 
 /**
@@ -34,8 +35,13 @@ import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 public class Tracer {
   private final static Random random = new SecureRandom();
   private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
-  private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>();
-  private static final TraceInfo DONT_TRACE = new TraceInfo(0, 0);
+  private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>() {
+    @Override
+    protected Span initialValue() {
+      return NullSpan.getInstance();
+    }
+  };
+  public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
   protected static String processId = "";
 
   private static Tracer instance = null;
@@ -49,7 +55,7 @@ public class Tracer {
 
   protected static TraceInfo traceInfo() {
     Span span = currentTrace.get();
-    if (span != null) {
+    if (!span.equals(NullSpan.getInstance())) {
       return new TraceInfo(span.getTraceId(), span.getSpanId());
     }
     return DONT_TRACE;
@@ -58,7 +64,7 @@ public class Tracer {
   protected Span on(String description) {
     Span parent = currentTrace.get();
     Span root;
-    if (parent == null) {
+    if (parent.equals(NullSpan.getInstance())) {
       root = new ProcessRootMilliSpan(description, random.nextLong(),
           random.nextLong(), Span.ROOT_SPAN_ID, processId);
     } else {
@@ -68,7 +74,7 @@ public class Tracer {
   }
 
   protected boolean isTracing() {
-    return currentTrace.get() != null;
+    return !currentTrace.get().equals(NullSpan.getInstance());
   }
 
   protected Span currentTrace() {
@@ -101,7 +107,7 @@ public class Tracer {
       deliver(span);
       currentTrace.set(span.getParent());
     } else {
-      currentTrace.set(null);
+      currentTrace.set(NullSpan.getInstance());
     }
   }
 

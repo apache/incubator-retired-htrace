@@ -38,7 +38,7 @@ public class ProcessRootMilliSpan extends MilliSpan {
   public ProcessRootMilliSpan(String description, long traceId, long spanId,
       long parentId,
       String processId) {
-    super(description, spanId, null, processId);
+    super(description, spanId, NullSpan.getInstance(), processId);
     this.traceId = traceId;
     this.parentId = parentId;
   }
