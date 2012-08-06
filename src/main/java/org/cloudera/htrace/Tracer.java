@@ -64,7 +64,7 @@ public class Tracer {
     } else {
       root = parent.child(description);
     }
-    return push(root);
+    return setCurrentSpan(root);
   }
 
   protected boolean isTracing() {
@@ -89,7 +89,7 @@ public class Tracer {
     receivers.remove(receiver);
   }
 
-  protected Span push(Span span) {
+  protected Span setCurrentSpan(Span span) {
     if (span != null) {
       currentTrace.set(span);
     }
