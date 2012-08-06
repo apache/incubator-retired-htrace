@@ -92,7 +92,6 @@ public class Tracer {
   protected Span push(Span span) {
     if (span != null) {
       currentTrace.set(span);
-      span.start();
     }
     return span;
   }

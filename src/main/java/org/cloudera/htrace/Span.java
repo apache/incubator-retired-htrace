@@ -31,10 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Span {
-  public static final long ROOT_SPAN_ID = 0;
-
-  /** Begin gathering timing information */
-  void start();
+  public static final long ROOT_SPAN_ID = 0x74ace;
 
   /** The block has completed, stop the clock */
   void stop();

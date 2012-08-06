@@ -83,10 +83,6 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public void start() {
-  }
-
-  @Override
   public void stop() {
   }
 

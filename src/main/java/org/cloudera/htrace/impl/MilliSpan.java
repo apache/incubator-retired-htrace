@@ -53,17 +53,9 @@ public class MilliSpan implements Span {
     this.description = description;
     this.spanId = id;
     this.parent = parent;
-    this.start = 0;
+    this.start = System.currentTimeMillis();
     this.stop = 0;
     this.processId = processId;
-  }
-
-  @Override
-  public synchronized void start() {
-    if (start > 0)
-      throw new IllegalStateException("Span for " + description
-          + " has already been started at " + start);
-    start = System.currentTimeMillis();
   }
 
   @Override
