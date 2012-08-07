@@ -17,6 +17,8 @@
 package org.cloudera.htrace;
 
 
+import java.io.Closeable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -26,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface SpanReceiver {
+public interface SpanReceiver extends Closeable {
 
   /**
    * Called when a Span is stopped and can now be stored.

@@ -17,7 +17,6 @@
 package org.cloudera.htrace.impl;
 
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -35,7 +34,7 @@ import org.cloudera.htrace.SpanReceiver;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class LocalFileSpanReceiver implements SpanReceiver, Closeable {
+public class LocalFileSpanReceiver implements SpanReceiver {
   public static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.hbase.LocalFileSpanReceiver");
   private String _file;
