@@ -105,7 +105,8 @@ public class Tracer {
   protected void pop(Span span) {
     if (span != null) {
       deliver(span);
-      currentTrace.set(span.getParent());
+      Span parent = span.getParent();
+      currentTrace.set(parent != null ? parent : NullSpan.getInstance());
     } else {
       currentTrace.set(NullSpan.getInstance());
     }
