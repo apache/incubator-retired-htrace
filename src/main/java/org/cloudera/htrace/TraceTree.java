@@ -19,6 +19,7 @@ package org.cloudera.htrace;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -61,7 +62,14 @@ public class TraceTree {
   }
 
   public Span getRoot() {
-    return pc.get(0L).iterator().next();
+    if (pc.get(0L) != null) {
+      Iterator<Span> iter = pc.get(0L).iterator();
+      if (iter.hasNext()) {
+        return iter.next();
+      }
+    } 
+    throw new IllegalStateException(
+        "TraceTree is not correctly formed - there is no root trace in this collection.");
   }
 
   public Map<Long, Collection<Span>> getPc() {
