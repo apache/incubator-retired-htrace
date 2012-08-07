@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 /**
- * Experimental class, not recommended for use in production.
+ * NOTE: Experimental class, not recommended for use in production.
  */
 public class TraceTree {
   private Map<Long, Collection<Span>> pc; // parent->children map
