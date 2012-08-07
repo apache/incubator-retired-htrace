@@ -114,6 +114,14 @@ public class Trace {
     Tracer.processId = processId;
   }
 
+  /**
+   * Removes the given SpanReceiver from the list of SpanReceivers.
+   * 
+   * @param rcvr
+   */
+  public static void removeReceiver(SpanReceiver rcvr) {
+    Tracer.getInstance().removeReceiver(rcvr);
+  }
 
   /**
    * Adds the given SpanReceiver to the current Tracer instance's list of

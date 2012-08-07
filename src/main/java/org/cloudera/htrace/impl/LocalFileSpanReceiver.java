@@ -42,9 +42,16 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private BufferedWriter _bwriter;
 
   public LocalFileSpanReceiver(String file) throws IOException {
+    init(file);
+  }
+
+  public void init(String file) throws IOException {
     this._file = file;
     this._fwriter = new FileWriter(_file, true);
     this._bwriter = new BufferedWriter(_fwriter);
+  }
+
+  public LocalFileSpanReceiver() {
   }
 
   @Override
