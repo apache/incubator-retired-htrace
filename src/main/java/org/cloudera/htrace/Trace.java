@@ -140,9 +140,7 @@ public class Trace {
    * @param value
    */
   public static void addAnnotation(byte[] key, byte[] value) {
-    if (isTracing()) {
       currentTrace().addAnnotation(key, value);
-    }
   }
 
   /**
