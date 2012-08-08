@@ -25,14 +25,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
-import org.cloudera.htrace.impl.AlwaysSampler;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TraceProxy {
 
-  @SuppressWarnings("rawtypes")
-  static final Sampler ALWAYS = AlwaysSampler.getInstance();
+
 
   /**
    * Returns an object that will trace all calls to itself.
@@ -41,7 +39,7 @@ public class TraceProxy {
    * @return
    */
   public static <T> T trace(T instance) {
-    return trace(instance, ALWAYS);
+    return trace(instance, Sampler.ALWAYS);
   }
 
   /**
@@ -62,7 +60,7 @@ public class TraceProxy {
         }
 
         Span span = Trace.startSpan(method.getName(),
-            AlwaysSampler.getInstance());
+ Sampler.ALWAYS);
         try {
           return method.invoke(instance, args);
         } catch (Throwable ex) {

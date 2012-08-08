@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.impl.NullSpan;
@@ -33,6 +35,7 @@ import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class Tracer {
+  public static final Log LOG = LogFactory.getLog(Tracer.class);
   private final static Random random = new SecureRandom();
   private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>() {
@@ -104,6 +107,9 @@ public class Tracer {
 
   protected void pop(Span span) {
     if (span != null) {
+      if (!span.equals(currentTrace())) {
+        LOG.warn("Stopped span: " + span + " that was not the current span.");
+      }
       deliver(span);
       Span parent = span.getParent();
       currentTrace.set(parent != null ? parent : NullSpan.getInstance());

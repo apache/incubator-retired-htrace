@@ -50,8 +50,8 @@ import org.cloudera.htrace.impl.NeverSampler;
 @InterfaceStability.Evolving
 public interface Sampler<T> {
 
-  public static final AlwaysSampler ALWAYS = AlwaysSampler.getInstance();
-  public static final NeverSampler NEVER = NeverSampler.getInstance();
+  public static final Sampler<?> ALWAYS = AlwaysSampler.INSTANCE;
+  public static final Sampler<?> NEVER = NeverSampler.INSTANCE;
 
   public boolean next(T info);
 

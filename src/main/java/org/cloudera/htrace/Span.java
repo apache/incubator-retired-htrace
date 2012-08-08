@@ -25,8 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Base interface for gathering and reporting statistics about a block of
  * execution.
  * 
- * Span's form a tree structure with the parent relationship. The first span in
- * a trace has no parent span.
+ * Spans form a tree structure with the parent relationship. The first span in a
+ * trace has no parent span.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

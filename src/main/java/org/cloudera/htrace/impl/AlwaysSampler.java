@@ -24,17 +24,9 @@ import org.cloudera.htrace.Sampler;
 @InterfaceStability.Evolving
 public final class AlwaysSampler implements Sampler<Object> {
 
-  private static AlwaysSampler instance;
-
-  public static AlwaysSampler getInstance() {
-    if (instance == null) {
-      instance = new AlwaysSampler();
-    }
-    return instance;
-  }
+  public static final AlwaysSampler INSTANCE = new AlwaysSampler();
 
   private AlwaysSampler() {
-
   }
 
   @Override

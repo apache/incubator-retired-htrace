@@ -36,7 +36,7 @@ import org.cloudera.htrace.SpanReceiver;
 @InterfaceStability.Evolving
 public class LocalFileSpanReceiver implements SpanReceiver {
   public static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.hbase.LocalFileSpanReceiver");
+.getLog(LocalFileSpanReceiver.class);
   private String _file;
   private FileWriter _fwriter;
   private BufferedWriter _bwriter;

@@ -24,15 +24,7 @@ import org.cloudera.htrace.Sampler;
 @InterfaceStability.Evolving
 public final class NeverSampler implements Sampler<Object> {
 
-  private static NeverSampler instance;
-
-  // No need to ever have more than one of these created.
-  public static NeverSampler getInstance() {
-    if (instance == null) {
-      instance = new NeverSampler();
-    }
-    return instance;
-  }
+  public static final NeverSampler INSTANCE = new NeverSampler();
 
   private NeverSampler() {
   }
