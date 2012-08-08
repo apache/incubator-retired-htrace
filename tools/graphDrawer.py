@@ -17,47 +17,48 @@
 
 import sys
 import gv
+import json
+from json import JSONDecoder
 from datetime import datetime
 from pygraph.classes.graph import graph
 from pygraph.classes.digraph import digraph
 from pygraph.readwrite.dot import write
+from collections import defaultdict
 
 ROOT_SPAN_ID = 0x74ace
-def spanTextLineToDict(stl):
-    splitStl = stl.split("/<,")
-    return {k:int(v) if k != "desc" else v for (k,v) in zip(spanDictKeys, splitStl)}
 
 def buildGraph(nid):
-    for child in pc[nid]:
-        gr.add_node(child, [("label", nodesMap[child]["desc"] + "(" + str(nodesMap[child]["stop"] - nodesMap[child]["start"]) +  ")")])
-        gr.add_edge((nid, child))
-        buildGraph(child)
+  for child in parentToChildren[nid]:
+    gr.add_node(child, [("label", nodesMap[child]["Description"] + "(" + str(nodesMap[child]["Stop"] - nodesMap[child]["Start"]) +  ")")])
+    gr.add_edge((nid, child))
+    buildGraph(child)
 
-spanText = sys.stdin.read().strip("\\\\;;;;")
-spanDictKeys = ["trace", "span", "parent", "start","stop","desc"]
-spanText = spanText.split("\\\\;;;;")
-nodes = [spanTextLineToDict(x) for x in spanText]
-temp = sorted(spanText)
-nodesMap = {s['span']:s for s in nodes}
-pc = {}
+def loads_invalid_obj_list(s):
+  decoder = JSONDecoder()
+  s_len = len(s)
+  objs = []
+  end = 0
+  while end != s_len:
+    obj, end = decoder.raw_decode(s, idx=end)
+    objs.append(obj)
+  return objs
 
-for x in nodesMap.keys():
-    if x not in pc:
-        pc[x] = set()
-    parentId = nodesMap[x]["parent"]
-    if parentId not in pc:
-        pc[parentId] = set()
-    pc[parentId].add(x)
+nodes = loads_invalid_obj_list(sys.stdin.read().strip())
+nodesMap = {s["SpanID"]:s for s in nodes}
+parentToChildren = defaultdict(set)
+
+for node in nodesMap.values():
+  parentToChildren[node["ParentID"]].add(node["SpanID"])
 
 count = 0
-for x in pc[ROOT_SPAN_ID]:
-    count += 1
-    gr = digraph()
-    gr.add_node(x, [("label", nodesMap[x]["desc"] + "(" + str(nodesMap[x]["stop"] - nodesMap[x]["start"]) +  ")")])
-    buildGraph(x)
-    dot = write(gr)
-    gvv = gv.readstring(dot)
-    gv.layout(gvv,'dot')
-    gv.render(gvv,'png','./graphs/' + str(datetime.now()) + nodesMap[x]["desc"][:10] + '.png')
+for x in parentToChildren[ROOT_SPAN_ID]:
+  count += 1
+  gr = digraph()
+  gr.add_node(x, [("label", nodesMap[x]["Description"] + "(" + str(nodesMap[x]["Stop"] - nodesMap[x]["Start"]) +  ")")])
+  buildGraph(x)
+  dot = write(gr)
+  gvv = gv.readstring(dot)
+  gv.layout(gvv,'dot')
+  gv.render(gvv,'png','./graphs/' + str(datetime.now()) + str(nodesMap[x]["Description"]) +   '.png')
 
 print("Created " + str(count)  + " images.")

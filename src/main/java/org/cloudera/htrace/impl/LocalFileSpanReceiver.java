@@ -19,6 +19,8 @@ package org.cloudera.htrace.impl;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.SpanReceiver;
+import org.mortbay.util.ajax.JSON;
 
 /**
  * Writes the spans it receives to a local file. For now I am ignoring the data
@@ -40,30 +43,26 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private String _file;
   private FileWriter _fwriter;
   private BufferedWriter _bwriter;
+  private Map<String, Object> values;
 
   public LocalFileSpanReceiver(String file) throws IOException {
-    init(file);
-  }
-
-  public void init(String file) throws IOException {
     this._file = file;
     this._fwriter = new FileWriter(_file, true);
     this._bwriter = new BufferedWriter(_fwriter);
-  }
-
-  public LocalFileSpanReceiver() {
+    values = new HashMap<String, Object>();
   }
 
   @Override
   public void receiveSpan(Span span) {
     try {
-      // writes in this weird delimited format, mainly for demonstration
-      // purposes.
-      // doesn't write out data (annotations) to the file
-      _bwriter.write(String.format("%d/<,%d/<,%d/<,%d/<,%d/<,%s\\\\;;;;",
-          span.getTraceId(), span.getSpanId(), span.getParentId(),
-          span.getStartTimeMillis(), span.getStopTimeMillis(),
-          span.getDescription()));
+      values.put("SpanID", span.getSpanId());
+      values.put("TraceID", span.getTraceId());
+      values.put("ParentID", span.getParentId());
+      values.put("Start", span.getStartTimeMillis());
+      values.put("Stop", span.getStopTimeMillis());
+      values.put("Description", span.getDescription());
+      values.put("Annotations", span.getAnnotations());
+      _bwriter.write(JSON.toString(values));
       _bwriter.flush();
     } catch (IOException e) {
       LOG.error("Error when writing to file: " + _file, e);

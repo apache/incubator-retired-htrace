@@ -38,6 +38,7 @@ public class TraceCreator {
     try {
       pretendRpcSend();
     } finally {
+      // This will produce a warning from Tracer.java that is expected.
       s.stop();
     }
   }

@@ -17,7 +17,6 @@
 package org.cloudera.htrace;
 
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -109,7 +108,9 @@ public class Tracer {
   protected void pop(Span span) {
     if (span != null) {
       if (!span.equals(currentTrace())) {
-        LOG.warn("Stopped span: " + span + " that was not the current span.");
+        LOG.warn("Stopped span: " + span
+            + " that was not the current span. Current span is: "
+            + currentTrace());
       }
       deliver(span);
       Span parent = span.getParent();
