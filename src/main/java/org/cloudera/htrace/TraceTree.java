@@ -31,9 +31,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * NOTE: Experimental class, not recommended for use in production.
  */
 public class TraceTree {
-  private Map<Long, Collection<Span>> pc; // parent->children map
+  private Map<Long, Collection<Span>> spansByParent; // parent->children map
   private Collection<Span> spans;
-  private Map<String, Collection<Span>> processIdMap;
+  private Map<String, Collection<Span>> spansByPid;
 
   public Collection<Span> getSpans() {
     return spans;
@@ -41,32 +41,32 @@ public class TraceTree {
 
   public TraceTree(Collection<Span> spans) {
     this.spans = spans;
-    this.pc = new HashMap<Long, Collection<Span>>();
-    this.processIdMap = new HashMap<String, Collection<Span>>();
+    this.spansByParent = new HashMap<Long, Collection<Span>>();
+    this.spansByPid = new HashMap<String, Collection<Span>>();
 
     for (Span s : spans) {
       if (!s.getProcessId().equals("")) {
-        if (!processIdMap.containsKey(s.getProcessId())) {
-          processIdMap.put(s.getProcessId(), new HashSet<Span>());
+        if (!spansByPid.containsKey(s.getProcessId())) {
+          spansByPid.put(s.getProcessId(), new HashSet<Span>());
         }
-        processIdMap.get(s.getProcessId()).add(s);
+        spansByPid.get(s.getProcessId()).add(s);
       }
 
-      if (!pc.containsKey(s.getSpanId())) {
-        pc.put(s.getSpanId(), new HashSet<Span>());
+      if (!spansByParent.containsKey(s.getSpanId())) {
+        spansByParent.put(s.getSpanId(), new HashSet<Span>());
       }
 
-      if (!pc.containsKey(s.getParentId())) {
-        pc.put(s.getParentId(), new HashSet<Span>());
+      if (!spansByParent.containsKey(s.getParentId())) {
+        spansByParent.put(s.getParentId(), new HashSet<Span>());
       }
 
-      pc.get(s.getParentId()).add(s);
+      spansByParent.get(s.getParentId()).add(s);
     }
   }
 
   public Span getRoot() {
-    if (pc.get(0L) != null) {
-      Iterator<Span> iter = pc.get(0L).iterator();
+    if (spansByParent.get(0L) != null) {
+      Iterator<Span> iter = spansByParent.get(0L).iterator();
       if (iter.hasNext()) {
         return iter.next();
       }
@@ -76,10 +76,10 @@ public class TraceTree {
   }
 
   public Map<Long, Collection<Span>> getPc() {
-    return pc;
+    return spansByParent;
   }
 
   public Map<String, Collection<Span>> getProcessIdMap() {
-    return processIdMap;
+    return spansByPid;
   }
 }
