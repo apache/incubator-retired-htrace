@@ -22,6 +22,7 @@ from pygraph.classes.graph import graph
 from pygraph.classes.digraph import digraph
 from pygraph.readwrite.dot import write
 
+ROOT_SPAN_ID = 0x74ace
 def spanTextLineToDict(stl):
     splitStl = stl.split("/<,")
     return {k:int(v) if k != "desc" else v for (k,v) in zip(spanDictKeys, splitStl)}
@@ -49,7 +50,7 @@ for x in nodesMap.keys():
     pc[parentId].add(x)
 
 count = 0
-for x in pc[0x74ace]:
+for x in pc[ROOT_SPAN_ID]:
     count += 1
     gr = digraph()
     gr.add_node(x, [("label", nodesMap[x]["desc"] + "(" + str(nodesMap[x]["stop"] - nodesMap[x]["start"]) +  ")")])

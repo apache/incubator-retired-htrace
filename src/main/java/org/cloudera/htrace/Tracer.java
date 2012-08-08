@@ -20,6 +20,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +38,7 @@ import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
   private final static Random random = new SecureRandom();
-  private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
+  private final List<SpanReceiver> receivers = new CopyOnWriteArrayList<SpanReceiver>();
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>() {
     @Override
     protected Span initialValue() {
@@ -90,11 +91,11 @@ public class Tracer {
     }
   }
 
-  protected synchronized void addReceiver(SpanReceiver receiver) {
+  protected void addReceiver(SpanReceiver receiver) {
     receivers.add(receiver);
   }
 
-  protected synchronized void removeReceiver(SpanReceiver receiver) {
+  protected void removeReceiver(SpanReceiver receiver) {
     receivers.remove(receiver);
   }
 
