@@ -28,8 +28,8 @@ from collections import defaultdict
 ROOT_SPAN_ID = 0x74ace
 
 def buildGraph(nid):
-  for child in parentToChildren[nid]:
-    gr.add_node(child, [("label", nodesMap[child]["Description"] + "(" + str(nodesMap[child]["Stop"] - nodesMap[child]["Start"]) +  ")")])
+  for child in spansByParent[nid]:
+    gr.add_node(child, [("label", spansBySpanId[child]["Description"] + "(" + str(spansBySpanId[child]["Stop"] - spansBySpanId[child]["Start"]) +  ")")])
     gr.add_edge((nid, child))
     buildGraph(child)
 
@@ -44,21 +44,21 @@ def loads_invalid_obj_list(s):
   return objs
 
 nodes = loads_invalid_obj_list(sys.stdin.read().strip())
-nodesMap = {s["SpanID"]:s for s in nodes}
-parentToChildren = defaultdict(set)
+spansBySpanId = {s["SpanID"]:s for s in nodes}
+spansByParent = defaultdict(set)
 
-for node in nodesMap.values():
-  parentToChildren[node["ParentID"]].add(node["SpanID"])
+for node in spansBySpanId.values():
+  spansByParent[node["ParentID"]].add(node["SpanID"])
 
 count = 0
-for x in parentToChildren[ROOT_SPAN_ID]:
+for x in spansByParent[ROOT_SPAN_ID]:
   count += 1
   gr = digraph()
-  gr.add_node(x, [("label", nodesMap[x]["Description"] + "(" + str(nodesMap[x]["Stop"] - nodesMap[x]["Start"]) +  ")")])
+  gr.add_node(x, [("label", spansBySpanId[x]["Description"] + "(" + str(spansBySpanId[x]["Stop"] - spansBySpanId[x]["Start"]) +  ")")])
   buildGraph(x)
   dot = write(gr)
   gvv = gv.readstring(dot)
   gv.layout(gvv,'dot')
-  gv.render(gvv,'png','./graphs/' + str(datetime.now()) + str(nodesMap[x]["Description"]) +   '.png')
+  gv.render(gvv,'png','./graphs/' + str(datetime.now()) + str(spansBySpanId[x]["Description"]) +   '.png')
 
 print("Created " + str(count)  + " images.")
