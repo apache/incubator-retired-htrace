@@ -25,17 +25,16 @@ import org.cloudera.htrace.Sampler;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ProbabilitySampler implements Sampler<Object> {
-  public double _threshold;
-  private Random _random;
+  public final double threshold;
+  private Random random;
 
   public ProbabilitySampler(double threshold) {
-    _threshold = threshold;
-    _random = new Random();
+    this.threshold = threshold;
+    random = new Random();
   }
 
   @Override
   public boolean next(Object info) {
-    return _random.nextDouble() > _threshold;
+    return random.nextDouble() > threshold;
   }
-
 }

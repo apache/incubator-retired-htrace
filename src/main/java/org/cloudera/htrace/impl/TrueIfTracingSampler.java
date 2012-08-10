@@ -20,7 +20,6 @@ public class TrueIfTracingSampler implements Sampler {
   }
 
   private TrueIfTracingSampler() {
-
   }
 
   @Override

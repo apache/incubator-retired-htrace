@@ -29,9 +29,6 @@ import org.cloudera.htrace.Trace;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TraceProxy {
-
-
-
   /**
    * Returns an object that will trace all calls to itself.
    * 

@@ -40,46 +40,46 @@ import org.mortbay.util.ajax.JSON;
 public class LocalFileSpanReceiver implements SpanReceiver {
   public static final Log LOG = LogFactory
 .getLog(LocalFileSpanReceiver.class);
-  private String _file;
-  private FileWriter _fwriter;
-  private BufferedWriter _bwriter;
-  private Map<String, Object> _values;
+  private String file;
+  private FileWriter fwriter;
+  private BufferedWriter bwriter;
+  private Map<String, Object> values;
 
   public LocalFileSpanReceiver(String file) throws IOException {
-    this._file = file;
-    this._fwriter = new FileWriter(_file, true);
-    this._bwriter = new BufferedWriter(_fwriter);
-    _values = new HashMap<String, Object>();
+    this.file = file;
+    this.fwriter = new FileWriter(this.file, true);
+    this.bwriter = new BufferedWriter(fwriter);
+    values = new HashMap<String, Object>();
   }
 
   @Override
   public void receiveSpan(Span span) {
     try {
-      _values.put("SpanID", span.getSpanId());
-      _values.put("TraceID", span.getTraceId());
-      _values.put("ParentID", span.getParentId());
-      _values.put("Start", span.getStartTimeMillis());
-      _values.put("Stop", span.getStopTimeMillis());
-      _values.put("Description", span.getDescription());
-      _values.put("Annotations", span.getAnnotations());
-      _bwriter.write(JSON.toString(_values));
-      _bwriter.flush();
+      values.put("SpanID", span.getSpanId());
+      values.put("TraceID", span.getTraceId());
+      values.put("ParentID", span.getParentId());
+      values.put("Start", span.getStartTimeMillis());
+      values.put("Stop", span.getStopTimeMillis());
+      values.put("Description", span.getDescription());
+      values.put("Annotations", span.getAnnotations());
+      bwriter.write(JSON.toString(values));
+      bwriter.flush();
     } catch (IOException e) {
-      LOG.error("Error when writing to file: " + _file, e);
+      LOG.error("Error when writing to file: " + file, e);
     }
   }
 
   @Override
   public void close() throws IOException {
     try {
-      _fwriter.close();
+      fwriter.close();
     } catch (IOException e) {
-      LOG.error("Error closing filewriter for file: " + _file, e);
+      LOG.error("Error closing filewriter for file: " + file, e);
     }
     try {
-      _bwriter.close();
+      bwriter.close();
     } catch (IOException e) {
-      LOG.error("Error closing bufferedwriter for file: " + _file, e);
+      LOG.error("Error closing bufferedwriter for file: " + file, e);
     }
   }
 }
