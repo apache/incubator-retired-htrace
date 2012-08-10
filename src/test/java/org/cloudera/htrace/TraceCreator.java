@@ -16,12 +16,17 @@
  */
 package org.cloudera.htrace;
 
+import java.util.Collection;
 import java.util.Random;
 
 /**
  * Does some stuff and traces it.
  */
 public class TraceCreator {
+
+  public static final String RPC_TRACE_ROOT = "createSampleRpcTrace";
+  public static final String THREADED_TRACE_ROOT = "createThreadedTrace";
+  public static final String SIMPLE_TRACE_ROOT = "createSimpleTrace";
 
   /**
    * Takes as input the SpanReceiver that should used as the sink for Spans when
@@ -33,8 +38,20 @@ public class TraceCreator {
     Trace.addReceiver(receiver);
   }
 
+  /**
+   * Takes as input the SpanReceivers that should used as the sink for Spans
+   * when createDemoTrace() is called.
+   * 
+   * @param receivers
+   */
+  public TraceCreator(Collection<SpanReceiver> receivers) {
+    for (SpanReceiver receiver : receivers) {
+      Trace.addReceiver(receiver);
+    }
+  }
+
   public void createSampleRpcTrace() {
-    Span s = Trace.startSpan("rpc example", Sampler.ALWAYS);
+    Span s = Trace.startSpan(RPC_TRACE_ROOT, Sampler.ALWAYS);
     try {
       pretendRpcSend();
     } finally {
@@ -44,7 +61,7 @@ public class TraceCreator {
   }
 
   public void createSimpleTrace() {
-    Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
+    Span s = Trace.startSpan(SIMPLE_TRACE_ROOT, Sampler.ALWAYS);
     try {
       importantWork1();
     } finally {
@@ -55,8 +72,8 @@ public class TraceCreator {
   /**
    * Creates the demo trace (will create different traces from call to call).
    */
-  public void createThreadedTraceTrace() {
-    Span s = Trace.startSpan("beginning the trace.", Sampler.ALWAYS);
+  public void createThreadedTrace() {
+    Span s = Trace.startSpan(THREADED_TRACE_ROOT, Sampler.ALWAYS);
     try {
       Random r = new Random();
       int numThreads = r.nextInt(4) + 1;
@@ -83,7 +100,7 @@ public class TraceCreator {
   private void importantWork1() {
     Span cur = Trace.startSpan("important work 1");
     try {
-      Thread.sleep((long) (5000 * Math.random()));
+      Thread.sleep((long) (2000 * Math.random()));
       importantWork2();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -95,7 +112,7 @@ public class TraceCreator {
   private void importantWork2() {
     Span cur = Trace.startSpan("important work 2");
     try {
-      Thread.sleep((long) (5000 * Math.random()));
+      Thread.sleep((long) (2000 * Math.random()));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } finally {
@@ -107,7 +124,7 @@ public class TraceCreator {
     @Override
     public void run() {
       try {
-        Thread.sleep(1000);
+        Thread.sleep(750);
         Random r = new Random();
         int importantNumber = 100 / r.nextInt(3);
         System.out.println("Important number: " + importantNumber);
@@ -116,7 +133,7 @@ public class TraceCreator {
       } catch (ArithmeticException ae) {
         Span c = Trace.startSpan("dealing with arithmetic exception.");
         try {
-          Thread.sleep((long) (5000 * Math.random()));
+          Thread.sleep((long) (3000 * Math.random()));
         } catch (InterruptedException ie1) {
           Thread.currentThread().interrupt();
         } finally {

@@ -16,18 +16,30 @@
  */
 package org.cloudera.htrace;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import org.cloudera.htrace.impl.LocalFileSpanReceiver;
+import org.cloudera.htrace.impl.POJOSpanReceiver;
 import org.cloudera.htrace.impl.StandardOutSpanReceiver;
 import org.junit.Test;
 
+import com.google.common.collect.Multimap;
+
 public class TestHTrace {
 
-  @Test
+  public static final String SPAN_FILE_FLAG = "spanFile";
+
+  //@Test
   public void testHtrace() throws Exception {
-    String fileName = System.getProperty("spanFile");
+    String fileName = System.getProperty(SPAN_FILE_FLAG);
 
     LocalFileSpanReceiver lfsr = null;
     StandardOutSpanReceiver sosr = null;
@@ -49,7 +61,7 @@ public class TestHTrace {
         throw e1;
       }
       TraceCreator tc = new TraceCreator(lfsr);
-      tc.createThreadedTraceTrace();
+      tc.createThreadedTrace();
       tc.createSimpleTrace();
       tc.createSampleRpcTrace();
       lfsr.close();
@@ -58,7 +70,81 @@ public class TestHTrace {
       TraceCreator tc = new TraceCreator(sosr);
       tc.createSimpleTrace();
       tc.createSampleRpcTrace();
-      tc.createThreadedTraceTrace();
+      tc.createThreadedTrace();
     }
+  }
+
+  @Test
+  public void testHtrace1() throws Exception {
+    final int numTraces = 3;
+    String fileName = System.getProperty(SPAN_FILE_FLAG);
+
+    Collection<SpanReceiver> rcvrs = new HashSet<SpanReceiver>();
+
+    // writes spans to a file if one is provided to maven with
+    // -DspanFile="FILENAME", otherwise writes to standard out.
+    if (fileName != null) {
+      try {
+        File f = new File(fileName);
+        File parent = f.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+          throw new IllegalArgumentException("Couldn't create file: "
+              + fileName);
+        }
+        rcvrs.add(new LocalFileSpanReceiver(fileName));
+      } catch (IOException e1) {
+        System.out.println("Error constructing LocalFileSpanReceiver: "
+            + e1.getMessage());
+        throw e1;
+      }
+
+    } else {
+      rcvrs.add(new StandardOutSpanReceiver());
+    }
+    POJOSpanReceiver psr = new POJOSpanReceiver();
+    rcvrs.add(psr);
+    runTraceCreatorTraces(new TraceCreator(rcvrs));
+    for (SpanReceiver receiver : rcvrs) {
+      receiver.close();
+    }
+
+    Collection<Span> spans = psr.getSpans();
+    TraceTree traceTree = new TraceTree(spans);
+    Collection<Span> roots = traceTree.getRoots();
+    assertEquals(numTraces, roots.size());
+
+    Map<String,Span> descriptionToRootSpan = new HashMap<String,Span>();
+    for (Span root : roots) {
+      descriptionToRootSpan.put(root.getDescription(), root);
+    }
+    
+    assertTrue(descriptionToRootSpan.keySet().contains(
+        TraceCreator.RPC_TRACE_ROOT));
+    assertTrue(descriptionToRootSpan.keySet().contains(
+        TraceCreator.SIMPLE_TRACE_ROOT));
+    assertTrue(descriptionToRootSpan.keySet().contains(
+        TraceCreator.THREADED_TRACE_ROOT));
+    
+    Multimap<Long, Span> spansByParentId = traceTree.getSpansByParentIdMap();
+    Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
+    assertEquals(1, spansByParentId.get(rpcTraceRoot.getSpanId()).size());
+
+    Span rpcTraceChild1 = spansByParentId.get(rpcTraceRoot.getSpanId())
+        .iterator().next();
+    assertEquals(1, spansByParentId.get(rpcTraceChild1.getSpanId()).size());
+
+    Span rpcTraceChild2 = spansByParentId.get(rpcTraceChild1.getSpanId())
+        .iterator().next();
+    assertEquals(1, spansByParentId.get(rpcTraceChild2.getSpanId()).size());
+
+    Span rpcTraceChild3 = spansByParentId.get(rpcTraceChild2.getSpanId())
+        .iterator().next();
+    assertEquals(0, spansByParentId.get(rpcTraceChild3.getSpanId()).size());
+  }
+
+  private void runTraceCreatorTraces(TraceCreator tc) {
+    tc.createThreadedTrace();
+    tc.createSimpleTrace();
+    tc.createSampleRpcTrace();
   }
 }
