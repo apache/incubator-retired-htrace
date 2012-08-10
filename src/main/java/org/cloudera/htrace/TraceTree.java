@@ -17,69 +17,71 @@
 package org.cloudera.htrace;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 /**
- * NOTE: Experimental class, not recommended for use in production.
+ * Used to create the graph formed by spans.  
  */
 public class TraceTree {
-  private Map<Long, Collection<Span>> spansByParent; // parent->children map
+  public static final Log LOG = LogFactory.getLog(Tracer.class);
+  private Multimap<Long, Span> spansByParentID;
   private Collection<Span> spans;
-  private Map<String, Collection<Span>> spansByPid;
+  private Multimap<String, Span> spansByPid;
 
   public Collection<Span> getSpans() {
     return spans;
   }
 
+  /**
+   * @return A MultiMap from parent span ID -> children of span with that ID.
+   */
+  public Multimap<Long, Span> getSpansByParentIdMap() {
+    return HashMultimap.<Long, Span> create(spansByParentID);
+  }
+
+  /**
+   * Create a new TraceTree
+   * 
+   * @param spans
+   *          The collection of spans to use to create this TraceTree. Should
+   *          have at least one root span (span with parentId =
+   *          Span.ROOT_SPAN_ID
+   */
   public TraceTree(Collection<Span> spans) {
     this.spans = spans;
-    this.spansByParent = new HashMap<Long, Collection<Span>>();
-    this.spansByPid = new HashMap<String, Collection<Span>>();
+    this.spansByParentID = HashMultimap.<Long, Span> create();
+    this.spansByPid = HashMultimap.<String, Span> create();
 
     for (Span s : spans) {
-      if (!s.getProcessId().equals("")) {
-        if (!spansByPid.containsKey(s.getProcessId())) {
-          spansByPid.put(s.getProcessId(), new HashSet<Span>());
-        }
-        spansByPid.get(s.getProcessId()).add(s);
+      if (s.getProcessId() != null) {
+        spansByPid.put(s.getProcessId(), s);
+      } else {
+        LOG.warn("Encountered span with null processId. This should not happen. Span: "
+            + s);
       }
-
-      if (!spansByParent.containsKey(s.getSpanId())) {
-        spansByParent.put(s.getSpanId(), new HashSet<Span>());
-      }
-
-      if (!spansByParent.containsKey(s.getParentId())) {
-        spansByParent.put(s.getParentId(), new HashSet<Span>());
-      }
-
-      spansByParent.get(s.getParentId()).add(s);
+      spansByParentID.put(s.getParentId(), s);
     }
   }
 
-  public Span getRoot() {
-    if (spansByParent.get(0L) != null) {
-      Iterator<Span> iter = spansByParent.get(0L).iterator();
-      if (iter.hasNext()) {
-        return iter.next();
-      }
+  /**
+   * @return A collection of the root spans (spans with parent ID =
+   *         Span.ROOT_SPAN_ID) in this tree.
+   */
+  public Collection<Span> getRoots() {
+    Collection<Span> roots = spansByParentID.get(Span.ROOT_SPAN_ID);
+    if (roots != null) {
+      return roots;
     } 
     throw new IllegalStateException(
-        "TraceTree is not correctly formed - there is no root trace in this collection.");
-  }
-
-  public Map<Long, Collection<Span>> getPc() {
-    return spansByParent;
-  }
-
-  public Map<String, Collection<Span>> getProcessIdMap() {
-    return spansByPid;
+        "TraceTree is not correctly formed - there are no root spans in the collection provided at construction.");
   }
 }
