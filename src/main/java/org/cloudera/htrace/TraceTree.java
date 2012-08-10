@@ -37,17 +37,6 @@ public class TraceTree {
   private Collection<Span> spans;
   private Multimap<String, Span> spansByPid;
 
-  public Collection<Span> getSpans() {
-    return spans;
-  }
-
-  /**
-   * @return A MultiMap from parent span ID -> children of span with that ID.
-   */
-  public Multimap<Long, Span> getSpansByParentIdMap() {
-    return HashMultimap.<Long, Span> create(spansByParentID);
-  }
-
   /**
    * Create a new TraceTree
    * 
@@ -73,6 +62,21 @@ public class TraceTree {
   }
 
   /**
+   * @return The collection of spans given to this TraceTree at construction.
+   */
+  public Collection<Span> getSpans() {
+    return spans;
+  }
+
+  /**
+   * @return A copy of the MultiMap from parent span ID -> children of span with
+   *         that ID.
+   */
+  public Multimap<Long, Span> getSpansByParentIdMap() {
+    return HashMultimap.<Long, Span> create(spansByParentID);
+  }
+
+  /**
    * @return A collection of the root spans (spans with parent ID =
    *         Span.ROOT_SPAN_ID) in this tree.
    */
@@ -83,5 +87,14 @@ public class TraceTree {
     } 
     throw new IllegalStateException(
         "TraceTree is not correctly formed - there are no root spans in the collection provided at construction.");
+  }
+
+  /**
+   * @return A copy of the Multimap from String process ID -> spans with that
+   *         process ID. If process ID was not set in Trace.java, all spans will
+   *         have empty string process IDs.
+   */
+  public Multimap<String, Span> getSpansByPidMap() {
+    return HashMultimap.<String, Span> create(spansByPid);
   }
 }
