@@ -43,26 +43,26 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private String _file;
   private FileWriter _fwriter;
   private BufferedWriter _bwriter;
-  private Map<String, Object> values;
+  private Map<String, Object> _values;
 
   public LocalFileSpanReceiver(String file) throws IOException {
     this._file = file;
     this._fwriter = new FileWriter(_file, true);
     this._bwriter = new BufferedWriter(_fwriter);
-    values = new HashMap<String, Object>();
+    _values = new HashMap<String, Object>();
   }
 
   @Override
   public void receiveSpan(Span span) {
     try {
-      values.put("SpanID", span.getSpanId());
-      values.put("TraceID", span.getTraceId());
-      values.put("ParentID", span.getParentId());
-      values.put("Start", span.getStartTimeMillis());
-      values.put("Stop", span.getStopTimeMillis());
-      values.put("Description", span.getDescription());
-      values.put("Annotations", span.getAnnotations());
-      _bwriter.write(JSON.toString(values));
+      _values.put("SpanID", span.getSpanId());
+      _values.put("TraceID", span.getTraceId());
+      _values.put("ParentID", span.getParentId());
+      _values.put("Start", span.getStartTimeMillis());
+      _values.put("Stop", span.getStopTimeMillis());
+      _values.put("Description", span.getDescription());
+      _values.put("Annotations", span.getAnnotations());
+      _bwriter.write(JSON.toString(_values));
       _bwriter.flush();
     } catch (IOException e) {
       LOG.error("Error when writing to file: " + _file, e);
