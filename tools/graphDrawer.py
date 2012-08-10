@@ -59,6 +59,6 @@ for x in spansByParent[ROOT_SPAN_ID]:
   dot = write(gr)
   gvv = gv.readstring(dot)
   gv.layout(gvv,'dot')
-  gv.render(gvv,'png','./graphs/' + str(datetime.now()) + str(spansBySpanId[x]["Description"]) +   '.png')
+  gv.render(gvv,'png','./graphs/' + str(datetime.now()) + str(spansBySpanId[x]["Description"])[:10] +   '.png')
 
 print("Created " + str(count)  + " images.")
