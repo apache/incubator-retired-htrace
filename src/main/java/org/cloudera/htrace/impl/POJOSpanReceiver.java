@@ -14,6 +14,9 @@ import org.cloudera.htrace.SpanReceiver;
 public class POJOSpanReceiver implements SpanReceiver {
   private final Collection<Span> spans;
 
+  /**
+   * @return The spans this POJOSpanReceiver has received.
+   */
   public Collection<Span> getSpans() {
     return spans;
   }
