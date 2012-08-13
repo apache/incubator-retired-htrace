@@ -107,7 +107,8 @@ public class Tracer {
 
   protected void pop(Span span) {
     if (span != null) {
-      if (!span.equals(currentTrace())) {
+      if (!span.equals(currentTrace())
+          && !currentTrace().equals(NullSpan.getInstance())) {
         LOG.warn("Stopped span: " + span
             + " that was not the current span. Current span is: "
             + currentTrace());
