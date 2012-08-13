@@ -43,8 +43,8 @@ HTrace stores span information in java's ThreadLocals, which causes
 the trace to be "lost" on thread changes. The only way to prevent
 this is to "wrap" your thread changes. For example, if your code looks
 like this:  
-`Thread t1 = new Thread(new MyRunnable());`
-...
+`Thread t1 = new Thread(new MyRunnable());`  
+...  
 Just change it to look this:  
 `Thread t1 = new Thread(Trace.wrap(new MyRunnable()));`
 
@@ -77,11 +77,11 @@ see on your traces.  In this case, you could start a new span before
 the computation that you then stop after the computation has
 finished. It might look like this:  
 <br>
-```Span computationSpan = Trace.startSpan("Expensive computation.");    
-    try {    
-        //expensive computation here     
-    } finally {     
-        computationSpan.stop();     
+```Span computationSpan = Trace.startSpan("Expensive computation.");    <br>
+    try {    <br>
+        //expensive computation here     <br>
+    } finally {     <br>
+        computationSpan.stop();     <br>
     }```
 <br>
 HTrace also supports key-value annotations on a per-trace basis.  
