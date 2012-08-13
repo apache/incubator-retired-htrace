@@ -37,8 +37,13 @@ public class TestHTrace {
 
   public static final String SPAN_FILE_FLAG = "spanFile";
 
+  /**
+   * Basic system test of HTrace.
+   * 
+   * @throws Exception
+   */
   @Test
-  public void testHtrace1() throws Exception {
+  public void testHtrace() throws Exception {
     final int numTraces = 3;
     String fileName = System.getProperty(SPAN_FILE_FLAG);
 
@@ -64,9 +69,11 @@ public class TestHTrace {
     } else {
       rcvrs.add(new StandardOutSpanReceiver());
     }
+
     POJOSpanReceiver psr = new POJOSpanReceiver();
     rcvrs.add(psr);
     runTraceCreatorTraces(new TraceCreator(rcvrs));
+
     for (SpanReceiver receiver : rcvrs) {
       receiver.close();
     }
