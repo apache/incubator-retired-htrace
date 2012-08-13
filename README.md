@@ -77,12 +77,12 @@ see on your traces.  In this case, you could start a new span before
 the computation that you then stop after the computation has
 finished. It might look like this:  
 <br>
-```Span computationSpan = Trace.startSpan("Expensive computation.");    <br>
-    try {    <br>
-        //expensive computation here     <br>
-    } finally {     <br>
-        computationSpan.stop();     <br>
-    }```
+    Span computationSpan = Trace.startSpan("Expensive computation.");  
+    try {  
+        //expensive computation here  
+    } finally {  
+        computationSpan.stop();  
+    }  
 <br>
 HTrace also supports key-value annotations on a per-trace basis.  
 <br>
