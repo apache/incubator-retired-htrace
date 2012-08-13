@@ -37,43 +37,6 @@ public class TestHTrace {
 
   public static final String SPAN_FILE_FLAG = "spanFile";
 
-  //@Test
-  public void testHtrace() throws Exception {
-    String fileName = System.getProperty(SPAN_FILE_FLAG);
-
-    LocalFileSpanReceiver lfsr = null;
-    StandardOutSpanReceiver sosr = null;
-
-    // writes spans to a file if one is provided to maven with
-    // -DspanFile="FILENAME", otherwise writes to standard out.
-    if (fileName != null) {
-      try {
-        File f = new File(fileName);
-        File parent = f.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-          throw new IllegalArgumentException("Couldn't create file: "
-              + fileName);
-        }
-        lfsr = new LocalFileSpanReceiver(fileName);
-      } catch (IOException e1) {
-        System.out.println("Error constructing LocalFileSpanReceiver: "
-            + e1.getMessage());
-        throw e1;
-      }
-      TraceCreator tc = new TraceCreator(lfsr);
-      tc.createThreadedTrace();
-      tc.createSimpleTrace();
-      tc.createSampleRpcTrace();
-      lfsr.close();
-    } else {
-      sosr = new StandardOutSpanReceiver();
-      TraceCreator tc = new TraceCreator(sosr);
-      tc.createSimpleTrace();
-      tc.createSampleRpcTrace();
-      tc.createThreadedTrace();
-    }
-  }
-
   @Test
   public void testHtrace1() throws Exception {
     final int numTraces = 3;
