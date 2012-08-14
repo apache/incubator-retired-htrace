@@ -5,10 +5,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Trace;
 
-@SuppressWarnings("rawtypes")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class TrueIfTracingSampler implements Sampler {
+public class TrueIfTracingSampler implements Sampler<Object> {
 
   private static TrueIfTracingSampler instance;
 

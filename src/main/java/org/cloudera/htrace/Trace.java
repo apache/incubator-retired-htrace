@@ -28,7 +28,7 @@ import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
 
-@SuppressWarnings("unchecked")
+
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Trace {

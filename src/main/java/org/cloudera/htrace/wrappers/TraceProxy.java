@@ -42,12 +42,14 @@ public class TraceProxy {
   /**
    * Returns an object that will trace all calls to itself.
    * 
+   * @param <V>
+   * 
    * @param instance
    * @param sampler
    * @return
    */
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  public static <T> T trace(final T instance, final Sampler sampler) {
+  @SuppressWarnings("unchecked")
+  public static <T, V> T trace(final T instance, final Sampler<V> sampler) {
     InvocationHandler handler = new InvocationHandler() {
       @Override
       public Object invoke(Object obj, Method method, Object[] args)
@@ -56,8 +58,7 @@ public class TraceProxy {
           return method.invoke(instance, args);
         }
 
-        Span span = Trace.startSpan(method.getName(),
- Sampler.ALWAYS);
+        Span span = Trace.startSpan(method.getName(), Sampler.ALWAYS);
         try {
           return method.invoke(instance, args);
         } catch (Throwable ex) {

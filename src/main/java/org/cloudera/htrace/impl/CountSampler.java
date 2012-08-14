@@ -26,10 +26,9 @@ import org.cloudera.htrace.Sampler;
  * Sampler that returns true every N calls.
  * 
  */
-@SuppressWarnings("rawtypes")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class CountSampler implements Sampler {
+public class CountSampler implements Sampler<Object> {
 
   final static Random random = new Random();
 
