@@ -38,8 +38,7 @@ import org.mortbay.util.ajax.JSON;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class LocalFileSpanReceiver implements SpanReceiver {
-  public static final Log LOG = LogFactory
-.getLog(LocalFileSpanReceiver.class);
+  public static final Log LOG = LogFactory.getLog(LocalFileSpanReceiver.class);
   private String file;
   private FileWriter fwriter;
   private BufferedWriter bwriter;
