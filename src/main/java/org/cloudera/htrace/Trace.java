@@ -28,7 +28,10 @@ import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
 
-
+/**
+ * The primary way to interact with the library. Provides methods to start
+ * spans, as well as set necessary tracing information.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Trace {
