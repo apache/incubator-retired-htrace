@@ -28,7 +28,7 @@ import org.cloudera.htrace.Trace;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class TraceRunnable implements Runnable, Comparable<TraceRunnable> {
+public class TraceRunnable implements Runnable {
 
   private final Span parent;
   private final Runnable runnable;
@@ -56,11 +56,5 @@ public class TraceRunnable implements Runnable, Comparable<TraceRunnable> {
     } else {
       runnable.run();
     }
-  }
-
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Override
-  public int compareTo(TraceRunnable o) {
-    return ((Comparable) this.runnable).compareTo(o.runnable);
   }
 }
