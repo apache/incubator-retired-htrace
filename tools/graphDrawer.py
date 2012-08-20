@@ -29,7 +29,10 @@ ROOT_SPAN_ID = 0x74ace
 
 def buildGraph(nid):
   for child in spansByParent[nid]:
-    gr.add_node(child, [("label", spansBySpanId[child]["Description"] + "(" + str(spansBySpanId[child]["Stop"] - spansBySpanId[child]["Start"]) +  ")")])
+    desc = spansBySpanId[child]["Description"] + "(" + str(spansBySpanId[child]["Stop"] - spansBySpanId[child]["Start"]) +  ")"
+    #graphviz can't handle '\'
+    desc = desc.replace("\\", "")
+    gr.add_node(child, [("label", desc)])
     gr.add_edge((nid, child))
     buildGraph(child)
 
