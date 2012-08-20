@@ -18,7 +18,7 @@ language governing permissions and limitations under the License. -->
     <description>Tracing library</description>
     <developers>
         <developer>
-            <id>leavitt</id>
+            <id>jon</id>
             <name>Jonathan Leavitt</name>
             <email>jonathan.leavitt@cloudera.com</email>
             <timezone>-7</timezone>
