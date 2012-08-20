@@ -57,7 +57,7 @@ public interface Span {
   /** A pseudo-unique (random) number assigned to this span instance */
   long getSpanId();
 
-  /** The parent span: returns null if this is the root span */
+  /** The parent span: returns the NullSpan if this is the root span */
   Span getParent();
 
   /**
