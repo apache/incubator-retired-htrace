@@ -38,11 +38,11 @@ public class MilliSpan implements Span {
   private static final Random next = new SecureRandom();
   private long start;
   private long stop;
-  final private Span parent;
-  final private String description;
-  final private long spanId;
+  private final Span parent;
+  private final String description;
+  private final long spanId;
   private Map<byte[], byte[]> traceInfo = null;
-  private String processId;
+  private final String processId;
 
   @Override
   public Span child(String description) {
