@@ -20,14 +20,10 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TraceProxy {
   /**
    * Returns an object that will trace all calls to itself.

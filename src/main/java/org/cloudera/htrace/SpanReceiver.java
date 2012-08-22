@@ -19,15 +19,11 @@ package org.cloudera.htrace;
 
 import java.io.Closeable;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * The collector within a process that is the destination of Spans when a trace
  * is running.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface SpanReceiver extends Closeable {
 
   /**

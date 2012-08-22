@@ -23,8 +23,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.impl.NullSpan;
 import org.cloudera.htrace.impl.ProcessRootMilliSpan;
 
@@ -32,8 +30,6 @@ import org.cloudera.htrace.impl.ProcessRootMilliSpan;
  * A Tracer provides the implementation for collecting and distributing Spans
  * within a process.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
   private final static Random random = new SecureRandom();

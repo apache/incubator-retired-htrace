@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
@@ -31,8 +29,6 @@ import org.cloudera.htrace.Trace;
  * A Span implementation that stores its information in milliseconds since the
  * epoch.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MilliSpan implements Span {
 
   private static final Random next = new SecureRandom();

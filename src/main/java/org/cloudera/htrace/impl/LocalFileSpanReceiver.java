@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.SpanReceiver;
 import org.mortbay.util.ajax.JSON;
@@ -39,8 +37,6 @@ import org.mortbay.util.ajax.JSON;
  * (annotations) portion of the spans. A production LocalFileSpanReceiver should
  * use a real CSV format.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class LocalFileSpanReceiver implements SpanReceiver {
   // default capacity for the executors blocking queue
   public static final int DEFAULT_CAPACITY = 5000;

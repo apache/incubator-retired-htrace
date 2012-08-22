@@ -18,16 +18,12 @@ package org.cloudera.htrace.impl;
 
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 
 /**
  * Sampler that returns true every N calls.
  * 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class CountSampler implements Sampler<Object> {
 
   final static Random random = new Random();

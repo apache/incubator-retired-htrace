@@ -18,12 +18,8 @@ package org.cloudera.htrace.impl;
 
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ProbabilitySampler implements Sampler<Object> {
   public final double threshold;
   private Random random;

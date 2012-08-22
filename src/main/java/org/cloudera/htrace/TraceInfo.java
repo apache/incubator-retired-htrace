@@ -16,11 +16,7 @@
  */
 package org.cloudera.htrace;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TraceInfo {
   public final long traceId;
   public final long parentSpanId;

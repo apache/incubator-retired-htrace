@@ -26,11 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TraceExecutorService implements ExecutorService {
 
   private final ExecutorService impl;

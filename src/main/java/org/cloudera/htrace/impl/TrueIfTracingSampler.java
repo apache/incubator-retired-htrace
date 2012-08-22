@@ -1,15 +1,11 @@
 package org.cloudera.htrace.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Trace;
 
 /**
  * A Sampler that returns true if and only if tracing is on the current thread.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TrueIfTracingSampler implements Sampler<Object> {
 
   private static TrueIfTracingSampler instance;

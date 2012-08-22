@@ -18,8 +18,6 @@ package org.cloudera.htrace.wrappers;
 
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
@@ -28,8 +26,6 @@ import org.cloudera.htrace.Trace;
  * Wrap a Callable with a Span that survives a change in threads.
  * 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TraceCallable<V> implements Callable<V> {
   private final Callable<V> impl;
   private final Span parent;

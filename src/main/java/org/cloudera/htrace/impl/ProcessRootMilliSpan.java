@@ -16,15 +16,11 @@
  */
 package org.cloudera.htrace.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Span that roots the span tree in a process, but perhaps not the whole trace.
  * 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ProcessRootMilliSpan extends MilliSpan {
 
   private final long traceId;

@@ -16,8 +16,6 @@
  */
 package org.cloudera.htrace;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.impl.AlwaysSampler;
 import org.cloudera.htrace.impl.NeverSampler;
 
@@ -46,8 +44,6 @@ import org.cloudera.htrace.impl.NeverSampler;
  * }
  * This would trace 50% of all gets, 75% of all puts and would not trace any other requests.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Sampler<T> {
 
   public static final Sampler<?> ALWAYS = AlwaysSampler.INSTANCE;

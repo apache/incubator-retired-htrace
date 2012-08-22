@@ -19,8 +19,6 @@ package org.cloudera.htrace.impl;
 import java.util.Collections;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Span;
 
 /**
@@ -28,8 +26,6 @@ import org.cloudera.htrace.Span;
  * we are not tracing.
  * 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class NullSpan implements Span {
 
   private static NullSpan instance = new NullSpan();

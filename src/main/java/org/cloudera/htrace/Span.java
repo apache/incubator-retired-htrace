@@ -18,8 +18,6 @@ package org.cloudera.htrace;
 
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Base interface for gathering and reporting statistics about a block of
@@ -28,8 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Spans form a tree structure with the parent relationship. The first span in a
  * trace has no parent span.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Span {
   public static final long ROOT_SPAN_ID = 0x74ace;
 

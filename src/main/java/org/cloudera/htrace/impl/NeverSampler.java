@@ -16,12 +16,8 @@
  */
 package org.cloudera.htrace.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.cloudera.htrace.Sampler;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class NeverSampler implements Sampler<Object> {
 
   public static final NeverSampler INSTANCE = new NeverSampler();
