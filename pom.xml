@@ -14,7 +14,7 @@ language governing permissions and limitations under the License. -->
     <modelVersion>4.0.0</modelVersion>
     <artifactId>htrace</artifactId>
     <name>htrace</name>
-    <version>1.49</version>
+    <version>1.50-SNAPSHOT</version>
     <description>Tracing library</description>
     <developers>
         <developer>
