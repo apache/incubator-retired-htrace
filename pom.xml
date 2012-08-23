@@ -133,7 +133,7 @@ language governing permissions and limitations under the License. -->
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-util</artifactId>
-            <version>6.1.19</version>
+            <version>6.1.26</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
