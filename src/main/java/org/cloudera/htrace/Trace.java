@@ -33,21 +33,42 @@ import org.cloudera.htrace.wrappers.TraceRunnable;
 public class Trace {
   private final static Random random = new SecureRandom();
 
+  /**
+   * Starts and returns a new span as the child of the current span if the
+   * default sampler (TrueIfTracingSampler) returns true, otherwise returns the
+   * NullSpan.
+   * 
+   * @param description
+   *          Description of the span to be created.
+   * @return
+   */
   public static Span startSpan(String description) {
-    return startSpan(description, TrueIfTracingSampler.getInstance());
+    return startSpan(description, TrueIfTracingSampler.INSTANCE);
   }
 
+  /**
+   * Starts and returns a new span as the child of the parameter 'parent' if the
+   * default sampler (TrueIfTracingSampler) returns true, otherwise returns the
+   * NullSpan.
+   * 
+   * @param description
+   *          Description of the span to be created.
+   * @param parent
+   *          The parent that should be used to create the child span that is to
+   *          be returned if the default TrueIfTracingSampler returns true.
+   * @return
+   */
   public static Span startSpan(String description, Span parent) {
-    return startSpan(description, parent, TrueIfTracingSampler.getInstance());
+    return startSpan(description, parent, TrueIfTracingSampler.INSTANCE);
   }
 
   public static Span startSpan(String description, TraceInfo tinfo) {
-    return startSpan(description, tinfo, TrueIfTracingSampler.getInstance());
+    return startSpan(description, tinfo, TrueIfTracingSampler.INSTANCE);
   }
   
   public static Span startSpan(String description, long traceId, long parentId) {
     return startSpan(description, traceId, parentId,
-        TrueIfTracingSampler.getInstance());
+        TrueIfTracingSampler.INSTANCE);
   }
   
   public static <T> Span startSpan(String description, Sampler<T> s) {

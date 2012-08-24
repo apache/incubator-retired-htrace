@@ -8,14 +8,7 @@ import org.cloudera.htrace.Trace;
  */
 public class TrueIfTracingSampler implements Sampler<Object> {
 
-  private static TrueIfTracingSampler instance;
-
-  public static TrueIfTracingSampler getInstance() {
-    if (instance == null) {
-      instance = new TrueIfTracingSampler();
-    }
-    return instance;
-  }
+  public static final TrueIfTracingSampler INSTANCE = new TrueIfTracingSampler();
 
   private TrueIfTracingSampler() {
   }

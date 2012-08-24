@@ -143,7 +143,7 @@ language governing permissions and limitations under the License. -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>13.0</version>
+            <version>12.0.1</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
