@@ -47,79 +47,34 @@ public class Trace {
   }
 
   /**
-   * Starts and returns a new span as the child of the parameter 'parent' if the
-   * default sampler (TrueIfTracingSampler) returns true, otherwise returns the
-   * NullSpan.
+   * Starts and returns a new span as the child of the parameter 'parent'. This
+   * will always return a new span, even if tracing wasn't previously enabled for
+   * this thread.
    * 
    * @param description
    *          Description of the span to be created.
    * @param parent
    *          The parent that should be used to create the child span that is to
-   *          be returned if the default TrueIfTracingSampler returns true.
+   *          be returned.
    * @return
    */
   public static Span startSpan(String description, Span parent) {
-    return startSpan(description, parent, TrueIfTracingSampler.INSTANCE);
+    return Tracer.getInstance().setCurrentSpan(parent.child(description));
   }
 
   public static Span startSpan(String description, TraceInfo tinfo) {
-    return startSpan(description, tinfo, TrueIfTracingSampler.INSTANCE);
-  }
-  
-  public static Span startSpan(String description, long traceId, long parentId) {
-    return startSpan(description, traceId, parentId,
-        TrueIfTracingSampler.INSTANCE);
+    return Tracer.getInstance().setCurrentSpan(
+        new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
+            tinfo.parentSpanId, Tracer.processId));
   }
   
   public static <T> Span startSpan(String description, Sampler<T> s) {
     return startSpan(description, s, null);
   }
 
-  public static <T> Span startSpan(String description, Span parent, Sampler<T> s) {
-    return startSpan(description, parent, s, null);
-  }
-
-  public static <T> Span startSpan(String description, TraceInfo tinfo,
-      Sampler<T> s) {
-    return startSpan(description, tinfo, s, null);
-  }
-
-  public static <T> Span startSpan(String description, long traceId,
-      long parentId, Sampler<T> s) {
-    return startSpan(description, traceId, parentId, s, null);
-  }
-
   public static <T> Span startSpan(String description, Sampler<T> s, T info) {
     if (isTracing() || s.next(info)) {
       return Tracer.getInstance().on(description);
-    }
-    return NullSpan.getInstance();
-  }
-
-  public static <T> Span startSpan(String description, Span parent,
-      Sampler<T> s, T info) {
-    if (isTracing() || s.next(info)) {
-      return Tracer.getInstance().setCurrentSpan(parent.child(description));
-    }
-    return NullSpan.getInstance();
-  }
-
-  public static <T> Span startSpan(String description, TraceInfo tinfo,
-      Sampler<T> s, T info) {
-    if (isTracing() || s.next(info)) {
-      return Tracer.getInstance().setCurrentSpan(
-          new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
-              tinfo.parentSpanId, Tracer.processId));
-    }
-    return NullSpan.getInstance();
-  }
-
-  public static <T> Span startSpan(String description, long traceId,
-      long parentId, Sampler<T> s, T info) {
-    if (isTracing() || s.next(info)) {
-      return Tracer.getInstance().setCurrentSpan(
-          new ProcessRootMilliSpan(description, traceId, random.nextLong(), parentId,
-              Tracer.processId));
     }
     return NullSpan.getInstance();
   }
