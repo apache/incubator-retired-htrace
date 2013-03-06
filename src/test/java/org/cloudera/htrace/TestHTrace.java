@@ -20,7 +20,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,20 +51,17 @@ public class TestHTrace {
     // writes spans to a file if one is provided to maven with
     // -DspanFile="FILENAME", otherwise writes to standard out.
     if (fileName != null) {
-      try {
-        File f = new File(fileName);
-        File parent = f.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-          throw new IllegalArgumentException("Couldn't create file: "
-              + fileName);
-        }
-        rcvrs.add(new LocalFileSpanReceiver(fileName));
-      } catch (IOException e1) {
-        System.out.println("Error constructing LocalFileSpanReceiver: "
-            + e1.getMessage());
-        throw e1;
+      File f = new File(fileName);
+      File parent = f.getParentFile();
+      if (parent != null && !parent.exists() && !parent.mkdirs()) {
+        throw new IllegalArgumentException("Couldn't create file: "
+            + fileName);
       }
-
+      HashMap<String, String> conf = new HashMap<String, String>();
+      conf.put("local-file-span-receiver.path", fileName);
+      LocalFileSpanReceiver receiver = new LocalFileSpanReceiver();
+      receiver.configure(HTraceConfiguration.fromMap(conf));
+      rcvrs.add(receiver);
     } else {
       rcvrs.add(new StandardOutSpanReceiver());
     }

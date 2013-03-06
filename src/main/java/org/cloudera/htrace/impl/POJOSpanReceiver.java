@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
+import org.cloudera.htrace.HTraceConfiguration;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.SpanReceiver;
 
@@ -13,6 +14,10 @@ import org.cloudera.htrace.SpanReceiver;
  */
 public class POJOSpanReceiver implements SpanReceiver {
   private final Collection<Span> spans;
+
+  @Override
+  public void configure(HTraceConfiguration conf) {    
+  }
 
   /**
    * @return The spans this POJOSpanReceiver has received.
@@ -33,4 +38,5 @@ public class POJOSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     spans.add(span);
   }
+
 }

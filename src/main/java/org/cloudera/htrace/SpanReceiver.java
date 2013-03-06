@@ -27,6 +27,12 @@ import java.io.Closeable;
 public interface SpanReceiver extends Closeable {
 
   /**
+   * Hosts of SpanReceivers should call this method to provide
+   * configuration to SpanReceivers after creating them.
+   */
+  public void configure(HTraceConfiguration conf);
+  
+  /**
    * Called when a Span is stopped and can now be stored.
    * 
    * @param span
