@@ -21,8 +21,13 @@ public class TraceInfo {
   public final long traceId;
   public final long parentSpanId;
 
-  public TraceInfo(long traceId, long spanId) {
+  public TraceInfo(long traceId, long parentSpanId) {
     this.traceId = traceId;
-    this.parentSpanId = spanId;
+    this.parentSpanId = parentSpanId;
+  }
+
+  @Override
+  public String toString() {
+    return "TraceInfo(traceId=" + traceId + ", parentSpanId=" + parentSpanId + ")";
   }
 }
