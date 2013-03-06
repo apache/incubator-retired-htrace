@@ -20,8 +20,7 @@ public class TestSampler {
 
   @Test
   public void testAlwaysSampler() {
-    Span cur = Trace.startSpan("test", new TraceInfo(0, 0),
-        Sampler.ALWAYS);
+    Span cur = Trace.startSpan("test", new TraceInfo(0, 0));
     assertFalse(cur.equals(NullSpan.getInstance()));
     cur.stop();
   }

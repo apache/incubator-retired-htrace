@@ -41,8 +41,7 @@ public class TraceRunnable implements Runnable {
   @Override
   public void run() {
     if (parent != null) {
-      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
-          Sampler.ALWAYS);
+      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
 
       try {
         runnable.run();

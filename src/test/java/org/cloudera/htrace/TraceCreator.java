@@ -148,7 +148,7 @@ public class TraceCreator {
   }
 
   public void pretendRpcReceiveWithTraceInfo(TraceInfo traceInfo) {
-    Span s = Trace.startSpan("received RPC", traceInfo, Sampler.ALWAYS);
+    Span s = Trace.startSpan("received RPC", traceInfo);
     try {
       importantWork1();
     } finally {

@@ -18,7 +18,6 @@ package org.cloudera.htrace.wrappers;
 
 import java.util.concurrent.Callable;
 
-import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
@@ -42,8 +41,7 @@ public class TraceCallable<V> implements Callable<V> {
   @Override
   public V call() throws Exception {
     if (parent != null) {
-      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
-          Sampler.ALWAYS);
+      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
 
       try {
         return impl.call();
