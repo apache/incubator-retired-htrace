@@ -90,7 +90,7 @@ public class Trace {
   }
 
   public static <T> Span startSpan(String description, Sampler<T> s, T info) {
-    if (s.next(info)) {
+    if (isTracing() || s.next(info)) {
       return Tracer.getInstance().on(description);
     }
     return NullSpan.getInstance();
@@ -98,7 +98,7 @@ public class Trace {
 
   public static <T> Span startSpan(String description, Span parent,
       Sampler<T> s, T info) {
-    if (s.next(info)) {
+    if (isTracing() || s.next(info)) {
       return Tracer.getInstance().setCurrentSpan(parent.child(description));
     }
     return NullSpan.getInstance();
@@ -106,7 +106,7 @@ public class Trace {
 
   public static <T> Span startSpan(String description, TraceInfo tinfo,
       Sampler<T> s, T info) {
-    if (s.next(info)) {
+    if (isTracing() || s.next(info)) {
       return Tracer.getInstance().setCurrentSpan(
           new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
               tinfo.parentSpanId, Tracer.processId));
@@ -116,7 +116,7 @@ public class Trace {
 
   public static <T> Span startSpan(String description, long traceId,
       long parentId, Sampler<T> s, T info) {
-    if (s.next(info)) {
+    if (isTracing() || s.next(info)) {
       return Tracer.getInstance().setCurrentSpan(
           new ProcessRootMilliSpan(description, traceId, random.nextLong(), parentId,
               Tracer.processId));
