@@ -16,6 +16,7 @@
  */
 package org.cloudera.htrace;
 
+import java.lang.management.ManagementFactory;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Random;
@@ -41,7 +42,7 @@ public class Tracer {
     }
   };
   public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
-  protected static String processId = "";
+  protected static String processId = null;
 
   private static Tracer instance = null;
 
@@ -65,7 +66,7 @@ public class Tracer {
     Span root;
     if (parent.equals(NullSpan.getInstance())) {
       root = new ProcessRootMilliSpan(description, random.nextLong(),
-          random.nextLong(), Span.ROOT_SPAN_ID, processId);
+          random.nextLong(), Span.ROOT_SPAN_ID, getProcessId());
     } else {
       root = parent.child(description);
     }
@@ -125,5 +126,20 @@ public class Tracer {
 
   protected int numReceivers() {
     return receivers.size();
+  }
+
+  static String getProcessId() {
+    if (processId == null) {
+      String mxBeanName = ManagementFactory.getRuntimeMXBean().getName();
+      String cmdLine = System.getProperty("sun.java.command");
+      if (cmdLine != null && !cmdLine.isEmpty()) {
+        String fullClassName = cmdLine.split("\\s+")[0];
+        String[] classParts = fullClassName.split("\\.");
+        cmdLine = classParts[classParts.length - 1];
+      }
+
+      processId = cmdLine + " (" + mxBeanName + ")";
+    }
+    return processId;
   }
 }

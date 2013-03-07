@@ -65,7 +65,7 @@ public class Trace {
   public static Span startSpan(String description, TraceInfo tinfo) {
     return Tracer.getInstance().setCurrentSpan(
         new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
-            tinfo.parentSpanId, Tracer.processId));
+            tinfo.parentSpanId, Tracer.getProcessId()));
   }
   
   public static <T> Span startSpan(String description, Sampler<T> s) {
