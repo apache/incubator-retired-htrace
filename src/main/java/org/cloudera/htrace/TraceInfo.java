@@ -19,15 +19,20 @@ package org.cloudera.htrace;
 
 public class TraceInfo {
   public final long traceId;
-  public final long parentSpanId;
+  public final long spanId;
 
-  public TraceInfo(long traceId, long parentSpanId) {
+  public TraceInfo(long traceId, long spanId) {
     this.traceId = traceId;
-    this.parentSpanId = parentSpanId;
+    this.spanId = spanId;
   }
 
   @Override
   public String toString() {
-    return "TraceInfo(traceId=" + traceId + ", parentSpanId=" + parentSpanId + ")";
+    return "TraceInfo(traceId=" + traceId + ", spanId=" + spanId + ")";
+  }
+
+  public static TraceInfo fromSpan(Span s) {
+    if (s == null) return null;
+    return new TraceInfo(s.getTraceId(), s.getSpanId());
   }
 }

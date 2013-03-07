@@ -23,6 +23,7 @@ import java.lang.reflect.Proxy;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 public class TraceProxy {
   /**
@@ -54,14 +55,14 @@ public class TraceProxy {
           return method.invoke(instance, args);
         }
 
-        Span span = Trace.startSpan(method.getName(), Sampler.ALWAYS);
+        TraceScope scope = Trace.startSpan(method.getName(), Sampler.ALWAYS);
         try {
           return method.invoke(instance, args);
         } catch (Throwable ex) {
           ex.printStackTrace();
           throw ex;
         } finally {
-          span.stop();
+          scope.close();
         }
       }
     };

@@ -24,8 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.impl.ProcessRootMilliSpan;
+import org.cloudera.htrace.impl.MilliSpan;
 
 /**
  * A Tracer provides the implementation for collecting and distributing Spans
@@ -38,7 +37,7 @@ public class Tracer {
   private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>() {
     @Override
     protected Span initialValue() {
-      return NullSpan.getInstance();
+      return null;
     }
   };
   public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
@@ -53,28 +52,21 @@ public class Tracer {
     return instance;
   }
 
-  protected static TraceInfo traceInfo() {
-    Span span = currentTrace.get();
-    if (!span.equals(NullSpan.getInstance())) {
-      return new TraceInfo(span.getTraceId(), span.getSpanId());
-    }
-    return DONT_TRACE;
-  }
-
-  protected Span on(String description) {
+  protected Span createNew(String description) {
     Span parent = currentTrace.get();
-    Span root;
-    if (parent.equals(NullSpan.getInstance())) {
-      root = new ProcessRootMilliSpan(description, random.nextLong(),
-          random.nextLong(), Span.ROOT_SPAN_ID, getProcessId());
+    if (parent == null) {
+      return new MilliSpan(description,
+          /* traceId = */ random.nextLong(),
+          /* parentSpanId = */ Span.ROOT_SPAN_ID,
+          /* spanId = */ random.nextLong(),
+          getProcessId());
     } else {
-      root = parent.child(description);
+      return parent.child(description);
     }
-    return setCurrentSpan(root);
   }
 
   protected boolean isTracing() {
-    return !currentTrace.get().equals(NullSpan.getInstance());
+    return currentTrace.get() != null;
   }
 
   protected Span currentTrace() {
@@ -96,31 +88,21 @@ public class Tracer {
   }
 
   protected Span setCurrentSpan(Span span) {
-    if (span != null) {
-      currentTrace.set(span);
-    }
+    currentTrace.set(span);
     return span;
   }
+  
+
+  public TraceScope continueSpan(Span s) {
+    Span oldCurrent = currentTrace();
+    setCurrentSpan(s);
+    return new TraceScope(s, oldCurrent);
+  }
+
   
   protected void clearTraceStack() {
     while (isTracing()) {
       currentTrace().stop();
-    }
-  }
-
-  protected void pop(Span span) {
-    if (span != null) {
-      if (!span.equals(currentTrace())
-          && !currentTrace().equals(NullSpan.getInstance())) {
-        LOG.warn("Stopped span: " + span
-            + " that was not the current span. Current span is: "
-            + currentTrace());
-      }
-      deliver(span);
-      Span parent = span.getParent();
-      currentTrace.set(parent != null ? parent : NullSpan.getInstance());
-    } else {
-      currentTrace.set(NullSpan.getInstance());
     }
   }
 

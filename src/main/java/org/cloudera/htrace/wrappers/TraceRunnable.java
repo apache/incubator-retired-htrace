@@ -19,6 +19,7 @@ package org.cloudera.htrace.wrappers;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 /**
  * Wrap a Runnable with a Span that survives a change in threads.
@@ -30,7 +31,7 @@ public class TraceRunnable implements Runnable {
   private final Runnable runnable;
 
   public TraceRunnable(Runnable runnable) {
-    this(Trace.currentTrace(), runnable);
+    this(Trace.currentSpan(), runnable);
   }
 
   public TraceRunnable(Span parent, Runnable runnable) {
@@ -41,12 +42,12 @@ public class TraceRunnable implements Runnable {
   @Override
   public void run() {
     if (parent != null) {
-      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
+      TraceScope chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
 
       try {
         runnable.run();
       } finally {
-        chunk.stop();
+        chunk.close();
       }
     } else {
       runnable.run();

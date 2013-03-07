@@ -20,8 +20,7 @@ import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.impl.ProcessRootMilliSpan;
+import org.cloudera.htrace.impl.MilliSpan;
 import org.cloudera.htrace.impl.TrueIfTracingSampler;
 import org.cloudera.htrace.wrappers.TraceCallable;
 import org.cloudera.htrace.wrappers.TraceRunnable;
@@ -42,7 +41,7 @@ public class Trace {
    *          Description of the span to be created.
    * @return
    */
-  public static Span startSpan(String description) {
+  public static TraceScope startSpan(String description) {
     return startSpan(description, TrueIfTracingSampler.INSTANCE);
   }
 
@@ -58,32 +57,37 @@ public class Trace {
    *          be returned.
    * @return
    */
-  public static Span startSpan(String description, Span parent) {
-    return Tracer.getInstance().setCurrentSpan(parent.child(description));
+  public static TraceScope startSpan(String description, Span parent) {
+    return continueSpan(parent.child(description));
   }
 
-  public static Span startSpan(String description, TraceInfo tinfo) {
-    return Tracer.getInstance().setCurrentSpan(
-        new ProcessRootMilliSpan(description, tinfo.traceId, random.nextLong(),
-            tinfo.parentSpanId, Tracer.getProcessId()));
+  public static TraceScope startSpan(String description, TraceInfo tinfo) {
+    if (tinfo == null) return continueSpan(null);
+    Span newSpan = new MilliSpan(description, tinfo.traceId, tinfo.spanId,
+        random.nextLong(), Tracer.getProcessId());
+    return continueSpan(newSpan);
   }
   
-  public static <T> Span startSpan(String description, Sampler<T> s) {
+  public static <T> TraceScope startSpan(String description, Sampler<T> s) {
     return startSpan(description, s, null);
   }
 
-  public static <T> Span startSpan(String description, Sampler<T> s, T info) {
+  public static <T> TraceScope startSpan(String description, Sampler<T> s, T info) {
+    Span span = null;
     if (isTracing() || s.next(info)) {
-      return Tracer.getInstance().on(description);
+      span = Tracer.getInstance().createNew(description);
     }
-    return NullSpan.getInstance();
+    return continueSpan(span);
   }
   
   /**
    * Pick up an existing span from another thread.
    */
-  public static void continueSpan(Span s) {
-    Tracer.getInstance().setCurrentSpan(s);
+  public static TraceScope continueSpan(Span s) {
+    // Return an empty TraceScope that does nothing on
+    // close
+    if (s == null) return new TraceScope(null, null);
+    return Tracer.getInstance().continueSpan(s);
   }
   
   /**
@@ -129,36 +133,14 @@ public class Trace {
    * Adds a data annotation to the current span if tracing is currently on.
    */
   public static void addKVAnnotation(byte[] key, byte[] value) {
-    currentTrace().addKVAnnotation(key, value);
+    currentSpan().addKVAnnotation(key, value);
   }
   
   /**
    * Annotate the current span with the given message.
    */
   public static void addTimelineAnnotation(String msg) {
-    currentTrace().addTimelineAnnotation(msg);
-  }
-
-  /**
-   * Provides the current trace's span ID and parent ID, or the TInfo: (0,0) if
-   * tracing is currently off.
-   *
-   * @return TINfo current trace or the sentinel no-trace (0,0) if tracing off
-   */
-  public static TraceInfo traceInfo() {
-    return Tracer.traceInfo();
-  }
-
-  /**
-   * If 'span' is not null, it is delivered to any registered SpanReceiver's,
-   * and sets the current span to 'span's' parent. If 'span' is null, the
-   * current trace is set to null.
-   *
-   * @param span
-   *          The Span to be popped
-   */
-  public static void pop(Span span) {
-    Tracer.getInstance().pop(span);
+    currentSpan().addTimelineAnnotation(msg);
   }
 
   /**
@@ -175,7 +157,7 @@ public class Trace {
    *
    * @return Span representing the current trace, or null if not tracing.
    */
-  public static Span currentTrace() {
+  public static Span currentSpan() {
     return Tracer.getInstance().currentTrace();
   }
 
@@ -187,7 +169,7 @@ public class Trace {
    */
   public static <V> Callable<V> wrap(Callable<V> callable) {
     if (isTracing()) {
-      return new TraceCallable<V>(Trace.currentTrace(), callable);
+      return new TraceCallable<V>(Trace.currentSpan(), callable);
     } else {
       return callable;
     }
@@ -201,7 +183,7 @@ public class Trace {
    */
   public static Runnable wrap(Runnable runnable) {
     if (isTracing()) {
-      return new TraceRunnable(Trace.currentTrace(), runnable);
+      return new TraceRunnable(Trace.currentSpan(), runnable);
     } else {
       return runnable;
     }

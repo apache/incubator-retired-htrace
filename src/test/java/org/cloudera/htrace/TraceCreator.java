@@ -51,21 +51,20 @@ public class TraceCreator {
   }
 
   public void createSampleRpcTrace() {
-    Span s = Trace.startSpan(RPC_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = Trace.startSpan(RPC_TRACE_ROOT, Sampler.ALWAYS);
     try {
       pretendRpcSend();
     } finally {
-      // This will produce a warning from Tracer.java that is expected.
-      s.stop();
+      s.close();
     }
   }
 
   public void createSimpleTrace() {
-    Span s = Trace.startSpan(SIMPLE_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = Trace.startSpan(SIMPLE_TRACE_ROOT, Sampler.ALWAYS);
     try {
       importantWork1();
     } finally {
-      s.stop();
+      s.close();
     }
   }
 
@@ -73,7 +72,7 @@ public class TraceCreator {
    * Creates the demo trace (will create different traces from call to call).
    */
   public void createThreadedTrace() {
-    Span s = Trace.startSpan(THREADED_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = Trace.startSpan(THREADED_TRACE_ROOT, Sampler.ALWAYS);
     try {
       Random r = new Random();
       int numThreads = r.nextInt(4) + 1;
@@ -93,30 +92,30 @@ public class TraceCreator {
       }
       importantWork1();
     } finally {
-      s.stop();
+      s.close();
     }
   }
 
   private void importantWork1() {
-    Span cur = Trace.startSpan("important work 1");
+    TraceScope cur = Trace.startSpan("important work 1");
     try {
       Thread.sleep((long) (2000 * Math.random()));
       importantWork2();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } finally {
-      cur.stop();
+      cur.close();
     }
   }
 
   private void importantWork2() {
-    Span cur = Trace.startSpan("important work 2");
+    TraceScope cur = Trace.startSpan("important work 2");
     try {
       Thread.sleep((long) (2000 * Math.random()));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } finally {
-      cur.stop();
+      cur.close();
     }
   }
 
@@ -131,28 +130,28 @@ public class TraceCreator {
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       } catch (ArithmeticException ae) {
-        Span c = Trace.startSpan("dealing with arithmetic exception.");
+        TraceScope c = Trace.startSpan("dealing with arithmetic exception.");
         try {
           Thread.sleep((long) (3000 * Math.random()));
         } catch (InterruptedException ie1) {
           Thread.currentThread().interrupt();
         } finally {
-          c.stop();
+          c.close();
         }
       }
     }
   }
 
   public void pretendRpcSend() {
-    pretendRpcReceiveWithTraceInfo(Trace.traceInfo());
+    pretendRpcReceiveWithTraceInfo(TraceInfo.fromSpan(Trace.currentSpan()));
   }
 
   public void pretendRpcReceiveWithTraceInfo(TraceInfo traceInfo) {
-    Span s = Trace.startSpan("received RPC", traceInfo);
+    TraceScope s = Trace.startSpan("received RPC", traceInfo);
     try {
       importantWork1();
     } finally {
-      s.stop();
+      s.close();
     }
   }
 }

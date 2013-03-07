@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 /**
  * Wrap a Callable with a Span that survives a change in threads.
@@ -30,7 +31,7 @@ public class TraceCallable<V> implements Callable<V> {
   private final Span parent;
 
   public TraceCallable(Callable<V> impl) {
-    this(Trace.currentTrace(), impl);
+    this(Trace.currentSpan(), impl);
   }
 
   public TraceCallable(Span parent, Callable<V> impl) {
@@ -41,12 +42,12 @@ public class TraceCallable<V> implements Callable<V> {
   @Override
   public V call() throws Exception {
     if (parent != null) {
-      Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
+      TraceScope chunk = Trace.startSpan(Thread.currentThread().getName(), parent);
 
       try {
         return impl.call();
       } finally {
-        chunk.stop();
+        chunk.close();
       }
     } else {
       return impl.call();

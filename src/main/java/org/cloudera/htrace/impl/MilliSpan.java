@@ -16,7 +16,6 @@
  */
 package org.cloudera.htrace.impl;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,7 +25,6 @@ import java.util.Random;
 
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.TimelineAnnotation;
-import org.cloudera.htrace.Trace;
 
 /**
  * A Span implementation that stores its information in milliseconds since the
@@ -34,11 +32,13 @@ import org.cloudera.htrace.Trace;
  */
 public class MilliSpan implements Span {
 
-  private static final Random next = new SecureRandom();
+  private static Random rand = new Random();
+  
   private long start;
   private long stop;
-  private final Span parent;
   private final String description;
+  private final long traceId;
+  private final long parentSpanId;
   private final long spanId;
   private Map<byte[], byte[]> traceInfo = null;
   private final String processId;
@@ -46,13 +46,14 @@ public class MilliSpan implements Span {
 
   @Override
   public Span child(String description) {
-    return new MilliSpan(description, next.nextLong(), this, processId);
+    return new MilliSpan(description, traceId, spanId, rand.nextLong(), processId);
   }
 
-  public MilliSpan(String description, long id, Span parent, String processId) {
+  public MilliSpan(String description, long traceId, long parentSpanId, long spanId, String processId) {
     this.description = description;
-    this.spanId = id;
-    this.parent = parent;
+    this.traceId = traceId;
+    this.parentSpanId = parentSpanId;
+    this.spanId = spanId;
     this.start = System.currentTimeMillis();
     this.stop = 0;
     this.processId = processId;
@@ -64,9 +65,8 @@ public class MilliSpan implements Span {
       throw new IllegalStateException("Span for " + description
           + " has not been started");
     stop = System.currentTimeMillis();
-    Trace.pop(this);
   }
-
+  
   protected long currentTimeMillis() {
     return System.currentTimeMillis();
   }
@@ -87,7 +87,7 @@ public class MilliSpan implements Span {
 
   @Override
   public String toString() {
-    return "start=" + start + "\nstop=" + stop + "\nparent=" + parent
+    return "start=" + start + "\nstop=" + stop + "\nparentId=" + parentSpanId
         + "\ndescription=" + description + "\nspanId=" + spanId
         + "\ntraceInfo=" + traceInfo + "\nprocessId=" + processId
         + "\ntimeline=" + timeline;
@@ -104,20 +104,13 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public Span getParent() {
-    return parent;
-  }
-
-  @Override
   public long getParentId() {
-    if (parent == null)
-      return -1;
-    return parent.getSpanId();
+    return parentSpanId;
   }
 
   @Override
   public long getTraceId() {
-    return parent.getTraceId();
+    return traceId;
   }
 
   @Override
