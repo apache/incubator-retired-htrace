@@ -17,9 +17,11 @@
 package org.cloudera.htrace.impl;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.cloudera.htrace.Span;
+import org.cloudera.htrace.TimelineAnnotation;
 
 /**
  * A Span that does nothing. Used to avoid returning and checking for nulls when
@@ -93,7 +95,11 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public void addAnnotation(byte[] key, byte[] value) {
+  public void addKVAnnotation(byte[] key, byte[] value) {
+  }
+  
+  @Override
+  public void addTimelineAnnotation(String msg) {
   }
 
   @Override
@@ -102,8 +108,13 @@ public class NullSpan implements Span {
   }
 
   @Override
-  public Map<byte[], byte[]> getAnnotations() {
+  public Map<byte[], byte[]> getKVAnnotations() {
     return Collections.emptyMap();
+  }
+
+  @Override
+  public List<TimelineAnnotation> getTimelineAnnotations() {
+    return Collections.emptyList();
   }
 
   @Override

@@ -78,6 +78,23 @@ public class Trace {
     }
     return NullSpan.getInstance();
   }
+  
+  /**
+   * Pick up an existing span from another thread.
+   */
+  public static void continueSpan(Span s) {
+    Tracer.getInstance().setCurrentSpan(s);
+  }
+  
+  /**
+   * Stop any spans that are currently active, as well
+   * as their parents. This can be used within threadpools,
+   * etc where you should clean up after anyone who might
+   * have accidentally leaked spans.
+   */
+  public static void clearTraceStack() {
+    Tracer.getInstance().clearTraceStack();
+  }
 
   /**
    * Set the processId to be used for all Spans created by this Tracer.
@@ -110,12 +127,16 @@ public class Trace {
 
   /**
    * Adds a data annotation to the current span if tracing is currently on.
-   *
-   * @param key
-   * @param value
    */
-  public static void addAnnotation(byte[] key, byte[] value) {
-      currentTrace().addAnnotation(key, value);
+  public static void addKVAnnotation(byte[] key, byte[] value) {
+    currentTrace().addKVAnnotation(key, value);
+  }
+  
+  /**
+   * Annotate the current span with the given message.
+   */
+  public static void addTimelineAnnotation(String msg) {
+    currentTrace().addTimelineAnnotation(msg);
   }
 
   /**

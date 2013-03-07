@@ -17,12 +17,15 @@
 package org.cloudera.htrace.impl;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import org.cloudera.htrace.Span;
+import org.cloudera.htrace.TimelineAnnotation;
 import org.cloudera.htrace.Trace;
 
 /**
@@ -39,6 +42,7 @@ public class MilliSpan implements Span {
   private final long spanId;
   private Map<byte[], byte[]> traceInfo = null;
   private final String processId;
+  private List<TimelineAnnotation> timeline = null;
 
   @Override
   public Span child(String description) {
@@ -83,11 +87,10 @@ public class MilliSpan implements Span {
 
   @Override
   public String toString() {
-    long parentId = getParentId();
-    return ("\"" + getDescription() + "\" trace:" + getTraceId()
-        + " span:" + spanId + (parentId > 0 ? " parent:" + parentId : "")
-        + " start:" + start + " ms: " + Long.toString(getAccumulatedMillis()) + (isRunning() ? "..."
-          : ""));
+    return "start=" + start + "\nstop=" + stop + "\nparent=" + parent
+        + "\ndescription=" + description + "\nspanId=" + spanId
+        + "\ntraceInfo=" + traceInfo + "\nprocessId=" + processId
+        + "\ntimeline=" + timeline;
   }
 
   @Override
@@ -128,17 +131,33 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public void addAnnotation(byte[] key, byte[] value) {
+  public void addKVAnnotation(byte[] key, byte[] value) {
     if (traceInfo == null)
       traceInfo = new HashMap<byte[], byte[]>();
     traceInfo.put(key, value);
   }
+  
+  @Override
+  public void addTimelineAnnotation(String msg) {
+    if (timeline == null) {
+      timeline = new ArrayList<TimelineAnnotation>();
+    }
+    timeline.add(new TimelineAnnotation(System.currentTimeMillis(), msg));
+  }
 
   @Override
-  public Map<byte[], byte[]> getAnnotations() {
+  public Map<byte[], byte[]> getKVAnnotations() {
     if (traceInfo == null)
       return Collections.emptyMap();
     return Collections.unmodifiableMap(traceInfo);
+  }
+  
+  @Override
+  public List<TimelineAnnotation> getTimelineAnnotations() {
+    if (timeline == null) {
+      return Collections.emptyList();
+    }
+    return Collections.unmodifiableList(timeline);
   }
 
   @Override

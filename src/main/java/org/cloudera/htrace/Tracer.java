@@ -100,6 +100,12 @@ public class Tracer {
     }
     return span;
   }
+  
+  protected void clearTraceStack() {
+    while (isTracing()) {
+      pop(currentTrace());
+    }
+  }
 
   protected void pop(Span span) {
     if (span != null) {

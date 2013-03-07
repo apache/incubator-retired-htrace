@@ -16,6 +16,7 @@
  */
 package org.cloudera.htrace;
 
+import java.util.List;
 import java.util.Map;
 
 
@@ -75,10 +76,16 @@ public interface Span {
   long getParentId();
 
   /** Add a data annotation associated with this span */
-  void addAnnotation(byte[] key, byte[] value);
+  void addKVAnnotation(byte[] key, byte[] value);
+
+  /** Add a timeline annotation associated with this span */
+  void addTimelineAnnotation(String msg);
 
   /** Get data associated with this span (read only) */
-  Map<byte[], byte[]> getAnnotations();
+  Map<byte[], byte[]> getKVAnnotations();
+  
+  /** Get any timeline annotations (read only) */
+  List<TimelineAnnotation> getTimelineAnnotations();
 
   /**
    * Return a unique id for the node or process from which this Span originated.
