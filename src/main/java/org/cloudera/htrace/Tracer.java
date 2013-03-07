@@ -104,7 +104,7 @@ public class Tracer {
   
   protected void clearTraceStack() {
     while (isTracing()) {
-      pop(currentTrace());
+      currentTrace().stop();
     }
   }
 
