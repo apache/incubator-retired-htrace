@@ -34,7 +34,7 @@ public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
   private final static Random random = new SecureRandom();
   private final List<SpanReceiver> receivers = new CopyOnWriteArrayList<SpanReceiver>();
-  private static final ThreadLocal<Span> currentTrace = new ThreadLocal<Span>() {
+  private static final ThreadLocal<Span> currentSpan = new ThreadLocal<Span>() {
     @Override
     protected Span initialValue() {
       return null;
@@ -53,7 +53,7 @@ public class Tracer {
   }
 
   protected Span createNew(String description) {
-    Span parent = currentTrace.get();
+    Span parent = currentSpan.get();
     if (parent == null) {
       return new MilliSpan(description,
           /* traceId = */ random.nextLong(),
@@ -66,11 +66,11 @@ public class Tracer {
   }
 
   protected boolean isTracing() {
-    return currentTrace.get() != null;
+    return currentSpan.get() != null;
   }
 
-  protected Span currentTrace() {
-    return currentTrace.get();
+  protected Span currentSpan() {
+    return currentSpan.get();
   }
 
   protected void deliver(Span span) {
@@ -88,22 +88,15 @@ public class Tracer {
   }
 
   protected Span setCurrentSpan(Span span) {
-    currentTrace.set(span);
+    currentSpan.set(span);
     return span;
   }
   
 
   public TraceScope continueSpan(Span s) {
-    Span oldCurrent = currentTrace();
+    Span oldCurrent = currentSpan();
     setCurrentSpan(s);
     return new TraceScope(s, oldCurrent);
-  }
-
-  
-  protected void clearTraceStack() {
-    while (isTracing()) {
-      currentTrace().stop();
-    }
   }
 
   protected int numReceivers() {

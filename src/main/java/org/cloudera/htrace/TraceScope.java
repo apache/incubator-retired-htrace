@@ -31,7 +31,7 @@ public class TraceScope implements Closeable {
   public Span detach() {
     detached = true;
 
-    Span cur = Tracer.getInstance().currentTrace();
+    Span cur = Tracer.getInstance().currentSpan();
     if (cur != span) {
       Tracer.LOG.debug("Closing trace span " + span + " but " +
         cur + " was top-of-stack");
