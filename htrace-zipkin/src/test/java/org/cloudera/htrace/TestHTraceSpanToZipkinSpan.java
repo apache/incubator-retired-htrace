@@ -52,7 +52,9 @@ public class TestHTraceSpanToZipkinSpan {
 
   private void assertSpansAreEquivalent(Span s, com.twitter.zipkin.gen.Span zs) {
     assertEquals(s.getTraceId(), zs.getTrace_id());
-    assertEquals(s.getParentId(), zs.getParent_id());
+    if (s.getParentId() != Span.ROOT_SPAN_ID) {
+      assertEquals(s.getParentId(), zs.getParent_id());
+    }
     assertEquals(s.getSpanId(), zs.getId());
     Assert.assertNotNull(zs.getAnnotations());
     if (ROOT_SPAN_DESC.equals(zs.getName())) {
