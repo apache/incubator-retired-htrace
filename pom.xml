@@ -93,12 +93,6 @@ language governing permissions and limitations under the License. -->
         <developerConnection>scm:git:git@github.com:cloudera/htrace.git</developerConnection>
         <url>scm:git:git@github.com:cloudera/htrace.git</url>
     </scm>
-    <pluginRepositories>
-       <pluginRepository>
-          <id>cloudera</id>
-          <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
-       </pluginRepository>
-     </pluginRepositories>
     <build>
         <plugins>
             <plugin>
