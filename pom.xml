@@ -49,35 +49,6 @@ language governing permissions and limitations under the License. -->
             <organizationUrl>http://www.cloudera.com</organizationUrl>
         </developer>
     </developers>
-    <profiles>
-        <profile>
-            <id>release-sign-artifacts</id>
-            <activation>
-                <property>
-                    <name>performRelease</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.1</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
     <url>https://github.com/cloudera/htrace</url>
     <licenses>
@@ -94,20 +65,83 @@ language governing permissions and limitations under the License. -->
         <url>scm:git:git@github.com:cloudera/htrace.git</url>
     </scm>
     <build>
+      <pluginManagement>
         <plugins>
-            <plugin>
-                <!-- explicitly define maven-deploy-plugin after other to force exec order -->
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>2.7</version>
-                <executions>
-                    <execution>
-                        <id>deploy</id>
-                        <phase>deploy</phase>
-                        <goals><goal>deploy</goal></goals>
-                    </execution>
-                </executions>
-            </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.1.2</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.8.1</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>2.5.1</version>
+            <configuration>
+              <source>1.6</source>
+              <target>1.6</target>
+              <optimize>true</optimize>
+              <encoding>UTF-8</encoding>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.1</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- explicitly define maven-deploy-plugin after other to force exec order -->
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.7</version>
+            <executions>
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals><goal>deploy</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
+      </pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+        </plugin>
+        <plugin>
+          <!-- explicitly define maven-deploy-plugin after other to force exec order -->
+          <artifactId>maven-deploy-plugin</artifactId>
+        </plugin>
+      </plugins>
     </build>
     <properties>
         <targetJdk>1.6</targetJdk>
