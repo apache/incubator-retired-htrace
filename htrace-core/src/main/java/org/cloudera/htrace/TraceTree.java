@@ -17,6 +17,7 @@
 package org.cloudera.htrace;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +42,7 @@ public class TraceTree {
    *          Span.ROOT_SPAN_ID
    */
   public TraceTree(Collection<Span> spans) {
-    this.spans = spans;
+    this.spans = ImmutableList.copyOf(spans);
     this.spansByParentID = HashMultimap.<Long, Span> create();
     this.spansByPid = HashMultimap.<String, Span> create();
 
