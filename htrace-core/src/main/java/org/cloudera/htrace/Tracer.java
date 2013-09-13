@@ -42,13 +42,17 @@ public class Tracer {
   public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
   protected static String processId = null;
 
-  private static Tracer instance = null;
+  /**
+   * Internal class for defered singleton idiom.
+   *
+   * https://en.wikipedia.org/wiki/Initialization_on_demand_holder_idiom
+   */
+  private static class TracerHolder {
+    private static final Tracer INSTANCE = new Tracer();
+  }
 
-  synchronized protected static Tracer getInstance() {
-    if (instance == null) {
-      instance = new Tracer();
-    }
-    return instance;
+  protected static Tracer getInstance() {
+    return TracerHolder.INSTANCE;
   }
 
   protected Span createNew(String description) {
