@@ -51,7 +51,7 @@ public class Tracer {
     private static final Tracer INSTANCE = new Tracer();
   }
 
-  protected static Tracer getInstance() {
+  public static Tracer getInstance() {
     return TracerHolder.INSTANCE;
   }
 
@@ -76,7 +76,7 @@ public class Tracer {
     return currentSpan.get();
   }
 
-  protected void deliver(Span span) {
+  public void deliver(Span span) {
     for (SpanReceiver receiver : receivers) {
       receiver.receiveSpan(span);
     }

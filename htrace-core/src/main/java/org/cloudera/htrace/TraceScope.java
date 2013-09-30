@@ -48,7 +48,6 @@ public class TraceScope implements Closeable {
     if (!detached) {
       // The span is done
       span.stop();
-      Tracer.getInstance().deliver(span);
       detach();
     }
   }
