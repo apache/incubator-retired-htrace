@@ -18,6 +18,7 @@ package org.cloudera.htrace.impl;
 
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.TimelineAnnotation;
+import org.cloudera.htrace.Tracer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,10 +62,13 @@ public class MilliSpan implements Span {
 
   @Override
   public synchronized void stop() {
-    if (start == 0)
-      throw new IllegalStateException("Span for " + description
+    if (stop == 0) {
+      if (start == 0)
+        throw new IllegalStateException("Span for " + description
           + " has not been started");
-    stop = System.currentTimeMillis();
+      stop = System.currentTimeMillis();
+      Tracer.getInstance().deliver(this);
+    }
   }
   
   protected long currentTimeMillis() {
