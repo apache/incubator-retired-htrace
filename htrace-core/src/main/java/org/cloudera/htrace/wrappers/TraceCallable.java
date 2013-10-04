@@ -24,7 +24,6 @@ import java.util.concurrent.Callable;
 
 /**
  * Wrap a Callable with a Span that survives a change in threads.
- * 
  */
 public class TraceCallable<V> implements Callable<V> {
   private final Callable<V> impl;
@@ -65,6 +64,6 @@ public class TraceCallable<V> implements Callable<V> {
   }
 
   private String getDescription() {
-    return this.description == null ? Thread.currentThread().getName(): description;
+    return this.description == null ? Thread.currentThread().getName() : description;
   }
 }

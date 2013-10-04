@@ -47,7 +47,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Zipkin is an open source tracing library. This span receiver acts as a bridge between HTrace and
  * Zipkin, that converts HTrace Span objects into Zipkin Span objects.
- *
+ * <p/>
  * HTrace spans are queued into a blocking queue.  From there background worker threads will
  * batch the spans together and then send them through to a Zipkin collector.
  */
@@ -73,7 +72,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   private static final int DEFAULT_COLLECTOR_PORT = 9410; // trace collector default port.
 
   /**
-   *  this is used to tell scribe that the entries are for zipkin..
+   * this is used to tell scribe that the entries are for zipkin..
    */
   private static final String CATEGORY = "zipkin";
 
@@ -115,7 +114,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
 
   /**
    * The thread factory used to create new ExecutorService.
-   *
+   * <p/>
    * This will be the same factory for the lifetime of this object so that
    * no thread names will ever be duplicated.
    */
@@ -135,8 +134,8 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     this.protocolFactory = new TBinaryProtocol.Factory();
 
     tf = new ThreadFactoryBuilder().setDaemon(true)
-                                   .setNameFormat("zipkinSpanReceiver-%d")
-                                   .build();
+        .setNameFormat("zipkinSpanReceiver-%d")
+        .build();
   }
 
   @Override
@@ -144,9 +143,9 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     this.conf = conf;
 
     this.collectorHostname = conf.get("zipkin.collector-hostname",
-      DEFAULT_COLLECTOR_HOSTNAME);
+        DEFAULT_COLLECTOR_HOSTNAME);
     this.collectorPort = conf.getInt("zipkin.collector-port",
-      DEFAULT_COLLECTOR_PORT);
+        DEFAULT_COLLECTOR_PORT);
 
     // initialize the endpoint. This endpoint is used while writing the Span.
     initConverter();
@@ -161,7 +160,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
 
     this.service = Executors.newFixedThreadPool(numThreads, tf);
 
-    for (int i = 0; i< numThreads; i++) {
+    for (int i = 0; i < numThreads; i++) {
       this.service.submit(new WriteSpanRunnable());
     }
   }
@@ -170,24 +169,22 @@ public class ZipkinSpanReceiver implements SpanReceiver {
    * Set up the HTrace to Zipkin converter.
    */
   private void initConverter() {
-    boolean inClientMode = conf.getBoolean("zipkin.is-in-client-mode", DEFAULT_IN_CLIENT_MODE);
     InetAddress tracedServiceHostname = null;
     // Try and get the hostname.  If it's not configured try and get the local hostname.
     try {
       String host = conf.get("zipkin.traced-service-hostname",
-                             InetAddress.getLocalHost().getHostAddress());
+          InetAddress.getLocalHost().getHostAddress());
 
       tracedServiceHostname = InetAddress.getByName(host);
     } catch (UnknownHostException e) {
       LOG.error("Couldn't get the localHost address", e);
     }
-    short tracedServicePort = (short) conf.getInt("zipkin.traced-service-port", 80);
+    short tracedServicePort = (short) conf.getInt("zipkin.traced-service-port", -1);
     byte[] address = tracedServiceHostname != null
-                     ? tracedServiceHostname.getAddress() : DEFAULT_COLLECTOR_HOSTNAME.getBytes();
+        ? tracedServiceHostname.getAddress() : DEFAULT_COLLECTOR_HOSTNAME.getBytes();
     int ipv4 = ByteBuffer.wrap(address).getInt();
-    this.converter = new HTraceToZipkinConverter(ipv4, tracedServicePort, inClientMode);
+    this.converter = new HTraceToZipkinConverter(ipv4, tracedServicePort);
   }
-
 
 
   private class WriteSpanRunnable implements Runnable {
@@ -208,9 +205,9 @@ public class ZipkinSpanReceiver implements SpanReceiver {
      * collector as a thrift object. The scribe client which is used for rpc writes a list of
      * LogEntry objects, so the span objects are first transformed into LogEntry objects before
      * sending to the zipkin-collector.
-     * 
+     * <p/>
      * Here is a little ascii art which shows the above transformation:
-     *  <pre>
+     * <pre>
      *  +------------+   +------------+   +------------+              +-----------------+
      *  | HTrace Span|-->|Zipkin Span |-->| (LogEntry) | ===========> | Zipkin Collector|
      *  +------------+   +------------+   +------------+ (Scribe rpc) +-----------------+
@@ -228,7 +225,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
         try {
           // Block for up to a second. to try and get a span.
           // We only block for a little bit in order to notice if the running value has changed
-          firstSpan =  queue.poll(1, TimeUnit.SECONDS);
+          firstSpan = queue.poll(1, TimeUnit.SECONDS);
 
           // If the poll was successful then it's possible that there
           // will be other spans to get. Try and get them.
@@ -256,7 +253,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
           // Convert every de-queued span
           for (Span htraceSpan : dequeuedSpans) {
             // convert the HTrace span to Zipkin span
-            com.twitter.zipkin.gen.Span zipkinSpan = converter.toZipkinSpan(htraceSpan);
+            com.twitter.zipkin.gen.Span zipkinSpan = converter.convert(htraceSpan);
             // Clear any old data.
             baos.reset();
             // Write the span to a BAOS
@@ -327,8 +324,9 @@ public class ZipkinSpanReceiver implements SpanReceiver {
 
   /**
    * Close the receiver.
-   *
+   * <p/>
    * This tries to shut
+   *
    * @throws IOException
    */
   @Override
@@ -338,8 +336,8 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     try {
       if (!service.awaitTermination(SHUTDOWN_TIMEOUT, TimeUnit.SECONDS)) {
         LOG.error("Was not able to process all remaining spans to write upon closing in: " +
-          SHUTDOWN_TIMEOUT + " " + TimeUnit.SECONDS +". There could be un-sent spans still left." +
-          "  They have been dropped.");
+            SHUTDOWN_TIMEOUT + " " + TimeUnit.SECONDS + ". There could be un-sent spans still left." +
+            "  They have been dropped.");
       }
     } catch (InterruptedException e1) {
       LOG.warn("Thread interrupted when terminating executor.", e1);
@@ -353,7 +351,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
         this.queue.add(span);
       } catch (IllegalStateException e) {
         LOG.error("Error trying to append span (" + span.getDescription() + ") to the queue."
-          +"  Blocking Queue was full.");
+            + "  Blocking Queue was full.");
       }
     }
   }

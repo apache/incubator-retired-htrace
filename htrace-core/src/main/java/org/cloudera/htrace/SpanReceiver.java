@@ -31,10 +31,10 @@ public interface SpanReceiver extends Closeable {
    * configuration to SpanReceivers after creating them.
    */
   public void configure(HTraceConfiguration conf);
-  
+
   /**
    * Called when a Span is stopped and can now be stored.
-   * 
+   *
    * @param span
    */
   public void receiveSpan(Span span);

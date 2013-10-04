@@ -28,7 +28,7 @@ import java.io.IOException;
 public class StandardOutSpanReceiver implements SpanReceiver {
 
   @Override
-  public void configure(HTraceConfiguration conf) {    
+  public void configure(HTraceConfiguration conf) {
   }
 
   @Override

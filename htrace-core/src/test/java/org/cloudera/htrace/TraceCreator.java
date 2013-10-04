@@ -31,7 +31,7 @@ public class TraceCreator {
   /**
    * Takes as input the SpanReceiver that should used as the sink for Spans when
    * createDemoTrace() is called.
-   * 
+   *
    * @param receiver
    */
   public TraceCreator(SpanReceiver receiver) {
@@ -41,7 +41,7 @@ public class TraceCreator {
   /**
    * Takes as input the SpanReceivers that should used as the sink for Spans
    * when createDemoTrace() is called.
-   * 
+   *
    * @param receivers
    */
   public TraceCreator(Collection<SpanReceiver> receivers) {

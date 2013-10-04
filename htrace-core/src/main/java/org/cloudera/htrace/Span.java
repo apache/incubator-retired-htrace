@@ -23,20 +23,26 @@ import java.util.Map;
 /**
  * Base interface for gathering and reporting statistics about a block of
  * execution.
- * 
+ * <p/>
  * Spans form a tree structure with the parent relationship. The first span in a
  * trace has no parent span.
  */
 public interface Span {
   public static final long ROOT_SPAN_ID = 0x74ace;
 
-  /** The block has completed, stop the clock */
+  /**
+   * The block has completed, stop the clock
+   */
   void stop();
 
-  /** Get the start time, in milliseconds */
+  /**
+   * Get the start time, in milliseconds
+   */
   long getStartTimeMillis();
 
-  /** Get the stop time, in milliseconds */
+  /**
+   * Get the stop time, in milliseconds
+   */
   long getStopTimeMillis();
 
   /**
@@ -45,13 +51,19 @@ public interface Span {
    */
   long getAccumulatedMillis();
 
-  /** Has the span been started and not yet stopped? */
+  /**
+   * Has the span been started and not yet stopped?
+   */
   boolean isRunning();
 
-  /** Return a textual description of this span */
+  /**
+   * Return a textual description of this span
+   */
   String getDescription();
 
-  /** A pseudo-unique (random) number assigned to this span instance */
+  /**
+   * A pseudo-unique (random) number assigned to this span instance
+   */
   long getSpanId();
 
   /**
@@ -60,7 +72,9 @@ public interface Span {
    */
   long getTraceId();
 
-  /** Create a child span of this span with the given description */
+  /**
+   * Create a child span of this span with the given description
+   */
   Span child(String description);
 
   @Override
@@ -72,22 +86,30 @@ public interface Span {
    */
   long getParentId();
 
-  /** Add a data annotation associated with this span */
+  /**
+   * Add a data annotation associated with this span
+   */
   void addKVAnnotation(byte[] key, byte[] value);
 
-  /** Add a timeline annotation associated with this span */
+  /**
+   * Add a timeline annotation associated with this span
+   */
   void addTimelineAnnotation(String msg);
 
-  /** Get data associated with this span (read only) */
+  /**
+   * Get data associated with this span (read only)
+   */
   Map<byte[], byte[]> getKVAnnotations();
-  
-  /** Get any timeline annotations (read only) */
+
+  /**
+   * Get any timeline annotations (read only)
+   */
   List<TimelineAnnotation> getTimelineAnnotations();
 
   /**
    * Return a unique id for the node or process from which this Span originated.
    * IP address is a reasonable choice.
-   * 
+   *
    * @return
    */
   String getProcessId();

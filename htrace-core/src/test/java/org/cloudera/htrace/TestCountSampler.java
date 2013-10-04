@@ -21,7 +21,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestCountSampler {
-  
+
   @Test
   public void testNext() {
     CountSampler half = new CountSampler(2);

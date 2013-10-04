@@ -27,7 +27,7 @@ import java.lang.reflect.Proxy;
 public class TraceProxy {
   /**
    * Returns an object that will trace all calls to itself.
-   * 
+   *
    * @param instance
    * @return
    */
@@ -37,9 +37,8 @@ public class TraceProxy {
 
   /**
    * Returns an object that will trace all calls to itself.
-   * 
+   *
    * @param <V>
-   * 
    * @param instance
    * @param sampler
    * @return

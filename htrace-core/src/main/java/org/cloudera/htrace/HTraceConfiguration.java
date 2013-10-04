@@ -47,7 +47,7 @@ public abstract class HTraceConfiguration {
       return true;
     }
 
-    LOG.warn("Expected boolean for key ["+key+"] instead got ["+value+"].");
+    LOG.warn("Expected boolean for key [" + key + "] instead got [" + value + "].");
     return defaultValue;
   }
 

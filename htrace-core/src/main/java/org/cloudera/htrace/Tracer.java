@@ -44,7 +44,7 @@ public class Tracer {
 
   /**
    * Internal class for defered singleton idiom.
-   *
+   * <p/>
    * https://en.wikipedia.org/wiki/Initialization_on_demand_holder_idiom
    */
   private static class TracerHolder {
@@ -94,7 +94,7 @@ public class Tracer {
     currentSpan.set(span);
     return span;
   }
-  
+
 
   public TraceScope continueSpan(Span s) {
     Span oldCurrent = currentSpan();
@@ -115,7 +115,7 @@ public class Tracer {
         cmdLine = classParts[classParts.length - 1];
       }
 
-      processId = (cmdLine == null || cmdLine.isEmpty())?"Unknown":cmdLine;
+      processId = (cmdLine == null || cmdLine.isEmpty()) ? "Unknown" : cmdLine;
     }
     return processId;
   }

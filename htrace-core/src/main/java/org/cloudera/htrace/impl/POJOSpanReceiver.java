@@ -32,7 +32,7 @@ public class POJOSpanReceiver implements SpanReceiver {
   private final Collection<Span> spans;
 
   @Override
-  public void configure(HTraceConfiguration conf) {    
+  public void configure(HTraceConfiguration conf) {
   }
 
   /**
