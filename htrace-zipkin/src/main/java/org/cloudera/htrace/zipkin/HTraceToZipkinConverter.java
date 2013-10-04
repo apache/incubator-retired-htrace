@@ -25,6 +25,7 @@ import com.twitter.zipkin.gen.zipkinCoreConstants;
 import org.cloudera.htrace.TimelineAnnotation;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  * This class is responsible for converting a HTrace.Span to a Zipkin.Span object. To use the Zipkin
  * infrastructure (collector, front end), we need to store the Span information in a zipkin specific
  * format. This class transforms a HTrace:Span object to a Zipkin:Span object.
- * <p>
+ * <p/>
  * This is how both Span objects are related:
  * <table>
  * <col width="50%"/> <col width="50%"/> <thead>
@@ -67,18 +68,26 @@ import java.util.Map;
  * </tr>
  * </tbody>
  * </table>
- * <p>
+ * <p/>
  */
 public class HTraceToZipkinConverter {
 
   private final int ipv4Address;
   private final short port;
-  private final boolean inClientMode;
 
-  public HTraceToZipkinConverter(int ipv4Address, short port, boolean inClientMode) {
+
+  private static final Map<String, Integer> DEFAULT_PORTS = new HashMap<String, Integer>();
+
+  static {
+    DEFAULT_PORTS.put("hmaster", 60000);
+    DEFAULT_PORTS.put("hregionserver",  60020);
+    DEFAULT_PORTS.put("namenode", 8020);
+    DEFAULT_PORTS.put("datanode", 50010);
+  }
+
+  public HTraceToZipkinConverter(int ipv4Address, short port) {
     this.ipv4Address = ipv4Address;
     this.port = port;
-    this.inClientMode = inClientMode;
   }
 
   /**
@@ -90,9 +99,10 @@ public class HTraceToZipkinConverter {
    * <li>Set the last annotation. [SS, CR]
    * </ul>
    */
-  public Span toZipkinSpan(org.cloudera.htrace.Span hTraceSpan) {
+  public Span convert(org.cloudera.htrace.Span hTraceSpan) {
     Span zipkinSpan = new Span();
-    Endpoint ep = new Endpoint(ipv4Address, port, hTraceSpan.getProcessId());
+    String serviceName = hTraceSpan.getProcessId().toLowerCase();
+    Endpoint ep = new Endpoint(ipv4Address, (short) getPort(serviceName), serviceName);
     List<Annotation> annotationList = createZipkinAnnotations(hTraceSpan, ep);
     List<BinaryAnnotation> binaryAnnotationList = createZipkinBinaryAnnotations(hTraceSpan, ep);
     zipkinSpan.setTrace_id(hTraceSpan.getTraceId());
@@ -110,27 +120,25 @@ public class HTraceToZipkinConverter {
    * Add annotations from the htrace Span.
    */
   private List<Annotation> createZipkinAnnotations(org.cloudera.htrace.Span hTraceSpan,
-                                                    Endpoint ep) {
+                                                   Endpoint ep) {
     List<Annotation> annotationList = new ArrayList<Annotation>();
 
-    String firstAnno =
-        inClientMode ? zipkinCoreConstants.CLIENT_SEND : zipkinCoreConstants.SERVER_RECV;
-    String lastAnno =
-        inClientMode ? zipkinCoreConstants.CLIENT_RECV : zipkinCoreConstants.SERVER_SEND;
-
     // add first zipkin  annotation.
-    annotationList.add(createZipkinAnnotation(firstAnno, hTraceSpan, ep, true));
+    annotationList.add(createZipkinAnnotation(zipkinCoreConstants.CLIENT_SEND, hTraceSpan.getStartTimeMillis(), ep, true));
+    annotationList.add(createZipkinAnnotation(zipkinCoreConstants.SERVER_RECV, hTraceSpan.getStartTimeMillis(), ep, true));
     // add HTrace time annotation
     for (TimelineAnnotation ta : hTraceSpan.getTimelineAnnotations()) {
-      annotationList.add(createZipkinAnnotation(ta.getMessage(), hTraceSpan, ep, true));
+      annotationList.add(createZipkinAnnotation(ta.getMessage(), ta.getTime(), ep, true));
     }
     // add last zipkin annotation
-    annotationList.add(createZipkinAnnotation(lastAnno, hTraceSpan, ep, false));
+    annotationList.add(createZipkinAnnotation(zipkinCoreConstants.SERVER_SEND, hTraceSpan.getStopTimeMillis(), ep, false));
+    annotationList.add(createZipkinAnnotation(zipkinCoreConstants.CLIENT_RECV, hTraceSpan.getStopTimeMillis(), ep, false));
     return annotationList;
   }
 
   /**
    * Creates a list of Annotations that are present in HTrace Span object.
+   *
    * @return list of Annotations that could be added to Zipkin Span.
    */
   private List<BinaryAnnotation> createZipkinBinaryAnnotations(org.cloudera.htrace.Span span,
@@ -149,26 +157,38 @@ public class HTraceToZipkinConverter {
 
   /**
    * Create an annotation with the correct times and endpoint.
-   * @param value Annotation value
-   * @param span Span from which timestamp will be extracted
-   * @param ep the endopint this annotation will be associated with.
+   *
+   * @param value       Annotation value
+   * @param time        timestamp will be extracted
+   * @param ep          the endopint this annotation will be associated with.
    * @param sendRequest use the first or last timestamp.
    */
-  private static Annotation createZipkinAnnotation(String value, org.cloudera.htrace.Span span,
-      Endpoint ep, boolean sendRequest) {
+  private static Annotation createZipkinAnnotation(String value, long time,
+                                                   Endpoint ep, boolean sendRequest) {
     Annotation annotation = new Annotation();
     annotation.setHost(ep);
 
     // Zipkin is in microseconds
     if (sendRequest) {
-      annotation.setTimestamp(span.getStartTimeMillis() * 1000);
-    }
-    else {
-      annotation.setTimestamp(span.getStopTimeMillis() * 1000);
+      annotation.setTimestamp(time * 1000);
+    } else {
+      annotation.setTimestamp(time * 1000);
     }
 
-    annotation.setDuration((int) span.getAccumulatedMillis());
+    annotation.setDuration(1);
     annotation.setValue(value);
     return annotation;
+  }
+
+  private int getPort(String serviceName) {
+    if (port != -1) {
+      return port;
+    }
+
+    Integer p = DEFAULT_PORTS.get(serviceName);
+    if (p != null) {
+      return p;
+    }
+    return 80;
   }
 }

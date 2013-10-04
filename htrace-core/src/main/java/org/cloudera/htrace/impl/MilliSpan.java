@@ -34,7 +34,7 @@ import java.util.Random;
 public class MilliSpan implements Span {
 
   private static Random rand = new Random();
-  
+
   private long start;
   private long stop;
   private final String description;
@@ -65,12 +65,12 @@ public class MilliSpan implements Span {
     if (stop == 0) {
       if (start == 0)
         throw new IllegalStateException("Span for " + description
-          + " has not been started");
+            + " has not been started");
       stop = System.currentTimeMillis();
       Tracer.getInstance().deliver(this);
     }
   }
-  
+
   protected long currentTimeMillis() {
     return System.currentTimeMillis();
   }
@@ -92,7 +92,7 @@ public class MilliSpan implements Span {
   @Override
   public String toString() {
     return "start=" + start + "\nstop=" + stop + "\nparentId=" + parentSpanId
-        + "\ndescription=" + description + "\nspanId=" + spanId +"\ntraceId=" + traceId
+        + "\ndescription=" + description + "\nspanId=" + spanId + "\ntraceId=" + traceId
         + "\ntraceInfo=" + traceInfo + "\nprocessId=" + processId
         + "\ntimeline=" + timeline;
   }
@@ -133,7 +133,7 @@ public class MilliSpan implements Span {
       traceInfo = new HashMap<byte[], byte[]>();
     traceInfo.put(key, value);
   }
-  
+
   @Override
   public void addTimelineAnnotation(String msg) {
     if (timeline == null) {
@@ -148,7 +148,7 @@ public class MilliSpan implements Span {
       return Collections.emptyMap();
     return Collections.unmodifiableMap(traceInfo);
   }
-  
+
   @Override
   public List<TimelineAnnotation> getTimelineAnnotations() {
     if (timeline == null) {

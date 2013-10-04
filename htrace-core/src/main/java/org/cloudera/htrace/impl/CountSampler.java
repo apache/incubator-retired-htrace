@@ -22,7 +22,6 @@ import java.util.Random;
 
 /**
  * Sampler that returns true every N calls.
- * 
  */
 public class CountSampler implements Sampler<Object> {
 

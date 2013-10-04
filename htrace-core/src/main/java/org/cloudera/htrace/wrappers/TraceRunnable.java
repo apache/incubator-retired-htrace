@@ -22,7 +22,6 @@ import org.cloudera.htrace.TraceScope;
 
 /**
  * Wrap a Runnable with a Span that survives a change in threads.
- * 
  */
 public class TraceRunnable implements Runnable {
 
@@ -60,6 +59,6 @@ public class TraceRunnable implements Runnable {
   }
 
   private String getDescription() {
-    return this.description == null ? Thread.currentThread().getName(): description;
+    return this.description == null ? Thread.currentThread().getName() : description;
   }
 }

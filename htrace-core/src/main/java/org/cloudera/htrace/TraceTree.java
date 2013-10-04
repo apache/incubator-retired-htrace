@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import java.util.Collection;
 
 /**
- * Used to create the graph formed by spans.  
+ * Used to create the graph formed by spans.
  */
 public class TraceTree {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
@@ -35,16 +35,15 @@ public class TraceTree {
 
   /**
    * Create a new TraceTree
-   * 
-   * @param spans
-   *          The collection of spans to use to create this TraceTree. Should
-   *          have at least one root span (span with parentId =
-   *          Span.ROOT_SPAN_ID
+   *
+   * @param spans The collection of spans to use to create this TraceTree. Should
+   *              have at least one root span (span with parentId =
+   *              Span.ROOT_SPAN_ID
    */
   public TraceTree(Collection<Span> spans) {
     this.spans = ImmutableList.copyOf(spans);
-    this.spansByParentID = HashMultimap.<Long, Span> create();
-    this.spansByPid = HashMultimap.<String, Span> create();
+    this.spansByParentID = HashMultimap.<Long, Span>create();
+    this.spansByPid = HashMultimap.<String, Span>create();
 
     for (Span s : spans) {
       if (s.getProcessId() != null) {
@@ -69,7 +68,7 @@ public class TraceTree {
    *         that ID.
    */
   public Multimap<Long, Span> getSpansByParentIdMap() {
-    return HashMultimap.<Long, Span> create(spansByParentID);
+    return HashMultimap.<Long, Span>create(spansByParentID);
   }
 
   /**
@@ -80,7 +79,7 @@ public class TraceTree {
     Collection<Span> roots = spansByParentID.get(Span.ROOT_SPAN_ID);
     if (roots != null) {
       return roots;
-    } 
+    }
     throw new IllegalStateException(
         "TraceTree is not correctly formed - there are no root spans in the collection provided at construction.");
   }
@@ -91,6 +90,6 @@ public class TraceTree {
    *         have empty string process IDs.
    */
   public Multimap<String, Span> getSpansByPidMap() {
-    return HashMultimap.<String, Span> create(spansByPid);
+    return HashMultimap.<String, Span>create(spansByPid);
   }
 }

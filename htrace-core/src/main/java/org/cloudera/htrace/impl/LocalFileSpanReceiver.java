@@ -55,8 +55,8 @@ public class LocalFileSpanReceiver implements SpanReceiver {
 
   public LocalFileSpanReceiver() {
   }
-  
-  
+
+
   @Override
   public void configure(HTraceConfiguration conf) {
     this.executorTerminationTimeoutDuration = DEFAULT_EXECUTOR_TERMINATION_TIMEOUT_DURATION;

@@ -19,7 +19,7 @@ package org.cloudera.htrace;
 public class TimelineAnnotation {
   private final long time;
   private final String msg;
-  
+
   public TimelineAnnotation(long time, String msg) {
     this.time = time;
     this.msg = msg;
@@ -32,7 +32,7 @@ public class TimelineAnnotation {
   public String getMessage() {
     return msg;
   }
-  
+
   @Override
   public String toString() {
     return "@" + time + ": " + msg;

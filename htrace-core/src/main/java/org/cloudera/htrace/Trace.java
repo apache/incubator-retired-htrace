@@ -36,9 +36,8 @@ public class Trace {
    * Starts and returns a new span as the child of the current span if the
    * default sampler (TrueIfTracingSampler) returns true, otherwise returns the
    * NullSpan.
-   * 
-   * @param description
-   *          Description of the span to be created.
+   *
+   * @param description Description of the span to be created.
    * @return
    */
   public static TraceScope startSpan(String description) {
@@ -49,12 +48,10 @@ public class Trace {
    * Starts and returns a new span as the child of the parameter 'parent'. This
    * will always return a new span, even if tracing wasn't previously enabled for
    * this thread.
-   * 
-   * @param description
-   *          Description of the span to be created.
-   * @param parent
-   *          The parent that should be used to create the child span that is to
-   *          be returned.
+   *
+   * @param description Description of the span to be created.
+   * @param parent      The parent that should be used to create the child span that is to
+   *                    be returned.
    * @return
    */
   public static TraceScope startSpan(String description, Span parent) {
@@ -68,7 +65,7 @@ public class Trace {
         random.nextLong(), Tracer.getProcessId());
     return continueSpan(newSpan);
   }
-  
+
   public static <T> TraceScope startSpan(String description, Sampler<T> s) {
     return startSpan(description, s, null);
   }
@@ -89,7 +86,7 @@ public class Trace {
     }
     return continueSpan(span);
   }
-  
+
   /**
    * Pick up an existing span from another thread.
    */
@@ -99,12 +96,12 @@ public class Trace {
     if (s == null) return new TraceScope(null, null);
     return Tracer.getInstance().continueSpan(s);
   }
-  
+
   /**
    * Set the processId to be used for all Spans created by this Tracer.
    *
-   * @see Span.java
    * @param processId
+   * @see Span.java
    */
   public static void setProcessId(String processId) {
     Tracer.processId = processId;
@@ -112,7 +109,7 @@ public class Trace {
 
   /**
    * Removes the given SpanReceiver from the list of SpanReceivers.
-   * 
+   *
    * @param rcvr
    */
   public static void removeReceiver(SpanReceiver rcvr) {
@@ -138,7 +135,7 @@ public class Trace {
       s.addKVAnnotation(key, value);
     }
   }
-  
+
   /**
    * Annotate the current span with the given message.
    */

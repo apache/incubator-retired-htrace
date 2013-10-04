@@ -35,7 +35,7 @@ public class TestHTrace {
 
   /**
    * Basic system test of HTrace.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -76,18 +76,18 @@ public class TestHTrace {
     Collection<Span> roots = traceTree.getRoots();
     Assert.assertEquals(numTraces, roots.size());
 
-    Map<String,Span> descriptionToRootSpan = new HashMap<String,Span>();
+    Map<String, Span> descriptionToRootSpan = new HashMap<String, Span>();
     for (Span root : roots) {
       descriptionToRootSpan.put(root.getDescription(), root);
     }
-    
+
     Assert.assertTrue(descriptionToRootSpan.keySet().contains(
         TraceCreator.RPC_TRACE_ROOT));
     Assert.assertTrue(descriptionToRootSpan.keySet().contains(
         TraceCreator.SIMPLE_TRACE_ROOT));
     Assert.assertTrue(descriptionToRootSpan.keySet().contains(
         TraceCreator.THREADED_TRACE_ROOT));
-    
+
     Multimap<Long, Span> spansByParentId = traceTree.getSpansByParentIdMap();
     Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
     Assert.assertEquals(1, spansByParentId.get(rpcTraceRoot.getSpanId()).size());
