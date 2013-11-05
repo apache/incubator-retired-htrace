@@ -44,11 +44,18 @@ with the information given (more on that in a bit).
 HTrace stores span information in java's ThreadLocals, which causes
 the trace to be "lost" on thread changes. The only way to prevent
 this is to "wrap" your thread changes. For example, if your code looks
-like this:  
-`Thread t1 = new Thread(new MyRunnable());`  
-...  
+like this:
+
+````java
+    Thread t1 = new Thread(new MyRunnable());
+    ...  
+````
+
 Just change it to look this:  
-`Thread t1 = new Thread(Trace.wrap(new MyRunnable()));`
+
+````java
+    Thread t1 = new Thread(Trace.wrap(new MyRunnable()));
+````
 
 That's it! `Trace.wrap()` takes a single argument (a runnable or a
 callable) and if the current thread is a part of a trace, returns a
@@ -78,20 +85,24 @@ For example, you might do some expensive computation that you want to
 see on your traces.  In this case, you could start a new span before
 the computation that you then stop after the computation has
 finished. It might look like this:  
-<br>
+
+````java
     Span computationSpan = Trace.startSpan("Expensive computation.");  
     try {  
         //expensive computation here  
     } finally {  
         computationSpan.stop();  
     }  
-<br>
+````
+
 HTrace also supports key-value annotations on a per-trace basis.  
 <br>
-Example:  
-`Trace.currentTrace().addAnnotation("faultyRecordCounter".getBytes(),
-"1".getBytes());`  
-<br>
+Example:
+
+````java
+    Trace.currentTrace().addAnnotation("faultyRecordCounter".getBytes(), "1".getBytes());
+````
+
 `Trace.currentTrace()` will not return `null` if the current thread is
 not tracing, but instead it will return a `NullSpan`, which does
 nothing on any of its method calls. The takeaway here is you can call
@@ -99,7 +110,11 @@ methods on the `currentTrace()` without fear of NullPointerExceptions.
 
 ###Samplers  
 `Sampler` is an interface that defines one function:  
-`boolean next(T info);`  
+
+````java
+    boolean next(T info);
+````
+
 All of the `Trace.startSpan()` methods can take an optional sampler.  
 A new span is only created if the sampler's next function returns
 true.  If the Sampler returns false, the `NullSpan` is returned from
