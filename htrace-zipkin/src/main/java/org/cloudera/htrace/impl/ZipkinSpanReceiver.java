@@ -278,7 +278,11 @@ public class ZipkinSpanReceiver implements SpanReceiver {
           errorCount += 1;
           // If there have been ten errors in a row start dropping things.
           if (errorCount < MAX_ERRORS) {
-            dequeuedSpans.addAll(dequeuedSpans);
+            try {
+              queue.addAll(dequeuedSpans);
+            } catch (IllegalStateException ex) {
+              // Just drop them if queue is full.
+            }
           }
 
           closeClient();
