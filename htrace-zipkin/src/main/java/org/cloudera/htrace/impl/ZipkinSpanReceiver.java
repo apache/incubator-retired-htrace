@@ -281,7 +281,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
             try {
               queue.addAll(dequeuedSpans);
             } catch (IllegalStateException ex) {
-              // Just drop them if queue is full.
+              LOG.error("Drop " + dequeuedSpans.size() + " span(s) because queue is full");
             }
           }
 
