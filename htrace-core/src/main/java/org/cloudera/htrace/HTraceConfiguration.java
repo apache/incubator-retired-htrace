@@ -44,7 +44,7 @@ public abstract class HTraceConfiguration {
     if ("true".equals(value)) {
       return true;
     } else if ("false".equals(value)) {
-      return true;
+      return false;
     }
 
     LOG.warn("Expected boolean for key [" + key + "] instead got [" + value + "].");
