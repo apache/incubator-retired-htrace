@@ -17,8 +17,8 @@ language governing permissions and limitations under the License. -->
 
   <parent>
     <artifactId>htrace</artifactId>
-    <groupId>org.cloudera.htrace</groupId>
-    <version>2.06-SNAPSHOT</version>
+    <groupId>org.htrace</groupId>
+    <version>3.0-SNAPSHOT</version>
   </parent>
 
   <name>htrace-core</name>
