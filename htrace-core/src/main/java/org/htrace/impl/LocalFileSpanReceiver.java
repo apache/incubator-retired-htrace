@@ -26,7 +26,7 @@ import org.mortbay.util.ajax.JSON;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -34,18 +34,17 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Writes the spans it receives to a local file. For now I am ignoring the data
- * (annotations) portion of the spans. A production LocalFileSpanReceiver should
- * use a real CSV format.
+ * Writes the spans it receives to a local file.
+ * A production LocalFileSpanReceiver should use a real CSV format.
  */
 public class LocalFileSpanReceiver implements SpanReceiver {
-  // default capacity for the executors blocking queue
-  public static final int DEFAULT_CAPACITY = 5000;
-  // default timeout duration when calling executor.awaitTermination()
-  public static final long DEFAULT_EXECUTOR_TERMINATION_TIMEOUT_DURATION = 60;
-  // default time unit for the above duration when calling
-  // executor.awaitTermination()
   public static final Log LOG = LogFactory.getLog(LocalFileSpanReceiver.class);
+  public static final String PATH_KEY = "local-file-span-receiver.path";
+  public static final String CAPACITY_KEY = "local-file-span-receiver.capacity";
+  // default capacity for the executors blocking queue
+  public static final int CAPACITY_DEFAULT = 5000;
+  // default timeout duration when calling executor.awaitTermination()
+  public static final long EXECUTOR_TERMINATION_TIMEOUT_DURATION_DEFAULT = 60;
   private String file;
   private FileWriter fwriter;
   private BufferedWriter bwriter;
@@ -59,11 +58,11 @@ public class LocalFileSpanReceiver implements SpanReceiver {
 
   @Override
   public void configure(HTraceConfiguration conf) {
-    this.executorTerminationTimeoutDuration = DEFAULT_EXECUTOR_TERMINATION_TIMEOUT_DURATION;
-    int capacity = conf.getInt("local-file-span-receiver.capacity", DEFAULT_CAPACITY);
-    this.file = conf.get("local-file-span-receiver.path");
+    this.executorTerminationTimeoutDuration = EXECUTOR_TERMINATION_TIMEOUT_DURATION_DEFAULT;
+    int capacity = conf.getInt(CAPACITY_KEY, CAPACITY_DEFAULT);
+    this.file = conf.get(PATH_KEY);
     if (file == null || file.isEmpty()) {
-      throw new IllegalArgumentException("must configure " + file);
+      throw new IllegalArgumentException("must configure " + PATH_KEY);
     }
     this.executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(capacity));
@@ -73,7 +72,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
       throw new RuntimeException(ioe);
     }
     this.bwriter = new BufferedWriter(fwriter);
-    this.values = new HashMap<String, Object>();
+    this.values = new LinkedHashMap<String, Object>();
   }
 
 
@@ -87,14 +86,17 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     @Override
     public void run() {
       try {
-        values.put("SpanID", span.getSpanId());
         values.put("TraceID", span.getTraceId());
+        values.put("SpanID", span.getSpanId());
         values.put("ParentID", span.getParentId());
+        values.put("ProcessID", span.getProcessId());
         values.put("Start", span.getStartTimeMillis());
         values.put("Stop", span.getStopTimeMillis());
         values.put("Description", span.getDescription());
-        values.put("Annotations", span.getKVAnnotations());
+        values.put("KVAnnotations", span.getKVAnnotations());
+        values.put("TLAnnotations", span.getTimelineAnnotations());
         bwriter.write(JSON.toString(values));
+        bwriter.newLine();
         bwriter.flush();
         values.clear();
       } catch (IOException e) {
