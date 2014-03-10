@@ -45,7 +45,7 @@ public class TraceTree {
     this.spansByParentID = HashMultimap.<Long, Span>create();
     this.spansByPid = HashMultimap.<String, Span>create();
 
-    for (Span s : spans) {
+    for (Span s : this.spans) {
       if (s.getProcessId() != null) {
         spansByPid.put(s.getProcessId(), s);
       } else {
