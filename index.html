@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Htrace : " />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Htrace</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/cloudera/htrace">View on GitHub</a>
+
+          <h1 id="project_title">Htrace</h1>
+          <h2 id="project_tagline"></h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/cloudera/htrace/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/cloudera/htrace/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a name="htrace" class="anchor" href="#htrace"><span class="octicon octicon-link"></span></a>HTrace</h1>
+
+<p>HTrace is a tracing framework intended for use with distributed systems written in java.  </p>
+
+<p>The project is hosted at <a href="http://github.com/cloudera/htrace">http://github.com/cloudera/htrace</a>.<br>
+The project is available in Maven Central with groupId: org.htrace, and name: htrace.<br>
+(It was formally at groupId: org.cloudera.htrace, and name: htrace).  </p>
+
+<h2>
+<a name="api" class="anchor" href="#api"><span class="octicon octicon-link"></span></a>API</h2>
+
+<p>Using HTrace requires some instrumentation to your application.<br>
+Before we get into that we have to review our terminology.  HTrace
+borrows <a href="http://research.google.com/pubs/pub36356.html">Dapper's</a>
+terminology.  </p>
+
+<p><b>Span:</b> The basic unit of work. For example, sending an RPC is a
+new span, as is sending a response to an RPC.<br>
+Span's are identified by a unique 64-bit ID for the span and another
+64-bit ID for the trace the span is a part of.  Spans also have other
+data, such as descriptions, key-value annotations, the ID of the span
+that caused them, and process ID's (normally IP address).<br><br>
+Spans are started and stopped, and they keep track of their timing
+information.  Once you create a span, you must stop it at some point
+in the future.  </p>
+
+<p><b>Trace:</b> A set of spans forming a tree-like structure.  For
+example, if you are running a distributed big-data store, a trace
+might be formed by a put request. </p>
+
+<p>To instrument your system you must:<br><br><b>1. Attach additional information to your RPC's.</b><br>
+In order to create the causal links necessary for a trace, HTrace
+needs to know about the causal
+relationships between spans.  The only information you need to add to
+your RPC's is two 64-bit longs.  If tracing is enabled (Trace.isTracing()
+returns true) when you send an RPC, attach the ID of the current span
+and the ID of the current trace to the message.<br>
+On the receiving end of the RPC, check to see if the message has the
+additional tracing information above.  If it does, start a new span
+with the information given (more on that in a bit).<br><br><b>2. Wrap your thread changes.</b><br>
+HTrace stores span information in java's ThreadLocals, which causes
+the trace to be "lost" on thread changes. The only way to prevent
+this is to "wrap" your thread changes. For example, if your code looks
+like this:</p>
+
+<div class="highlight highlight-java"><pre>    <span class="n">Thread</span> <span class="n">t1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">MyRunnable</span><span class="o">());</span>
+    <span class="o">...</span>  
+</pre></div>
+
+<p>Just change it to look this:  </p>
+
+<div class="highlight highlight-java"><pre>    <span class="n">Thread</span> <span class="n">t1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="n">Trace</span><span class="o">.</span><span class="na">wrap</span><span class="o">(</span><span class="k">new</span> <span class="n">MyRunnable</span><span class="o">()));</span>
+</pre></div>
+
+<p>That's it! <code>Trace.wrap()</code> takes a single argument (a runnable or a
+callable) and if the current thread is a part of a trace, returns a
+wrapped version of the argument.  The wrapped version of a callable
+and runnable just knows about the span that created it and will start
+a new span in the new thread that is the child of the span that
+created the runnable/callable.  There may be situations in which a
+simple <code>Trace.wrap()</code> does not suffice.  In these cases all you need
+to do is keep a reference to the "parent span" (the span before the
+thread change) and once you're in the new thread start a new span that
+is the "child" of the parent span you stored.<br><br>
+For example:<br><br>
+Say you have some object representing a "put" operation.  When the
+client does a "put," the put is first added to a list so another
+thread can batch together the puts. In this situation, you
+might want to add another field to the Put class that could store the
+current span at the time the put was created.  Then when the put is
+pulled out of the list to be processed, you can start a new span as
+the child of the span stored in the Put.<br><br><b>3. Add custom spans and annotations.</b><br>
+Once you've augmented your RPC's and wrapped the necessary thread
+changes, you can add more spans and annotations wherever you want.<br>
+For example, you might do some expensive computation that you want to
+see on your traces.  In this case, you could start a new span before
+the computation that you then stop after the computation has
+finished. It might look like this:  </p>
+
+<div class="highlight highlight-java"><pre>    <span class="n">Span</span> <span class="n">computationSpan</span> <span class="o">=</span> <span class="n">Trace</span><span class="o">.</span><span class="na">startSpan</span><span class="o">(</span><span class="s">"Expensive computation."</span><span class="o">);</span>  
+    <span class="k">try</span> <span class="o">{</span>  
+        <span class="c1">//expensive computation here  </span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>  
+        <span class="n">computationSpan</span><span class="o">.</span><span class="na">stop</span><span class="o">();</span>  
+    <span class="o">}</span>  
+</pre></div>
+
+<p>HTrace also supports key-value annotations on a per-trace basis.<br><br>
+Example:</p>
+
+<div class="highlight highlight-java"><pre>    <span class="n">Trace</span><span class="o">.</span><span class="na">currentTrace</span><span class="o">().</span><span class="na">addAnnotation</span><span class="o">(</span><span class="s">"faultyRecordCounter"</span><span class="o">.</span><span class="na">getBytes</span><span class="o">(),</span> <span class="s">"1"</span><span class="o">.</span><span class="na">getBytes</span><span class="o">());</span>
+</pre></div>
+
+<p><code>Trace.currentTrace()</code> will not return <code>null</code> if the current thread is
+not tracing, but instead it will return a <code>NullSpan</code>, which does
+nothing on any of its method calls. The takeaway here is you can call
+methods on the <code>currentTrace()</code> without fear of NullPointerExceptions.</p>
+
+<h3>
+<a name="samplers" class="anchor" href="#samplers"><span class="octicon octicon-link"></span></a>Samplers</h3>
+
+<p><code>Sampler</code> is an interface that defines one function:  </p>
+
+<div class="highlight highlight-java"><pre>    <span class="kt">boolean</span> <span class="nf">next</span><span class="o">(</span><span class="n">T</span> <span class="n">info</span><span class="o">);</span>
+</pre></div>
+
+<p>All of the <code>Trace.startSpan()</code> methods can take an optional sampler.<br>
+A new span is only created if the sampler's next function returns
+true.  If the Sampler returns false, the <code>NullSpan</code> is returned from
+<code>startSpan()</code>, so it's safe to call <code>stop()</code> or <code>addAnnotation()</code> on it.
+As you may have noticed from the <code>next()</code> method signature, Sampler is
+parameterized.  The argument to <code>next()</code> is whatever piece of
+information you might need for sampling.  See <code>Sampler.java</code> for an
+example of this.  If you do not require any additional information,
+then just ignore the parameter.<br>
+HTrace includes  a sampler that always returns true, a
+sampler that always returns false and a sampler returns true some
+percentage of the time (you pass in the percentage as a decimal at construction). </p>
+
+<h3>
+<a name="tracestartspan" class="anchor" href="#tracestartspan"><span class="octicon octicon-link"></span></a><code>Trace.startSpan()</code>
+</h3>
+
+<p>There is a single method to create and start spans: <code>startSpan()</code>.<br>
+For the <code>startSpan()</code> methods that do not take an explicit Sampler, the
+default Sampler is used.  The default sampler returns true if and only
+if tracing is already on in the current thread.  That means that
+calling <code>startSpan()</code> with no explicit Sampler is a good idea when you
+have information that you would like to add to a trace if it's already
+occurring, but is not something you would want to start a whole new
+trace for.<br><br>
+If you are using a sampler that makes use of the <code>T info</code> parameter to
+<code>next()</code>, just pass in the object as the last argument.  If you leave it
+out, HTrace will pass <code>null</code> for you (so make sure your Samplers can
+handle <code>null</code>).<br><br>
+Aside from whether or not you pass in an explicit <code>Sampler</code>, there are
+other options you have when calling <code>startSpan()</code>.<br>
+For the next section I am assuming you are familiar with the options
+for passing in <code>Samplers</code> and <code>info</code> parameters, so when I say "no
+arguments," I mean no additional arguments other than whatever
+<code>Sampler</code>/<code>info</code> parameters you deem necessary.<br><br>
+You can call <code>startSpan()</code> with no additional arguments.
+In this case, <code>Trace.java</code> will start a span if the sampler (explicit
+or default) returns true. If the current span is not the <code>NullSpan</code>, the span
+returned will be a child of the current span, otherwise it will start
+a new trace in the current thread (it will be a
+<code>ProcessRootMilliSpan</code>). All of the other <code>startSpan()</code> methods take some
+parameter describing the parent span of the span to be created. The
+versions that take a <code>TraceInfo</code> or a <code>long traceId</code> and <code>long
+parentId</code> will mostly be used when continuing a trace over RPC. The
+receiver of the RPC will check the message for the additional two
+<code>longs</code> and will call <code>startSpan()</code> if they are attached.  The last
+<code>startSpan()</code> takes a <code>Span parent</code>.  The result of <code>parent.child()</code>
+will be used for the new span.  <code>Span.child()</code> simply returns a span
+that is a child of <code>this</code>. </p>
+
+<h2>
+<a name="testing-information" class="anchor" href="#testing-information"><span class="octicon octicon-link"></span></a>Testing Information</h2>
+
+<p>The test that creates a sample trace (TestHTrace) takes a command line argument telling it where to write span information. Run mvn test -DspanFile="FILE_PATH" to write span information to FILE_PATH. If no file is specified, span information will be written to standard out. If span information is written to a file, you can use the included graphDrawer python script in tools/ to create a simple visualization of the trace. Or you could write some javascript to make a better visualization, and send a pull request if you do :). </p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Htrace maintained by <a href="https://github.com/cloudera">cloudera</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
