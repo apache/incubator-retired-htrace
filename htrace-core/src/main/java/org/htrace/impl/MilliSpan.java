@@ -91,10 +91,7 @@ public class MilliSpan implements Span {
 
   @Override
   public String toString() {
-    return "start=" + start + "\nstop=" + stop + "\nparentId=" + parentSpanId
-        + "\ndescription=" + description + "\nspanId=" + spanId + "\ntraceId=" + traceId
-        + "\ntraceInfo=" + traceInfo + "\nprocessId=" + processId
-        + "\ntimeline=" + timeline;
+    return String.format("Span{Id:0x%16x,parentId:0x%16x,desc:%s}", spanId, parentSpanId, description);
   }
 
   @Override

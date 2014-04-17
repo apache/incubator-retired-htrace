@@ -91,9 +91,8 @@ public class Trace {
    * Pick up an existing span from another thread.
    */
   public static TraceScope continueSpan(Span s) {
-    // Return an empty TraceScope that does nothing on
-    // close
-    if (s == null) return new TraceScope(null, null);
+    // Return an empty TraceScope that does nothing on close
+    if (s == null) return NullScope.INSTANCE;
     return Tracer.getInstance().continueSpan(s);
   }
 
