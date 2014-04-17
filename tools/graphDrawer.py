@@ -38,12 +38,7 @@ def buildGraph(nid):
 
 def loads_invalid_obj_list(s):
   decoder = JSONDecoder()
-  s_len = len(s)
-  objs = []
-  end = 0
-  while end != s_len:
-    obj, end = decoder.raw_decode(s, idx=end)
-    objs.append(obj)
+  objs = [decoder.decode(x) for x in s.split()]
   return objs
 
 nodes = loads_invalid_obj_list(sys.stdin.read().strip())
