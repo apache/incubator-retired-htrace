@@ -166,6 +166,41 @@ receiver of the RPC will check the message for the additional two
 will be used for the new span.  `Span.child()` simply returns a span
 that is a child of `this`. 
 
+###Span Receivers
+In order to use the tracing information consisting of spans,
+you need implementation of `SpanReceiver` interface which collects spans
+and typically writes it to files or databases or collector services.
+The `SpanReceiver` implementation must provide `receiveSpan` method which
+is called from `Trace.deliver` method.
+You do not need to explicitly call `Trace.deliver`
+because it is internally called by the implementation of `Span`.
+
+````java
+    public interface SpanReceiver extends Closeable {
+      public void configure(HTraceConfiguration conf);
+      public void receiveSpan(Span span);
+    }
+````
+
+Each application process using HTrace needs to
+initialize the SpanReceiver implementation and register it first
+by calling `Trace.addReceiver` method.
+
+````java
+    // load and instanciate SpanReceiver impl.
+    // ...
+    impl.configure(conf);
+    Trace.addReceiver(impl);
+````
+
+htrace-zipkin provides the `SpanReceiver` implementation
+which sends spans to [Zipkin](https://github.com/twitter/zipkin) collector.
+You can build the uber-jar (htrace-zipkin-*-jar-withdependency.jar) for manual setup as shown below.
+This ubse-jar contains depencdencies except htrace-core and its dependencies.
+
+    $ cd htrace-zipkin
+    $ mvn compile assembly:single
+
 Testing Information
 -------------------------------
 
