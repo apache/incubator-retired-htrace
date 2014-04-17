@@ -91,6 +91,9 @@ public class Tracer {
   }
 
   protected Span setCurrentSpan(Span span) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("setting current span " + span);
+    }
     currentSpan.set(span);
     return span;
   }

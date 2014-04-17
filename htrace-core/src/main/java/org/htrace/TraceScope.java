@@ -61,6 +61,14 @@ public class TraceScope implements Closeable {
     return span;
   }
 
+  /**
+   * Return true when {@link #detach()} has been called. Helpful when debugging
+   * multiple threads working on a single span.
+   */
+  public boolean isDetached() {
+    return detached;
+  }
+
   @Override
   public void close() {
     if (span == null) return;
