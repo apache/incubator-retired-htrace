@@ -32,25 +32,24 @@ import java.util.Map;
 
 public class HBaseSpanInfo implements Span {
   private final long traceId;
-  private final long spanId;
   private final long parentSpanId;
   private long start;
   private long stop;
+  private final long spanId;
   private final String processId;
   private final String description;
   private List<TimelineAnnotation> timeline = null;
   private Map<byte[], byte[]> traceInfo = null;
 
-  public HBaseSpanInfo(long traceId, long spanId, long parentSpanId,
-                       long start, long stop,
-                       String processId, String description,
+  public HBaseSpanInfo(long traceId, long parentSpanId, long start, long stop,
+                       long spanId, String processId, String description,
                        List<TimelineAnnotation> timeline,
                        Map<byte[], byte[]> traceInfo) {
     this.traceId = traceId;
-    this.spanId = spanId;
     this.parentSpanId = parentSpanId;
     this.start = start;
     this.stop = stop;
+    this.spanId = spanId;
     this.processId = processId;
     this.description = description;
     this.timeline = timeline;
@@ -80,13 +79,17 @@ public class HBaseSpanInfo implements Span {
   public static DataOutputBuffer toDataOutputBuffer(Span span) throws IOException {
     final DataOutputBuffer out = new DataOutputBuffer(128);
     out.write(Bytes.toBytes(span.getTraceId()));
-    out.write(Bytes.toBytes(span.getSpanId()));
     out.write(Bytes.toBytes(span.getParentId()));
     out.write(Bytes.toBytes(span.getStartTimeMillis()));
     out.write(Bytes.toBytes(span.getStopTimeMillis()));
+    out.write(Bytes.toBytes(span.getSpanId()));
     Bytes.writeByteArray(out, Bytes.toBytes(span.getProcessId()));
     Bytes.writeByteArray(out, Bytes.toBytes(span.getDescription()));
-    for (TimelineAnnotation tl : span.getTimelineAnnotations()) {
+    List<TimelineAnnotation> timeline = span.getTimelineAnnotations();
+    int size = timeline.size();
+    out.write(Bytes.toBytes(size));
+    for (int i = 0; i < size; i++) {
+      TimelineAnnotation tl = timeline.get(i);
       out.write(Bytes.toBytes(tl.getTime()));
       Bytes.writeByteArray(out, Bytes.toBytes(tl.getMessage()));
     }
@@ -109,51 +112,38 @@ public class HBaseSpanInfo implements Span {
       throws IOException {
     DataInputStream in =
       new DataInputStream(new ByteArrayInputStream(bytes, offset, length));
-    long traceId = 0;
-    long spanId = 0;
-    long parentSpanId = 0;
-    long start = 0;
-    long stop = 0;
-    String processId = null;
-    String description = null;
     List<TimelineAnnotation> timeline = new ArrayList<TimelineAnnotation>();
     byte[] buf = new byte[Bytes.SIZEOF_LONG];
-    try {
+    in.readFully(buf);
+    long traceId = Bytes.toLong(buf);
+    in.readFully(buf);
+    long parentSpanId  = Bytes.toLong(buf);
+    in.readFully(buf);
+    long start = Bytes.toLong(buf);
+    in.readFully(buf);
+    long stop = Bytes.toLong(buf);
+    in.readFully(buf);
+    long spanId  = Bytes.toLong(buf);
+    String processId = Bytes.toString(Bytes.readByteArray(in));
+    String description = Bytes.toString(Bytes.readByteArray(in));
+    byte[] size = new byte[Bytes.SIZEOF_INT];
+    in.readFully(size);
+    byte[] msg = null;
+    for (int i = Bytes.toInt(size); i > 0; i--) {
       in.readFully(buf);
-      traceId = Bytes.toLong(buf);
-      in.readFully(buf);
-      spanId  = Bytes.toLong(buf);
-      in.readFully(buf);
-      parentSpanId  = Bytes.toLong(buf);
-      in.readFully(buf);
-      start = Bytes.toLong(buf);
-      in.readFully(buf);
-      stop = Bytes.toLong(buf);
-      processId = Bytes.toString(Bytes.readByteArray(in));
-      description = Bytes.toString(Bytes.readByteArray(in));
-      byte[] msg = null;
-      while (true) {
-        in.readFully(buf);
-        msg = Bytes.readByteArray(in);
-        timeline.add(new TimelineAnnotation(Bytes.toLong(buf),
-                                            Bytes.toString(msg)));
-      }
-    } catch (EOFException e) {
-      // do nothing.
+      msg = Bytes.readByteArray(in);
+      timeline.add(new TimelineAnnotation(Bytes.toLong(buf),
+                                          Bytes.toString(msg)));
     }
-    // todo: support traceInfo
-    return new HBaseSpanInfo(traceId, spanId, parentSpanId, start, stop,
-                             processId, description, timeline, null);
+    return new HBaseSpanInfo(traceId, parentSpanId, start, stop,
+                             spanId, processId, description,
+                             timeline,
+                             null);
   }
 
   @Override
   public long getTraceId() {
     return traceId;
-  }
-
-  @Override
-  public long getSpanId() {
-    return spanId;
   }
 
   @Override
@@ -169,6 +159,11 @@ public class HBaseSpanInfo implements Span {
   @Override
   public long getStopTimeMillis() {
     return stop;
+  }
+
+  @Override
+  public long getSpanId() {
+    return spanId;
   }
 
   @Override

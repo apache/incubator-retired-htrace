@@ -22,6 +22,10 @@ language governing permissions and limitations under the License. -->
   </parent>
 
   <name>htrace-hbase</name>
+  <description>
+    htrace-hbase is the tools to send tracing information
+    to a HBase database for analysis later.
+  </description>
   <url>https://github.com/cloudera/htrace</url>
 
   <properties>
@@ -101,6 +105,12 @@ language governing permissions and limitations under the License. -->
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
       <version>${hbase.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.htrace</groupId>
+          <artifactId>htrace-core</artifactId>
+        </exclusion>
+      </exclusions> 
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>

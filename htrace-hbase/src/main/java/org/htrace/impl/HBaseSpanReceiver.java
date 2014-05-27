@@ -53,8 +53,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * HBase is an open source distributed datastore.
  * This span receiver store spans into HBase.
  * HTrace spans are queued into a blocking queue.
- * From there background worker threads will batch the spans together
- * and then send them through to a Zipkin collector.
+ * From there background worker threads will send them
+ * to a HBase database.
  */
 public class HBaseSpanReceiver implements SpanReceiver {
   private static final Log LOG = LogFactory.getLog(HBaseSpanReceiver.class);
@@ -114,9 +114,9 @@ public class HBaseSpanReceiver implements SpanReceiver {
 
   public HBaseSpanReceiver() {
     this.queue = new ArrayBlockingQueue<Span>(1000);
-    tf = new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("hbaseSpanReceiver-%d")
-        .build();
+    this.tf = new ThreadFactoryBuilder().setDaemon(true)
+                                        .setNameFormat("hbaseSpanReceiver-%d")
+                                        .build();
   }
 
   @Override
@@ -147,9 +147,6 @@ public class HBaseSpanReceiver implements SpanReceiver {
   }
 
   private class WriteSpanRunnable implements Runnable {
-    /**
-     * scribe client to push zipkin spans
-     */
     private HConnection hconnection;
     private HTableInterface htable;
 
@@ -157,7 +154,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
     }
 
     /**
-     * This runnable converts a HTrace span to a Zipkin span and sends it across the zipkin
+     * This runnable sends a HTrace span to the HBase.
      */
     @Override
     public void run() {
@@ -221,7 +218,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
           closeClient();
           try {
             // Since there was an error sleep just a little bit to try and allow the
-            // zipkin collector some time to recover.
+            // HBase some time to recover.
             Thread.sleep(500);
           } catch (InterruptedException e1) {
             // Ignored
