@@ -34,6 +34,7 @@ import org.htrace.HTraceConfiguration;
 import org.htrace.Span;
 import org.htrace.SpanReceiver;
 import org.htrace.TimelineAnnotation;
+import org.htrace.protobuf.generated.SpanProtos;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -158,7 +159,9 @@ public class HBaseSpanReceiver implements SpanReceiver {
      */
     @Override
     public void run() {
-
+      SpanProtos.Span.Builder sbuilder = SpanProtos.Span.newBuilder();
+      SpanProtos.TimelineAnnotation.Builder tlbuilder =
+          SpanProtos.TimelineAnnotation.newBuilder();
       List<Span> dequeuedSpans = new ArrayList<Span>(maxSpanBatchSize);
       long errorCount = 0;
 
@@ -194,9 +197,23 @@ public class HBaseSpanReceiver implements SpanReceiver {
 
         try {
           for (Span span : dequeuedSpans) {
+            sbuilder.clear()
+                    .setTraceId(span.getTraceId())
+                    .setParentId(span.getParentId())
+                    .setStart(span.getStartTimeMillis())
+                    .setStop(span.getStopTimeMillis())
+                    .setSpanId(span.getSpanId())
+                    .setProcessId(span.getProcessId())
+                    .setDescription(span.getDescription());
+            for (TimelineAnnotation ta : span.getTimelineAnnotations()) {
+              sbuilder.addTimeline(tlbuilder.clear()
+                                            .setTime(ta.getTime())
+                                            .setMessage(ta.getMessage())
+                                            .build());
+            }
             Put put = new Put(Bytes.toBytes(span.getTraceId()));
             put.add(HBaseSpanReceiver.this.cf,
-                    HBaseSpanInfo.toBytes(span),
+                    sbuilder.build().toByteArray(),
                     null);
             this.htable.put(put);
           }

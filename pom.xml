@@ -125,6 +125,7 @@ language governing permissions and limitations under the License. -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
+              <exclude>**/generated/**</exclude>
               <!-- Readme -->
               <exclue>README.md</exclue>
             </excludes>
