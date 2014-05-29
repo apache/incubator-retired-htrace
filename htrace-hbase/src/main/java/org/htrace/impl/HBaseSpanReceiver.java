@@ -314,4 +314,23 @@ public class HBaseSpanReceiver implements SpanReceiver {
       }
     }
   }
+
+  /**
+   * Run basic test.
+   * @throws IOException
+   */
+  public static void main(String[] args) throws IOException {
+    HBaseSpanReceiver receiver = new HBaseSpanReceiver();
+    receiver.configure(new HBaseHTraceConfiguration(HBaseConfiguration.create()));
+    org.htrace.Trace.addReceiver(receiver);
+    org.htrace.TraceScope parent = 
+        org.htrace.Trace.startSpan("HBaseSpanReceiver.main.parent",
+                                   org.htrace.Sampler.ALWAYS);
+    org.htrace.TraceScope child =
+        org.htrace.Trace.startSpan("HBaseSpanReceiver.main.child",
+                                   parent.getSpan());
+    child.close();
+    parent.close();
+    receiver.close();
+  }
 }
