@@ -31,9 +31,12 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.htrace.HTraceConfiguration;
+import org.htrace.Sampler;
 import org.htrace.Span;
 import org.htrace.SpanReceiver;
 import org.htrace.TimelineAnnotation;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 import org.htrace.protobuf.generated.SpanProtos;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -74,6 +77,10 @@ public class HBaseSpanReceiver implements SpanReceiver {
   public static final String DEFAULT_TABLE = "htrace";
   public static final String COLUMNFAMILY_KEY = "htrace.hbase.columnfamily";
   public static final String DEFAULT_COLUMNFAMILY = "s";
+  public static final String INDEXFAMILY_KEY = "htrace.hbase.indexfamily";
+  public static final String DEFAULT_INDEXFAMILY = "i";
+  public static final byte[] INDEX_SPAN_QUAL = Bytes.toBytes("s");
+  public static final byte[] INDEX_TIME_QUAL = Bytes.toBytes("t");
 
   /**
    * How long this receiver will try and wait for all threads to shutdown.
@@ -111,6 +118,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
   private Configuration hconf;
   private byte[] table;
   private byte[] cf;
+  private byte[] icf;
   private int maxSpanBatchSize;
 
   public HBaseSpanReceiver() {
@@ -126,6 +134,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
     this.hconf = HBaseConfiguration.create();
     this.table = Bytes.toBytes(conf.get(TABLE_KEY, DEFAULT_TABLE));
     this.cf = Bytes.toBytes(conf.get(COLUMNFAMILY_KEY, DEFAULT_COLUMNFAMILY));
+    this.icf = Bytes.toBytes(conf.get(INDEXFAMILY_KEY, DEFAULT_INDEXFAMILY));
     this.maxSpanBatchSize = conf.getInt(MAX_SPAN_BATCH_SIZE_KEY,
                                         DEFAULT_MAX_SPAN_BATCH_SIZE);
     String quorum = conf.get(COLLECTOR_QUORUM_KEY, DEFAULT_COLLECTOR_QUORUM);
@@ -215,6 +224,14 @@ public class HBaseSpanReceiver implements SpanReceiver {
             put.add(HBaseSpanReceiver.this.cf,
                     sbuilder.build().toByteArray(),
                     null);
+            if (span.getParentId() == Span.ROOT_SPAN_ID) {
+              put.add(HBaseSpanReceiver.this.icf,
+                      INDEX_TIME_QUAL,
+                      Bytes.toBytes(span.getStartTimeMillis()));
+              put.add(HBaseSpanReceiver.this.icf,
+                      INDEX_SPAN_QUAL,
+                      sbuilder.build().toByteArray());
+            }
             this.htable.put(put);
           }
           // clear the list for the next time through.
@@ -319,18 +336,32 @@ public class HBaseSpanReceiver implements SpanReceiver {
    * Run basic test.
    * @throws IOException
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
     HBaseSpanReceiver receiver = new HBaseSpanReceiver();
     receiver.configure(new HBaseHTraceConfiguration(HBaseConfiguration.create()));
-    org.htrace.Trace.addReceiver(receiver);
-    org.htrace.TraceScope parent = 
-        org.htrace.Trace.startSpan("HBaseSpanReceiver.main.parent",
-                                   org.htrace.Sampler.ALWAYS);
-    org.htrace.TraceScope child =
-        org.htrace.Trace.startSpan("HBaseSpanReceiver.main.child",
-                                   parent.getSpan());
-    child.close();
+    Trace.addReceiver(receiver);
+    TraceScope parent = 
+        Trace.startSpan("HBaseSpanReceiver.main.parent", Sampler.ALWAYS);
+    Thread.sleep(10);
+    long traceid = parent.getSpan().getTraceId();
+    TraceScope child1 =
+        Trace.startSpan("HBaseSpanReceiver.main.child.1");
+    Thread.sleep(10);
+    TraceScope child2 =
+        Trace.startSpan("HBaseSpanReceiver.main.child.2", parent.getSpan());
+    Thread.sleep(10);
+    TraceScope gchild =
+        Trace.startSpan("HBaseSpanReceiver.main.grandchild");
+    Trace.addTimelineAnnotation("annotation 1.");
+    Thread.sleep(10);
+    Trace.addTimelineAnnotation("annotation 2.");
+    gchild.close();
+    Thread.sleep(10);
+    child2.close();
+    Thread.sleep(10);
+    child1.close();
     parent.close();
     receiver.close();
+    System.out.println("trace id: " + traceid);
   }
 }
