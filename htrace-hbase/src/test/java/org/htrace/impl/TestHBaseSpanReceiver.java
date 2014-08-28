@@ -29,17 +29,13 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -47,7 +43,6 @@ import org.junit.Test;
 import org.junit.Assert;
 import org.htrace.Span;
 import org.htrace.SpanReceiver;
-import org.htrace.HTraceConfiguration;
 import org.htrace.TimelineAnnotation;
 import org.htrace.TraceCreator;
 import org.htrace.TraceTree;
@@ -57,7 +52,6 @@ import org.htrace.protobuf.generated.SpanProtos;
 public class TestHBaseSpanReceiver {
   private static final Log LOG = LogFactory.getLog(TestHBaseSpanReceiver.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private HTableInterface htable;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -69,62 +63,21 @@ public class TestHBaseSpanReceiver {
     UTIL.shutdownMiniCluster();
   }
 
-  Configuration configure(Configuration conf) {
-    Configuration hconf = HBaseConfiguration.create(conf);
-    hconf.set(HBaseHTraceConfiguration.KEY_PREFIX +
-              HBaseSpanReceiver.COLLECTOR_QUORUM_KEY,
-              conf.get(HConstants.ZOOKEEPER_QUORUM));
-    hconf.setInt(HBaseHTraceConfiguration.KEY_PREFIX +
-                 HBaseSpanReceiver.ZOOKEEPER_CLIENT_PORT_KEY,
-                 conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
-    hconf.set(HBaseHTraceConfiguration.KEY_PREFIX +
-              HBaseSpanReceiver.ZOOKEEPER_ZNODE_PARENT_KEY,
-              conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
-    return hconf;
-  }
-
-  void createTable() {
-    try { 
-      this.htable = UTIL.createTable(HBaseSpanReceiver.DEFAULT_TABLE,
-                                     HBaseSpanReceiver.DEFAULT_COLUMNFAMILY);
-    } catch (IOException e) {
-      Assert.fail("failed to create htrace table. " + e.getMessage());
-    }
-  }
-
-  private SpanReceiver startReceiver(Configuration conf) {
-    SpanReceiver receiver = new HBaseSpanReceiver();
-    receiver.configure(new HBaseHTraceConfiguration(conf));
-    return receiver;
-  }
-
-  private void stopReceiver(SpanReceiver receiver) {
-    if (receiver != null) {
-      try {
-        receiver.close();
-        receiver = null;
-      } catch (IOException e) {
-        Assert.fail("failed to close span receiver. " + e.getMessage());
-      }
-    }
-  }
-
   @Test
   public void testHBaseSpanReceiver() {
-    createTable();
-    Configuration conf = configure(UTIL.getConfiguration());
-    SpanReceiver receiver = startReceiver(conf);
+    HTableInterface htable = HBaseTestUtil.createTable(UTIL);
+    SpanReceiver receiver = HBaseTestUtil.startReceiver(UTIL);
     TraceCreator tc = new TraceCreator(receiver);
     tc.createThreadedTrace();
     tc.createSimpleTrace();
     tc.createSampleRpcTrace();
-    stopReceiver(receiver);
+    HBaseTestUtil.stopReceiver(receiver);
     Scan scan = new Scan();
     scan.addFamily(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_COLUMNFAMILY));
     scan.setMaxVersions(1);
     ArrayList<Span> spans = new ArrayList<Span>();
     try {
-      ResultScanner scanner = this.htable.getScanner(scan);
+      ResultScanner scanner = htable.getScanner(scan);
       Result result = null;
       while ((result = scanner.next()) != null) {
         for (Cell cell : result.listCells()) {
@@ -159,6 +112,25 @@ public class TestHBaseSpanReceiver {
     Assert.assertEquals(1, spansByParentId.get(rpcChild2.getSpanId()).size());
     Span rpcChild3 = spansByParentId.get(rpcChild2.getSpanId()).iterator().next();
     Assert.assertEquals(0, spansByParentId.get(rpcChild3.getSpanId()).size());
+
+    Scan iscan = new Scan();
+    iscan.addColumn(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_INDEXFAMILY),
+                    HBaseSpanReceiver.INDEX_SPAN_QUAL);
+    try {
+      ResultScanner scanner = htable.getScanner(iscan);
+      Result result = null;
+      while ((result = scanner.next()) != null) {
+        for (Cell cell : result.listCells()) {
+          InputStream in = new ByteArrayInputStream(cell.getValueArray(),
+                                                    cell.getValueOffset(),
+                                                    cell.getValueLength());
+          Assert.assertEquals(SpanProtos.Span.parseFrom(in).getParentId(),
+                              Span.ROOT_SPAN_ID);
+        }
+      }
+    } catch (IOException e) {
+      Assert.fail("failed to get spans from index family. " + e.getMessage());
+    }
   }
 
   private class TestSpan implements Span {

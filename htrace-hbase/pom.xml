@@ -30,35 +30,36 @@ language governing permissions and limitations under the License. -->
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- <hbase.version>0.98.1-hadoop2</hbase.version> -->
-    <hbase.version>0.99.0-SNAPSHOT</hbase.version>
+    <hbase.version>2.0.0-SNAPSHOT</hbase.version>
+    <!-- <hbase.version>0.99.0-SNAPSHOT</hbase.version> -->
     <hadoop.version>2.4.0</hadoop.version>
+    <!-- <hadoop.version>3.0.0-SNAPSHOT</hadoop.version> -->
     <protobuf.version>2.5.0</protobuf.version>
   </properties>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main</directory>
+        <includes>
+          <include>webapps/**</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-      </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/generated/**</exclude>
+            <exclude>**/webapps/static/d3.min.js</exclude>
+          </excludes>
+        </configuration>
       </plugin>
       <plugin>
-        <!-- explicitly define maven-deploy-plugin after other to force exec order -->
-        <artifactId>maven-deploy-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -67,6 +68,20 @@ language governing permissions and limitations under the License. -->
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
         </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!-- explicitly define maven-deploy-plugin after other to force exec order -->
+        <artifactId>maven-deploy-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
@@ -85,6 +100,12 @@ language governing permissions and limitations under the License. -->
       <version>${project.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+      <scope>provided</scope>
     </dependency>
     <!-- Global deps. -->
     <dependency>
@@ -119,11 +140,6 @@ language governing permissions and limitations under the License. -->
       <artifactId>hbase-testing-util</artifactId>
       <version>${hbase.version}</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
     </dependency>
   </dependencies>
 
