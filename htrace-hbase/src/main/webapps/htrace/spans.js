@@ -21,8 +21,11 @@ d3.json("/getspans/" + traceid, function(spans) {
     spans.map(function(s) {
         s.start = parseInt(s.start);
         s.stop = parseInt(s.stop);
+        if (s.timeline) {
+          s.timeline.forEach(function(t) { t.time = parseInt(t.time); });
+        }
       });
-    var rootid = 477902;
+    var rootid = "477902";
     var margin = {top: 50, right: 500, bottom: 50, left: 50};
     var barheight = 20;
     var width = 800;
@@ -32,15 +35,17 @@ d3.json("/getspans/" + traceid, function(spans) {
     var tmax = d3.max(spans, function(s) { return s.stop; });
     var xscale = d3.time.scale()
       .domain([new Date(tmin), new Date(tmax)]).range([0, width]);
+
     var byparent = d3.nest()
-      .sortValues(function(a, b) {
-          return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
-        })
       .key(function(e) {return e.parent_id})
       .map(spans, d3.map);
     addchildren(byparent.get(rootid), byparent);
-    var sortedspans = [];
-    traverse(byparent.get(rootid), function(e) { sortedspans.push(e); });
+   
+    var tree = d3.layout.tree()
+      .sort(function(a, b) {
+          return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+        });
+    var sortedspans = tree.nodes(byparent.get(rootid)[0]);
 
     var svg = d3.select("body").append("svg")
       .attr("width", width + gleftmargin + margin.left + margin.right)
@@ -61,12 +66,19 @@ d3.json("/getspans/" + traceid, function(spans) {
       .append("g")
       .attr("transform", function(s, i) {
           return "translate(0, " + (i * barheight + 5) + ")";
+        })
+      .classed("timeline", function (d) {
+          return d.timeline;
         });
 
     span_g.append("text")
-      .text(function(s){ return s.process_id; })
+      .text(function(s){ 
+          return s.process_id;
+        })
       .style("alignment-baseline", "hanging")
-      .attr("transform", "translate(" + (- gleftmargin) + ", 0)");
+      .attr("transform", function(s) {
+          return "translate(" + (s.depth * 10 - gleftmargin) + ", 0)";
+        });
 
     var rect_g = span_g.append("g")
       .attr("transform", function(s) {
@@ -78,7 +90,8 @@ d3.json("/getspans/" + traceid, function(spans) {
       .attr("width", function (s) {
           return (width * (s.stop - s.start)) / (tmax - tmin) + 1;
         })
-      .style("fill", "lightblue");
+      .style("fill", "lightblue")
+      .attr("class", "span")
 
     rect_g.append("text")
       .text(function(s){ return s.description; })
@@ -91,6 +104,46 @@ d3.json("/getspans/" + traceid, function(spans) {
       .style("font-size", "10px")
       .attr("transform", function(s, i) { return "translate(0, 10)"; });
 
+    bars.selectAll("g.timeline")
+      .selectAll("rect.timeline")
+      .data(function(s) { return s.timeline; })
+      .enter()
+      .append("rect")
+      .style("fill", "red")
+      .attr("height", 8)
+      .attr("width", 8)
+      .attr("transform", function(t) {
+          return "translate(" + xscale(t.time) + ", 11)";
+        })
+      .classed("timeline");
+
+    var popup = d3.select("body")
+      .append("div")
+      .attr("class", "popup")
+      .style("opacity", 0);
+
+    bars.selectAll("g.timeline")
+      .on("mouseover", function(d) {
+          popup.transition()
+            .duration(300)
+            .style("opacity", .95);
+          var text = "<table>";
+          d.timeline.forEach(function (t) {
+              text += "<tr><td>" + (t.time - tmin) + "</td>";
+              text += "<td> : " + t.message + "<td/></tr>";
+            });
+          text += "</table>"
+          popup.html(text)
+            .style("left", "30px")
+            .style("top", "30px")
+            .style("width", "700px")
+            .style("background", "orange")
+            .style("position", "absolute");
+        })
+      .on("mouseout", function(d) {
+          popup.transition().duration(200).style("opacity", 0);
+        });
+    
     var axis = d3.svg.axis()
       .scale(xscale)
       .orient("top")
@@ -108,15 +161,6 @@ function addchildren (nodes, byparent) {
       if (byparent.get(e.span_id)) {
         e.children = byparent.get(e.span_id);
         addchildren(e.children, byparent);
-      }
-    });
-}
-
-function traverse (children, func) {
-  children.forEach(function(e) {
-      func(e);
-      if (e.children) {
-        traverse (e.children, func);
       }
     });
 }
