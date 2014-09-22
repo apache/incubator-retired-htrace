@@ -44,7 +44,9 @@ tracing spans are stored.  By default it uses the table named
 
     hbase(main):001:0> create 'htrace', 's', 'i'
 
-Run some tracing from hbase shell:
+Run some tracing from hbase shell (Make sure htrace is on the CLASSPATH when you start the shell):
+
+    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase shell
 
     hbase(main):002:0> trace 'start'; create 't1', 'f'; trace 'stop'
     ...
@@ -57,7 +59,7 @@ Running the main class of receiver also generate a simple, artificial trace for 
 
 Starting viewer process which listens 0.0.0.0:16900 by default.:
 
-    $ HBASE_CLASSPATH=/Users/stack/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase org.htrace.viewer.HBaseSpanViewerServer
+    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase org.htrace.viewer.HBaseSpanViewerServer
 
 Accessing http://host:16900/ with Web browser shows you list of traces like below.:
 
