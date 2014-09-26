@@ -37,7 +37,7 @@ d3.json("/getspans/" + traceid, function(spans) {
       .domain([new Date(tmin), new Date(tmax)]).range([0, width]);
 
     var byparent = d3.nest()
-      .key(function(e) {return e.parent_id})
+      .key(function(e) { return e.parent_id; })
       .map(spans, d3.map);
     addchildren(byparent.get(rootid), byparent);
    
@@ -59,22 +59,17 @@ d3.json("/getspans/" + traceid, function(spans) {
       .attr("height", height)
       .attr("transform", "translate(" + gleftmargin + ", 0)");
     
-    var span_g = bars.append("g")
-      .selectAll("g")
+    var span_g = bars.selectAll("g.span")
       .data(sortedspans)
       .enter()
       .append("g")
       .attr("transform", function(s, i) {
           return "translate(0, " + (i * barheight + 5) + ")";
         })
-      .classed("timeline", function (d) {
-          return d.timeline;
-        });
+      .classed("timeline", function(d) { return d.timeline; });
 
     span_g.append("text")
-      .text(function(s){ 
-          return s.process_id;
-        })
+      .text(function(s) { return s.process_id; })
       .style("alignment-baseline", "hanging")
       .attr("transform", function(s) {
           return "translate(" + (s.depth * 10 - gleftmargin) + ", 0)";
@@ -104,8 +99,7 @@ d3.json("/getspans/" + traceid, function(spans) {
       .style("font-size", "10px")
       .attr("transform", function(s, i) { return "translate(0, 10)"; });
 
-    bars.selectAll("g.timeline")
-      .selectAll("rect.timeline")
+    bars.selectAll("g.timeline").selectAll("rect.timeline")
       .data(function(s) { return s.timeline; })
       .enter()
       .append("rect")
@@ -117,16 +111,13 @@ d3.json("/getspans/" + traceid, function(spans) {
         })
       .classed("timeline");
 
-    var popup = d3.select("body")
-      .append("div")
+    var popup = d3.select("body").append("div")
       .attr("class", "popup")
       .style("opacity", 0);
 
     bars.selectAll("g.timeline")
       .on("mouseover", function(d) {
-          popup.transition()
-            .duration(300)
-            .style("opacity", .95);
+          popup.transition().duration(300).style("opacity", .95);
           var text = "<table>";
           d.timeline.forEach(function (t) {
               text += "<tr><td>" + (t.time - tmin) + "</td>";
@@ -135,13 +126,13 @@ d3.json("/getspans/" + traceid, function(spans) {
           text += "</table>"
           popup.html(text)
             .style("left", "30px")
-            .style("top", "30px")
+            .style("top", (document.body.scrollTop + 30) + "px")
             .style("width", "700px")
             .style("background", "orange")
             .style("position", "absolute");
         })
       .on("mouseout", function(d) {
-          popup.transition().duration(200).style("opacity", 0);
+          popup.transition().duration(300).style("opacity", 0);
         });
     
     var axis = d3.svg.axis()
@@ -151,9 +142,7 @@ d3.json("/getspans/" + traceid, function(spans) {
       .tickFormat(d3.time.format("%x %X.%L"))
       .tickSize(6, 3);
 
-    bars.append("g")
-      .attr("class", "axis")
-      .call(axis);
+    bars.append("g").attr("class", "axis").call(axis);
   });
 
 function addchildren (nodes, byparent) {
