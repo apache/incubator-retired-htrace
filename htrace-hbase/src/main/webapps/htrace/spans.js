@@ -37,15 +37,14 @@ d3.json("/getspans/" + traceid, function(spans) {
       .domain([new Date(tmin), new Date(tmax)]).range([0, width]);
 
     var byparent = d3.nest()
+      .sortValues(function(a, b) {
+          return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+        })
       .key(function(e) { return e.parent_id; })
       .map(spans, d3.map);
     addchildren(byparent.get(rootid), byparent);
-   
-    var tree = d3.layout.tree()
-      .sort(function(a, b) {
-          return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
-        });
-    var sortedspans = tree.nodes(byparent.get(rootid)[0]);
+    var sortedspans = [];
+    traverse(0, byparent.get(rootid), function(e) { sortedspans.push(e); });
 
     var svg = d3.select("body").append("svg")
       .attr("width", width + gleftmargin + margin.left + margin.right)
@@ -145,11 +144,21 @@ d3.json("/getspans/" + traceid, function(spans) {
     bars.append("g").attr("class", "axis").call(axis);
   });
 
-function addchildren (nodes, byparent) {
+function addchildren(nodes, byparent) {
   nodes.forEach(function(e) {
       if (byparent.get(e.span_id)) {
         e.children = byparent.get(e.span_id);
         addchildren(e.children, byparent);
+      }
+    });
+}
+
+function traverse(depth, children, func) {
+  children.forEach(function(e) {
+      e.depth = depth;
+      func(e);
+      if (e.children) {
+        traverse (depth + 1, e.children, func);
       }
     });
 }
