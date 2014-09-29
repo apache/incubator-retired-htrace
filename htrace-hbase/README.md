@@ -131,8 +131,6 @@ $ bin/hbase org.htrace.viewer.HBaseSpanViewerServer \
 Todo
 ----
 
-- showing timeline annotation in spans view.
-- showing parent-child relationships in spans view.
 - enabling to focus in/out specific spans in trace.
 - limiting the traces shown in list based on time period.
 - adding utility shell script.
