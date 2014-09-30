@@ -69,6 +69,18 @@ Clicking the trace in the list shows you the spans.:
 
 ![visualization of spans](spans.png "spans view")
 
+Light blue rectangls represent spans.
+The horizontal position of rectangle describe the time.
+The width of rectangle and the number at lower left side of rect
+describes the time from start to stop of the span in milliseconds.
+Small red rectangle represents timeline annotation at that time.
+Pointing span with red rectangles shows you annotations associated with the span in popup.
+
+![timeline annotations](timelines.png "timeline annotations")
+
+Leading numbers are time of annotation relative to start of the trace.
+
+
 Receiver Configuration
 ----------------------
 
