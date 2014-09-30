@@ -34,7 +34,7 @@ Add a configuration that sets HBase as span receiver in hbase-site.xml:
     </property>
 
 Starting HBase server in standalone-mode with htrace-hbase jar added
-to the CLASSPATH.
+to the CLASSPATH (use appropriate 'version' -- below we are using 3.0.4).
 
     $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar $HBASE_HOME/bin/hbase master start
 
@@ -69,12 +69,12 @@ Clicking the trace in the list shows you the spans.:
 
 ![visualization of spans](spans.png "spans view")
 
-Light blue rectangls represent spans.
-The horizontal position of rectangle describe the time.
-The width of rectangle and the number at lower left side of rect
-describes the time from start to stop of the span in milliseconds.
-Small red rectangle represents timeline annotation at that time.
-Pointing span with red rectangles shows you annotations associated with the span in popup.
+Light blue rectangles represent spans.
+The horizontal position of the rectangle represents relative time.
+The width of a rectangle and the number at its lower left corner
+is the time from start to stop of the span in milliseconds.
+If you hover over any small red rectangle, you will see the annotation
+associated with the span in a popup window.
 
 ![timeline annotations](timelines.png "timeline annotations")
 
