@@ -273,7 +273,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
           errorCount = 0;
         } catch (Exception e) {
           LOG.error("Error when writing to the zipkin collector: " +
-              collectorHostname + ":" + collectorPort);
+              collectorHostname + ":" + collectorPort, e);
 
           errorCount += 1;
           // If there have been ten errors in a row start dropping things.
