@@ -7,3 +7,5 @@
 *.iml
 *.orig
 *~
+*.swp
+dependency-reduced-pom.xml
