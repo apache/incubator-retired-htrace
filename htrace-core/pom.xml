@@ -42,6 +42,30 @@ language governing permissions and limitations under the License. -->
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <configuration>
+              <relocations>
+                <relocation>
+                  <pattern>com.google.common</pattern>
+                  <shadedPattern>org.apache.htrace.google.common</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.mortbay</pattern>
+                  <shadedPattern>org.apache.htrace.mortbay</shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
       </plugin>
       <plugin>
