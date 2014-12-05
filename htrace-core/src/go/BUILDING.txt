@@ -1,0 +1,30 @@
+Building the HTrace Go code
+===========================
+The htrace go code consists of 4 main parts:
+* The "htraced" standalone server
+    This is a server which accepts trace spans, and services REST queries.
+
+* The "htrace" command-line program which can query the server
+    This is a simple command-line program which can query the htrace server.
+
+* The htraced Javascript Web UI (not yet implemented)
+
+* The htrace go client library (not yet implemented)
+    This is the equivalent of the Java HTrace client library, but written in Go.
+
+You can build all these parts simply by running "gobuild.sh".
+The binaries will be created in bin/.
+
+Dependencies
+============
+You will need to install:
+* The Go programming language
+* The development package for leveldb (some Linux distros call this "leveldb-devel") containing libleveldb.so
+
+htraced requires libleveldb.so to be in your shared library path in order to run.
+You can set LD_LIBRARY_PATH to the path for this library, or simply install
+libleveldb.so to your system library path.
+
+Testing
+=======
+You can run the unit tests by running "./gobuild.sh test"
