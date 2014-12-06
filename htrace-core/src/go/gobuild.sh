@@ -68,13 +68,16 @@ if [ -x "/sbin/ldconfig" ]; then
     # Suse requires ldconfig to be run via the absolute path
     ldconfig=/sbin/ldconfig
 else
-    ldconfig=ldconfig
+    which ldconfig &> /dev/null
+    [ $? -eq 0 ] && ldconfig=ldconfig
 fi
-if "${ldconfig}" -p | grep -q libleveldb; then
-    :
-else
-    echo "You must install the leveldb-devel package (or distro-specific equivalent.)"
-    exit 1
+if [ -v ldconfig ]; then
+    if "${ldconfig}" -p | grep -q libleveldb; then
+        :
+    else
+        echo "You must install the leveldb-devel package (or distro-specific equivalent.)"
+        exit 1
+    fi
 fi
 
 go "${ACTION}" -v org/apache/htrace/htraced org/apache/htrace/htrace "$@"
