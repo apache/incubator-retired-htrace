@@ -17,7 +17,7 @@ language governing permissions and limitations under the License. -->
 
   <parent>
     <artifactId>htrace</artifactId>
-    <groupId>org.htrace</groupId>
+    <groupId>org.apache.htrace</groupId>
     <version>3.0.4</version>
   </parent>
 
@@ -89,13 +89,13 @@ language governing permissions and limitations under the License. -->
   <dependencies>
     <!-- Module deps. -->
     <dependency>
-      <groupId>org.htrace</groupId>
+      <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.htrace</groupId>
+      <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
@@ -130,7 +130,7 @@ language governing permissions and limitations under the License. -->
       <version>${hbase.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>org.htrace</groupId>
+          <groupId>org.apache.htrace</groupId>
           <artifactId>htrace-core</artifactId>
         </exclusion>
       </exclusions> 

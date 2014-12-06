@@ -21,7 +21,7 @@ const width_span = 700;
 const size_tl = 6;
 const margin = {top: 50, bottom: 50, left: 50, right: 1000, process: 250};
 
-const ROOT_SPAN_ID = "477902"; // constants defined in org.htrace.Span
+const ROOT_SPAN_ID = "477902"; // constants defined in org.apache.htrace.Span
 const traceid = window.location.search.substring(1).split("=")[1];
 
 d3.json("/getspans/" + traceid, function(spans) {

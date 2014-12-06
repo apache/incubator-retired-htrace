@@ -2,9 +2,10 @@ HTrace
 ======
 HTrace is a tracing framework intended for use with distributed systems written in java.
 
-The project is hosted at http://github.com/cloudera/htrace.
-The project is available in Maven Central with groupId: org.htrace, and name: htrace.
-(It was formally at groupId: org.cloudera.htrace, and name: htrace).
+The project is hosted at http://htrace.incubator.apache.org
+The project is available in Maven Central with groupId: org.apache.htrace,
+and name: htrace (It was formally groupId: org.cloudera.htrace, and
+groundId: org.htrace).
 
 API
 ---

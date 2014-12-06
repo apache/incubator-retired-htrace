@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-option java_package = "org.htrace.protobuf.generated";
+option java_package = "org.apache.htrace.protobuf.generated";
 option java_outer_classname = "SpanProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;

@@ -17,7 +17,7 @@ language governing permissions and limitations under the License. -->
 
   <parent>
     <artifactId>htrace</artifactId>
-    <groupId>org.htrace</groupId>
+    <groupId>org.apache.htrace</groupId>
     <version>3.0.4</version>
   </parent>
 

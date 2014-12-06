@@ -30,13 +30,13 @@ Add a configuration that sets HBase as span receiver in hbase-site.xml:
 
     <property>
       <name>hbase.trace.spanreceiver.classes</name>
-      <value>org.htrace.impl.HBaseSpanReceiver</value>
+      <value>org.apache.htrace.impl.HBaseSpanReceiver</value>
     </property>
 
 Starting HBase server in standalone-mode with htrace-hbase jar added
 to the CLASSPATH (use appropriate 'version' -- below we are using 3.0.4).
 
-    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar $HBASE_HOME/bin/hbase master start
+    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/apache/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar $HBASE_HOME/bin/hbase master start
 
 Running HBase shell from another terminal, add the table in which
 tracing spans are stored.  By default it uses the table named
@@ -46,7 +46,7 @@ tracing spans are stored.  By default it uses the table named
 
 Run some tracing from hbase shell (Make sure htrace is on the CLASSPATH when you start the shell):
 
-    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase shell
+    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/apache/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase shell
 
     hbase(main):002:0> trace 'start'; create 't1', 'f'; trace 'stop'
     ...
@@ -55,11 +55,11 @@ Run some tracing from hbase shell (Make sure htrace is on the CLASSPATH when you
 
 Running the main class of receiver also generate a simple, artificial trace for test:
 
-    $ bin/hbase org.htrace.impl.HBaseSpanReceiver
+    $ bin/hbase org.apache.htrace.impl.HBaseSpanReceiver
 
 Starting viewer process which listens 0.0.0.0:16900 by default.:
 
-    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase org.htrace.viewer.HBaseSpanViewerServer
+    $ HBASE_CLASSPATH=$HOME/.m2/repository/org/apache/htrace/htrace-hbase/3.0.4/htrace-hbase-3.0.4.jar ./bin/hbase org.apache.htrace.viewer.HBaseSpanViewerServer
 
 Accessing http://host:16900/ with Web browser shows you list of traces like below.:
 
@@ -131,7 +131,7 @@ In addition, span viewer server uses
   to specify the name of table and column families.
 
 ```
-$ bin/hbase org.htrace.viewer.HBaseSpanViewerServer \
+$ bin/hbase org.apache.htrace.viewer.HBaseSpanViewerServer \
     -Dhtrace.viewer.http.address=0.0.0.0:16900 \
     -Dhbase.zookeeper.quorum=127.0.0.1 \
     -Dhbase.zookeeper.znode.parent=/hbase \
