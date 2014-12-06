@@ -9,3 +9,5 @@
 *~
 *.swp
 dependency-reduced-pom.xml
+htrace-core/src/go/bin
+htrace-core/src/go/pkg

@@ -121,13 +121,17 @@ language governing permissions and limitations under the License. -->
           </executions>
           <configuration>
             <excludes>
-              <!--  exclude source control files -->
-              <exclude>.git/**</exclude>
-              <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
+              <exclude>**/d3.min.js</exclude>
+              <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/generated/**</exclude>
-              <!-- Readme -->
-              <exclue>README.md</exclue>
+              <exclude>*/.settings/*</exclude>
+              <exclude>*/generated/*</exclude>
+              <exclude>*/gopkg.in/*</exclude>
+              <exclude>.git/**</exclude>
+              <exclude>htrace-core/src/go/bin/*</exclude>
+              <exclude>htrace-core/src/go/pkg/*</exclude>
+              <exclue>**/README.md</exclue>
             </excludes>
           </configuration>
         </plugin>
