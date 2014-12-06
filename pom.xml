@@ -132,6 +132,9 @@ language governing permissions and limitations under the License. -->
               <exclude>htrace-core/src/go/bin/*</exclude>
               <exclude>htrace-core/src/go/pkg/*</exclude>
               <exclue>**/README.md</exclue>
+              <!-- Pulled down sources -->
+              <exclude>**/gopkg.in/**</exclude>
+              <exclude>**/github.com/**</exclude>
             </excludes>
           </configuration>
         </plugin>
