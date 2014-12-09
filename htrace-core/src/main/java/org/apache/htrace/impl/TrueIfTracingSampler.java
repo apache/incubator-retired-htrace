@@ -16,6 +16,7 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 
@@ -24,9 +25,10 @@ import org.apache.htrace.Trace;
  */
 public class TrueIfTracingSampler implements Sampler<Object> {
 
-  public static final TrueIfTracingSampler INSTANCE = new TrueIfTracingSampler();
+  public static final TrueIfTracingSampler INSTANCE =
+    new TrueIfTracingSampler(null);
 
-  private TrueIfTracingSampler() {
+  public TrueIfTracingSampler(HTraceConfiguration conf) {
   }
 
   @Override

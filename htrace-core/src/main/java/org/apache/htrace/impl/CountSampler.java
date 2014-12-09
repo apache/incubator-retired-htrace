@@ -16,6 +16,7 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 import java.util.Random;
@@ -24,14 +25,15 @@ import java.util.Random;
  * Sampler that returns true every N calls.
  */
 public class CountSampler implements Sampler<Object> {
+  private final static String SAMPLER_FREQUENCY_CONF_KEY = "sampler.frequency";
 
   final static Random random = new Random();
 
   final long frequency;
   long count = random.nextLong();
 
-  public CountSampler(long frequency) {
-    this.frequency = frequency;
+  public CountSampler(HTraceConfiguration conf) {
+    this.frequency = Long.parseLong(conf.get(SAMPLER_FREQUENCY_CONF_KEY), 10);
   }
 
   @Override

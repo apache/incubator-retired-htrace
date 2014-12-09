@@ -16,14 +16,36 @@
  */
 package org.apache.htrace;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceInfo;
 import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.AlwaysSampler;
+import org.apache.htrace.impl.NeverSampler;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSampler {
+  @Test
+  public void testSamplerFactory() {
+    Sampler alwaysSampler = new SamplerFactory(
+        HTraceConfiguration.fromKeyValuePairs("sampler", "AlwaysSampler")).
+        build();
+    Assert.assertEquals(AlwaysSampler.class, alwaysSampler.getClass());
+
+    Sampler neverSampler = new SamplerFactory(
+        HTraceConfiguration.fromKeyValuePairs("sampler", "NeverSampler")).
+        build();
+    Assert.assertEquals(NeverSampler.class, neverSampler.getClass());
+
+    Sampler neverSampler2 = new SamplerFactory(HTraceConfiguration.
+        fromKeyValuePairs("sampler", "NonExistentSampler")).
+        build();
+    Assert.assertEquals(NeverSampler.class, neverSampler2.getClass());
+  }
+
   @Test
   public void testParamterizedSampler() {
     TestParamSampler sampler = new TestParamSampler();

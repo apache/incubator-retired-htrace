@@ -48,6 +48,18 @@ public abstract class HTraceConfiguration {
     return new MapConf(conf);
   }
 
+  static HTraceConfiguration fromKeyValuePairs(String... pairs) {
+    if ((pairs.length % 2) != 0) {
+      throw new RuntimeException("You must specify an equal number of keys " +
+          "and values.");
+    }
+    Map<String, String> conf = new HashMap<String, String>();
+    for (int i = 0; i < pairs.length; i+=2) {
+      conf.put(pairs[i], pairs[i + 1]);
+    }
+    return new MapConf(conf);
+  }
+
   public abstract String get(String key);
 
   public abstract String get(String key, String defaultValue);

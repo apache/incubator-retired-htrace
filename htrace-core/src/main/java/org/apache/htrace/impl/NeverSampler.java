@@ -16,13 +16,14 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 public final class NeverSampler implements Sampler<Object> {
 
-  public static final NeverSampler INSTANCE = new NeverSampler();
+  public static final NeverSampler INSTANCE = new NeverSampler(null);
 
-  private NeverSampler() {
+  public NeverSampler(HTraceConfiguration conf) {
   }
 
   @Override

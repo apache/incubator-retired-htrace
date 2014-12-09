@@ -16,6 +16,7 @@
  */
 package org.apache.htrace;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.impl.CountSampler;
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,8 +25,10 @@ public class TestCountSampler {
 
   @Test
   public void testNext() {
-    CountSampler half = new CountSampler(2);
-    CountSampler hundred = new CountSampler(100);
+    CountSampler half = new CountSampler(HTraceConfiguration.
+        fromKeyValuePairs("sampler.frequency", "2"));
+    CountSampler hundred = new CountSampler(HTraceConfiguration.
+        fromKeyValuePairs("sampler.frequency", "100"));
     int halfCount = 0;
     int hundredCount = 0;
     for (int i = 0; i < 200; i++) {

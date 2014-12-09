@@ -16,13 +16,14 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 public final class AlwaysSampler implements Sampler<Object> {
 
-  public static final AlwaysSampler INSTANCE = new AlwaysSampler();
+  public static final AlwaysSampler INSTANCE = new AlwaysSampler(null);
 
-  private AlwaysSampler() {
+  public AlwaysSampler(HTraceConfiguration conf) {
   }
 
   @Override

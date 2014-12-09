@@ -16,17 +16,18 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 import java.util.Random;
 
 public class ProbabilitySampler implements Sampler<Object> {
   public final double threshold;
-  private Random random;
+  private Random random = new Random();
+  private final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
 
-  public ProbabilitySampler(double threshold) {
-    this.threshold = threshold;
-    random = new Random();
+  public ProbabilitySampler(HTraceConfiguration conf) {
+    this.threshold = Double.parseDouble(conf.get(SAMPLER_FRACTION_CONF_KEY));
   }
 
   @Override
