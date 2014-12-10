@@ -42,7 +42,7 @@ public class TestHTraceSpanToZipkinSpan {
 
   @Test
   public void testHTraceToZipkin() throws IOException {
-    POJOSpanReceiver psr = new POJOSpanReceiver();
+    POJOSpanReceiver psr = new POJOSpanReceiver(HTraceConfiguration.EMPTY);
     Trace.addReceiver(psr);
 
     Span rootSpan = new MilliSpan(ROOT_SPAN_DESC, 1, Span.ROOT_SPAN_ID, 100, "test");

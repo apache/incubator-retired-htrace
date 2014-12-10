@@ -26,9 +26,7 @@ import java.io.IOException;
  * Used for testing. Simply prints to standard out any spans it receives.
  */
 public class StandardOutSpanReceiver implements SpanReceiver {
-
-  @Override
-  public void configure(HTraceConfiguration conf) {
+  public StandardOutSpanReceiver(HTraceConfiguration conf) {
   }
 
   @Override

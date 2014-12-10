@@ -61,14 +61,14 @@ public class TestHTrace {
       }
       HashMap<String, String> conf = new HashMap<String, String>();
       conf.put("local-file-span-receiver.path", fileName);
-      LocalFileSpanReceiver receiver = new LocalFileSpanReceiver();
-      receiver.configure(HTraceConfiguration.fromMap(conf));
+      LocalFileSpanReceiver receiver =
+          new LocalFileSpanReceiver(HTraceConfiguration.fromMap(conf));
       rcvrs.add(receiver);
     } else {
-      rcvrs.add(new StandardOutSpanReceiver());
+      rcvrs.add(new StandardOutSpanReceiver(HTraceConfiguration.EMPTY));
     }
 
-    POJOSpanReceiver psr = new POJOSpanReceiver();
+    POJOSpanReceiver psr = new POJOSpanReceiver(HTraceConfiguration.EMPTY);
     rcvrs.add(psr);
     runTraceCreatorTraces(new TraceCreator(rcvrs));
 

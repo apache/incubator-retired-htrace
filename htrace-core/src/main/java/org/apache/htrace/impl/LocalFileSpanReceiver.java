@@ -52,12 +52,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private ExecutorService executor;
   private long executorTerminationTimeoutDuration;
 
-  public LocalFileSpanReceiver() {
-  }
-
-
-  @Override
-  public void configure(HTraceConfiguration conf) {
+  public LocalFileSpanReceiver(HTraceConfiguration conf) {
     this.executorTerminationTimeoutDuration = EXECUTOR_TERMINATION_TIMEOUT_DURATION_DEFAULT;
     int capacity = conf.getInt(CAPACITY_KEY, CAPACITY_DEFAULT);
     this.file = conf.get(PATH_KEY);

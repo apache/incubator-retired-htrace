@@ -130,17 +130,17 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   private String collectorHostname;
   private int collectorPort;
 
-  public ZipkinSpanReceiver() {
+  public ZipkinSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.protocolFactory = new TBinaryProtocol.Factory();
 
     tf = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("zipkinSpanReceiver-%d")
         .build();
+    configure(conf);
   }
 
-  @Override
-  public void configure(HTraceConfiguration conf) {
+  private void configure(HTraceConfiguration conf) {
     this.conf = conf;
 
     this.collectorHostname = conf.get("zipkin.collector-hostname",

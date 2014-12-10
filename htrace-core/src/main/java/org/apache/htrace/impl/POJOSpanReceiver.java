@@ -31,8 +31,8 @@ import java.util.HashSet;
 public class POJOSpanReceiver implements SpanReceiver {
   private final Collection<Span> spans;
 
-  @Override
-  public void configure(HTraceConfiguration conf) {
+  public POJOSpanReceiver(HTraceConfiguration conf) {
+    this.spans = new HashSet<Span>();
   }
 
   /**
@@ -40,10 +40,6 @@ public class POJOSpanReceiver implements SpanReceiver {
    */
   public Collection<Span> getSpans() {
     return spans;
-  }
-
-  public POJOSpanReceiver() {
-    this.spans = new HashSet<Span>();
   }
 
   @Override
@@ -54,5 +50,4 @@ public class POJOSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     spans.add(span);
   }
-
 }

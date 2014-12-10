@@ -123,15 +123,11 @@ public class HBaseSpanReceiver implements SpanReceiver {
   private byte[] icf;
   private int maxSpanBatchSize;
 
-  public HBaseSpanReceiver() {
+  public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.tf = new ThreadFactoryBuilder().setDaemon(true)
                                         .setNameFormat("hbaseSpanReceiver-%d")
                                         .build();
-  }
-
-  @Override
-  public void configure(HTraceConfiguration conf) {
     this.conf = conf;
     this.hconf = HBaseConfiguration.create();
     this.table = Bytes.toBytes(conf.get(TABLE_KEY, DEFAULT_TABLE));

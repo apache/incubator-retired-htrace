@@ -16,6 +16,7 @@
  */
 package org.apache.htrace;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -30,6 +31,19 @@ public abstract class HTraceConfiguration {
 
   private static final Log LOG = LogFactory.getLog(HTraceConfiguration.class);
 
+  private static final Map<String, String> EMPTY_MAP = new HashMap<String, String>(1);
+
+  /**
+   * An empty HTrace configuration.
+   */
+  public static final HTraceConfiguration EMPTY = fromMap(EMPTY_MAP);
+
+  /**
+   * Create an HTrace configuration from a map.
+   *
+   * @param conf    The map to create the configuration from.
+   * @return        The new configuration.
+   */
   public static HTraceConfiguration fromMap(Map<String, String> conf) {
     return new MapConf(conf);
   }
