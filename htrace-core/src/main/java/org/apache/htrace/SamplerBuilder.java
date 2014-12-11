@@ -22,14 +22,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.AlwaysSampler;
 import org.apache.htrace.impl.NeverSampler;
 
-public class SamplerFactory {
+public class SamplerBuilder {
   private final static String SAMPLER_CONF_KEY = "sampler";
   private final static ClassLoader classLoader =
-      SamplerFactory.class.getClassLoader();
+      SamplerBuilder.class.getClassLoader();
   private final HTraceConfiguration conf;
-  private static final Log LOG = LogFactory.getLog(SamplerFactory.class);
+  private static final Log LOG = LogFactory.getLog(SamplerBuilder.class);
 
-  public SamplerFactory(HTraceConfiguration conf) {
+  public SamplerBuilder(HTraceConfiguration conf) {
     this.conf = conf;
   }
 
@@ -45,7 +45,7 @@ public class SamplerFactory {
     try {
       cls = classLoader.loadClass(str);
     } catch (ClassNotFoundException e) {
-      LOG.error("SamplerFactory cannot find sampler class " + str +
+      LOG.error("SamplerBuilder cannot find sampler class " + str +
           ": falling back on NeverSampler.");
       return NeverSampler.INSTANCE;
     }
@@ -53,7 +53,7 @@ public class SamplerFactory {
     try {
       ctor = cls.getConstructor(HTraceConfiguration.class);
     } catch (NoSuchMethodException e) {
-      LOG.error("SamplerFactory cannot find a constructor for class " + str +
+      LOG.error("SamplerBuilder cannot find a constructor for class " + str +
           "which takes an HTraceConfiguration.  Falling back on " +
           "NeverSampler.");
       return NeverSampler.INSTANCE;
@@ -61,11 +61,11 @@ public class SamplerFactory {
     try {
       return ctor.newInstance(conf);
     } catch (ReflectiveOperationException e) {
-      LOG.error("SamplerFactory reflection error when constructing " + str +
+      LOG.error("SamplerBuilder reflection error when constructing " + str +
           ".  Falling back on NeverSampler.", e);
       return NeverSampler.INSTANCE;
     } catch (Throwable e) {
-      LOG.error("SamplerFactory constructor error when constructing " + str +
+      LOG.error("SamplerBuilder constructor error when constructing " + str +
           ".  Falling back on NeverSampler.", e);
       return NeverSampler.INSTANCE;
     }

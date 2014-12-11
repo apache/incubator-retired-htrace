@@ -29,18 +29,18 @@ import org.junit.Test;
 
 public class TestSampler {
   @Test
-  public void testSamplerFactory() {
-    Sampler alwaysSampler = new SamplerFactory(
+  public void testSamplerBuilder() {
+    Sampler alwaysSampler = new SamplerBuilder(
         HTraceConfiguration.fromKeyValuePairs("sampler", "AlwaysSampler")).
         build();
     Assert.assertEquals(AlwaysSampler.class, alwaysSampler.getClass());
 
-    Sampler neverSampler = new SamplerFactory(
+    Sampler neverSampler = new SamplerBuilder(
         HTraceConfiguration.fromKeyValuePairs("sampler", "NeverSampler")).
         build();
     Assert.assertEquals(NeverSampler.class, neverSampler.getClass());
 
-    Sampler neverSampler2 = new SamplerFactory(HTraceConfiguration.
+    Sampler neverSampler2 = new SamplerBuilder(HTraceConfiguration.
         fromKeyValuePairs("sampler", "NonExistentSampler")).
         build();
     Assert.assertEquals(NeverSampler.class, neverSampler2.getClass());
