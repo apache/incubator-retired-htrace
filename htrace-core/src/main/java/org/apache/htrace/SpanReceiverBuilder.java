@@ -20,23 +20,44 @@ import java.lang.reflect.Constructor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class SpanReceiverFactory {
-  static final Log LOG = LogFactory.getLog(SpanReceiverFactory.class);
+/**
+ * A {@link SpanReceiver} builder. It defaults finding class of span receiver to build in
+ * the passed in configuration using the {@link #SPAN_RECEIVER_CONF_KEY} key.
+ */
+public class SpanReceiverBuilder {
+  static final Log LOG = LogFactory.getLog(SpanReceiverBuilder.class);
 
   public final static String SPAN_RECEIVER_CONF_KEY = "span.receiver";
   private final static ClassLoader classLoader =
-      SpanReceiverFactory.class.getClassLoader();
+      SpanReceiverBuilder.class.getClassLoader();
   private final HTraceConfiguration conf;
-  private boolean logErrors = true;
+  private boolean logErrors;
+  private String spanReceiverClass;
 
-  public SpanReceiverFactory(HTraceConfiguration conf) {
+  public SpanReceiverBuilder(HTraceConfiguration conf) {
     this.conf = conf;
+    reset();
+  }
+
+  /**
+   * Set this builder back to defaults.
+   * @return This instance
+   */
+  public SpanReceiverBuilder reset() {
+    this.logErrors = true;
+    this.spanReceiverClass = this.conf.get(SPAN_RECEIVER_CONF_KEY);
+    return this;
+  }
+
+  public SpanReceiverBuilder spanReceiverClass(final String spanReceiverClass) {
+    this.spanReceiverClass = spanReceiverClass;
+    return this;
   }
 
   /**
    * Configure whether we should log errors during build().
    */
-  public SpanReceiverFactory logErrors(boolean logErrors) {
+  public SpanReceiverBuilder logErrors(boolean logErrors) {
     this.logErrors = logErrors;
     return this;
   }
@@ -56,10 +77,11 @@ public class SpanReceiverFactory {
   }
 
   public SpanReceiver build() {
-    String str = conf.get(SPAN_RECEIVER_CONF_KEY);
-    if ((str == null) || str.isEmpty()) {
+    if ((this.spanReceiverClass == null) ||
+        this.spanReceiverClass.isEmpty()) {
       return null;
     }
+    String str = spanReceiverClass;
     if (!str.contains(".")) {
       str = "org.apache.htrace.impl." + str;
     }
@@ -67,7 +89,7 @@ public class SpanReceiverFactory {
     try {
       cls = classLoader.loadClass(str);
     } catch (ClassNotFoundException e) {
-      logError("SpanReceiverFactory cannot find SpanReceiver class " + str +
+      logError("SpanReceiverBuilder cannot find SpanReceiver class " + str +
           ": disabling span receiver.");
       return null;
     }
@@ -75,7 +97,7 @@ public class SpanReceiverFactory {
     try {
       ctor = cls.getConstructor(HTraceConfiguration.class);
     } catch (NoSuchMethodException e) {
-      logError("SpanReceiverFactory cannot find a constructor for class " +
+      logError("SpanReceiverBuilder cannot find a constructor for class " +
           str + "which takes an HTraceConfiguration.  Disabling span " +
           "receiver.");
       return null;
@@ -83,11 +105,11 @@ public class SpanReceiverFactory {
     try {
       return ctor.newInstance(conf);
     } catch (ReflectiveOperationException e) {
-      logError("SpanReceiverFactory reflection error when constructing " + str +
+      logError("SpanReceiverBuilder reflection error when constructing " + str +
           ".  Disabling span receiver.", e);
       return null;
     } catch (Throwable e) {
-      logError("SpanReceiverFactory constructor error when constructing " + str +
+      logError("SpanReceiverBuilder constructor error when constructing " + str +
           ".  Disabling span receiver.", e);
       return null;
     }

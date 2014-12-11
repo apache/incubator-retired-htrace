@@ -17,11 +17,9 @@
 
 package org.apache.htrace.impl;
 
-import com.google.common.collect.Multimap;
-
-import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,9 +30,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -42,15 +39,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.TimelineAnnotation;
+import org.apache.htrace.TraceCreator;
 import org.apache.htrace.TraceTree;
-import org.apache.htrace.impl.HBaseSpanReceiver;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.Assert;
-import org.apache.htrace.TraceCreator;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.google.common.collect.Multimap;
 
 
 public class TestHBaseSpanReceiver {
@@ -70,7 +68,7 @@ public class TestHBaseSpanReceiver {
   // Reenable after fix circular dependency
   @Ignore @Test
   public void testHBaseSpanReceiver() {
-    HTableInterface htable = HBaseTestUtil.createTable(UTIL);
+    Table htable = HBaseTestUtil.createTable(UTIL);
     SpanReceiver receiver = HBaseTestUtil.startReceiver(UTIL);
     TraceCreator tc = new TraceCreator(receiver);
     tc.createThreadedTrace();
@@ -108,7 +106,6 @@ public class TestHBaseSpanReceiver {
     Assert.assertTrue(descs.keySet().contains(TraceCreator.SIMPLE_TRACE_ROOT));
     Assert.assertTrue(descs.keySet().contains(TraceCreator.THREADED_TRACE_ROOT));
 
-    /** TODO: FIX!!!!!!
     Multimap<Long, Span> spansByParentId = traceTree.getSpansByParentIdMap();
     Span rpcRoot = descs.get(TraceCreator.RPC_TRACE_ROOT);
     Assert.assertEquals(1, spansByParentId.get(rpcRoot.getSpanId()).size());
@@ -137,7 +134,6 @@ public class TestHBaseSpanReceiver {
     } catch (IOException e) {
       Assert.fail("failed to get spans from index family. " + e.getMessage());
     }
-      */
   }
 
   private class TestSpan implements Span {

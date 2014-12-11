@@ -23,26 +23,25 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 
-public class TestSpanReceiverFactory {
+public class TestSpanReceiverBuilder {
   /**
-   * Test that if no span receiver is configured, the factory returns null.
+   * Test that if no span receiver is configured, the builder returns null.
    */
   @Test
   public void testGetNullSpanReceiver() {
-    SpanReceiverFactory factory =
-        new SpanReceiverFactory(HTraceConfiguration.EMPTY).logErrors(false);
-    SpanReceiver rcvr = factory.build();
+    SpanReceiverBuilder builder =
+        new SpanReceiverBuilder(HTraceConfiguration.EMPTY).logErrors(false);
+    SpanReceiver rcvr = builder.build();
     Assert.assertEquals(null, rcvr);
   }
 
   private static SpanReceiver createSpanReceiver(Map<String, String> m) {
     HTraceConfiguration hconf = HTraceConfiguration.fromMap(m);
-    SpanReceiverFactory factory =
-        new SpanReceiverFactory(hconf).
+    SpanReceiverBuilder builder =
+        new SpanReceiverBuilder(hconf).
             logErrors(false);
-    return factory.build();
+    return builder.build();
   }
 
   /**
@@ -54,7 +53,7 @@ public class TestSpanReceiverFactory {
 
     // Create LocalFileSpanReceiver
     confMap.put(LocalFileSpanReceiver.PATH_KEY, "/tmp/foo");
-    confMap.put(SpanReceiverFactory.SPAN_RECEIVER_CONF_KEY,
+    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
         "org.apache.htrace.impl.LocalFileSpanReceiver");
     SpanReceiver rcvr = createSpanReceiver(confMap);
     Assert.assertEquals("org.apache.htrace.impl.LocalFileSpanReceiver",
@@ -63,7 +62,7 @@ public class TestSpanReceiverFactory {
 
     // Create POJOSpanReceiver
     confMap.remove(LocalFileSpanReceiver.PATH_KEY);
-    confMap.put(SpanReceiverFactory.SPAN_RECEIVER_CONF_KEY, "POJOSpanReceiver");
+    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY, "POJOSpanReceiver");
     rcvr = createSpanReceiver(confMap);
     Assert.assertEquals("org.apache.htrace.impl.POJOSpanReceiver",
         rcvr.getClass().getName());
@@ -71,7 +70,7 @@ public class TestSpanReceiverFactory {
 
     // Create StandardOutSpanReceiver
     confMap.remove(LocalFileSpanReceiver.PATH_KEY);
-    confMap.put(SpanReceiverFactory.SPAN_RECEIVER_CONF_KEY,
+    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
         "org.apache.htrace.impl.StandardOutSpanReceiver");
     rcvr = createSpanReceiver(confMap);
     Assert.assertEquals("org.apache.htrace.impl.StandardOutSpanReceiver",
@@ -107,7 +106,7 @@ public class TestSpanReceiverFactory {
     HashMap<String, String> confMap = new HashMap<String, String>();
 
     // Create TestSpanReceiver
-    confMap.put(SpanReceiverFactory.SPAN_RECEIVER_CONF_KEY,
+    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
         TestSpanReceiver.class.getName());
     confMap.put(TestSpanReceiver.SUCCEEDS, "true");
     SpanReceiver rcvr = createSpanReceiver(confMap);

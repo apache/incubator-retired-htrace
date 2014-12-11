@@ -17,34 +17,7 @@
 
 package org.apache.htrace.impl;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.htrace.HTraceConfiguration;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.TimelineAnnotation;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-import org.apache.htrace.protobuf.generated.SpanProtos;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -54,6 +27,30 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.htrace.HBaseHTraceConfiguration;
+import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Span;
+import org.apache.htrace.SpanReceiver;
+import org.apache.htrace.SpanReceiverBuilder;
+import org.apache.htrace.TimelineAnnotation;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.protobuf.generated.SpanProtos;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HBase is an open source distributed datastore.
@@ -112,16 +109,13 @@ public class HBaseSpanReceiver implements SpanReceiver {
    */
   private final ThreadFactory tf;
 
-  ////////////////////
-  /// Variables that will change on each call to configure()
-  ///////////////////
   private ExecutorService service;
-  private HTraceConfiguration conf;
-  private Configuration hconf;
-  private byte[] table;
-  private byte[] cf;
-  private byte[] icf;
-  private int maxSpanBatchSize;
+  private final HTraceConfiguration conf;
+  private final Configuration hconf;
+  private final byte[] table;
+  private final byte[] cf;
+  private final byte[] icf;
+  private final int maxSpanBatchSize;
 
   public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
@@ -155,8 +149,8 @@ public class HBaseSpanReceiver implements SpanReceiver {
   }
 
   private class WriteSpanRunnable implements Runnable {
-    private HConnection hconnection;
-    private HTableInterface htable;
+    private Connection hconnection;
+    private Table htable;
 
     public WriteSpanRunnable() {
     }
@@ -285,8 +279,8 @@ public class HBaseSpanReceiver implements SpanReceiver {
     private void startClient() {
       if (this.htable == null) {
         try {
-          hconnection = HConnectionManager.createConnection(hconf);
-          htable = hconnection.getTable(table);
+          hconnection = ConnectionFactory.createConnection(hconf);
+          htable = hconnection.getTable(TableName.valueOf(table));
         } catch (IOException e) {
           LOG.warn("Failed to create HBase connection. " + e.getMessage());
         }
@@ -331,28 +325,25 @@ public class HBaseSpanReceiver implements SpanReceiver {
   }
 
   /**
-   * Run basic test.
+   * Run basic test. Adds span to an existing htrace table in an existing hbase setup.
+   * Requires a running hbase to send the traces too with an already created trace
+   * table (Default table name is 'htrace' with column families 's' and 'i').
    * @throws IOException
-   *
-   *
-   * TODO: !!!!! FIX !!!! Circular dependency back to HBase!!!
-   *
+   */
   public static void main(String[] args) throws Exception {
-    HBaseSpanReceiver receiver = new HBaseSpanReceiver();
-    receiver.configure(new HBaseHTraceConfiguration(HBaseConfiguration.create()));
+    SpanReceiverBuilder builder =
+      new SpanReceiverBuilder(new HBaseHTraceConfiguration(HBaseConfiguration.create()));
+    SpanReceiver receiver =
+      builder.spanReceiverClass(HBaseSpanReceiver.class.getName()).build();
     Trace.addReceiver(receiver);
-    TraceScope parent =
-        Trace.startSpan("HBaseSpanReceiver.main.parent", Sampler.ALWAYS);
+    TraceScope parent = Trace.startSpan("HBaseSpanReceiver.main.parent", Sampler.ALWAYS);
     Thread.sleep(10);
     long traceid = parent.getSpan().getTraceId();
-    TraceScope child1 =
-        Trace.startSpan("HBaseSpanReceiver.main.child.1");
+    TraceScope child1 = Trace.startSpan("HBaseSpanReceiver.main.child.1");
     Thread.sleep(10);
-    TraceScope child2 =
-        Trace.startSpan("HBaseSpanReceiver.main.child.2", parent.getSpan());
+    TraceScope child2 = Trace.startSpan("HBaseSpanReceiver.main.child.2", parent.getSpan());
     Thread.sleep(10);
-    TraceScope gchild =
-        Trace.startSpan("HBaseSpanReceiver.main.grandchild");
+    TraceScope gchild = Trace.startSpan("HBaseSpanReceiver.main.grandchild");
     Trace.addTimelineAnnotation("annotation 1.");
     Thread.sleep(10);
     Trace.addTimelineAnnotation("annotation 2.");
@@ -365,5 +356,4 @@ public class HBaseSpanReceiver implements SpanReceiver {
     receiver.close();
     System.out.println("trace id: " + traceid);
   }
-   */
 }

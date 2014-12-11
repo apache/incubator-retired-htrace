@@ -19,24 +19,19 @@ package org.apache.htrace.impl;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.HBaseHTraceConfiguration;
 import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.impl.HBaseSpanReceiver;
+import org.apache.htrace.SpanReceiverBuilder;
 import org.junit.Assert;
 
 
 public class HBaseTestUtil {
-  private static final Log LOG = LogFactory.getLog(HBaseTestUtil.class);
-
   public static Configuration configure(Configuration conf) {
     Configuration hconf = HBaseConfiguration.create(conf);
     hconf.set(HBaseHTraceConfiguration.KEY_PREFIX +
@@ -51,8 +46,8 @@ public class HBaseTestUtil {
     return hconf;
   }
 
-  public static HTableInterface createTable(HBaseTestingUtility util) {
-    HTableInterface htable = null;
+  public static Table createTable(HBaseTestingUtility util) {
+    Table htable = null;
     try {
       htable = util.createTable(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_TABLE),
                                 new byte[][]{Bytes.toBytes(HBaseSpanReceiver.DEFAULT_COLUMNFAMILY),
@@ -64,12 +59,7 @@ public class HBaseTestUtil {
   }
 
   public static SpanReceiver startReceiver(Configuration conf) {
-    /* TODO: FIX!!!!! CIRCULAR DEPENDENCY BACK TO HBASE
-    SpanReceiver receiver = new HBaseSpanReceiver();
-    receiver.configure(new HBaseHTraceConfiguration(conf));
-    return receiver;
-    */
-    return null;
+    return new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf)).build();
   }
 
   public static SpanReceiver startReceiver(HBaseTestingUtility util) {
