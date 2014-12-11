@@ -19,4 +19,4 @@
 
 package common
 
-const RELEASE_VERSION = "1.0-SNAPSHOT"
+const RELEASE_VERSION = "3.1.0-SNAPSHOT"
