@@ -40,6 +40,7 @@ import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.TraceCreator;
+import org.apache.htrace.TraceTree.SpansByParent;
 import org.apache.htrace.TraceTree;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 import org.junit.AfterClass;
@@ -95,7 +96,9 @@ public class TestHBaseSpanReceiver {
     }
 
     TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getRoots();
+    Collection<Span> roots =
+        traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+    Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
     Assert.assertEquals(3, roots.size());
 
     Map<String, Span> descs = new HashMap<String, Span>();
@@ -106,15 +109,15 @@ public class TestHBaseSpanReceiver {
     Assert.assertTrue(descs.keySet().contains(TraceCreator.SIMPLE_TRACE_ROOT));
     Assert.assertTrue(descs.keySet().contains(TraceCreator.THREADED_TRACE_ROOT));
 
-    Multimap<Long, Span> spansByParentId = traceTree.getSpansByParentIdMap();
+    SpansByParent spansByParentId = traceTree.getSpansByParent();
     Span rpcRoot = descs.get(TraceCreator.RPC_TRACE_ROOT);
-    Assert.assertEquals(1, spansByParentId.get(rpcRoot.getSpanId()).size());
-    Span rpcChild1 = spansByParentId.get(rpcRoot.getSpanId()).iterator().next();
-    Assert.assertEquals(1, spansByParentId.get(rpcChild1.getSpanId()).size());
-    Span rpcChild2 = spansByParentId.get(rpcChild1.getSpanId()).iterator().next();
-    Assert.assertEquals(1, spansByParentId.get(rpcChild2.getSpanId()).size());
-    Span rpcChild3 = spansByParentId.get(rpcChild2.getSpanId()).iterator().next();
-    Assert.assertEquals(0, spansByParentId.get(rpcChild3.getSpanId()).size());
+    Assert.assertEquals(1, spansByParentId.find(rpcRoot.getSpanId()).size());
+    Span rpcChild1 = spansByParentId.find(rpcRoot.getSpanId()).iterator().next();
+    Assert.assertEquals(1, spansByParentId.find(rpcChild1.getSpanId()).size());
+    Span rpcChild2 = spansByParentId.find(rpcChild1.getSpanId()).iterator().next();
+    Assert.assertEquals(1, spansByParentId.find(rpcChild2.getSpanId()).size());
+    Span rpcChild3 = spansByParentId.find(rpcChild2.getSpanId()).iterator().next();
+    Assert.assertEquals(0, spansByParentId.find(rpcChild3.getSpanId()).size());
 
     Scan iscan = new Scan();
     iscan.addColumn(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_INDEXFAMILY),

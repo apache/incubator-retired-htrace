@@ -16,22 +16,128 @@
  */
 package org.apache.htrace;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
+import org.apache.htrace.impl.MilliSpan;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.TreeSet;
 
 /**
  * Used to create the graph formed by spans.
  */
 public class TraceTree {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
-  private Multimap<Long, Span> spansByParentID;
-  private Collection<Span> spans;
-  private Multimap<String, Span> spansByPid;
+
+  public static class SpansByParent {
+    private static Comparator<Span> COMPARATOR =
+        new Comparator<Span>() {
+          @Override
+          public int compare(Span a, Span b) {
+            if (a.getParentId() < b.getParentId()) {
+              return -1;
+            } else if (a.getParentId() > b.getParentId()) {
+              return 1;
+            } else if (a.getSpanId() < b.getSpanId()) {
+              return -1;
+            } else if (a.getSpanId() > b.getSpanId()) {
+              return 1;
+            } else {
+              return 0;
+            }
+          }
+        };
+
+    private final TreeSet<Span> treeSet;
+
+    SpansByParent(Collection<Span> spans) {
+      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
+      for (Span span : spans) {
+        treeSet.add(span);
+      }
+      this.treeSet = treeSet;
+    }
+
+    public List<Span> find(long parentId) {
+      List<Span> spans = new ArrayList<Span>();
+      Span span = new MilliSpan("", Long.MIN_VALUE,
+          parentId, Long.MIN_VALUE, "");
+      while (true) {
+        span = treeSet.higher(span);
+        if (span == null) {
+          break;
+        }
+        if (span.getParentId() != parentId) {
+          break;
+        }
+        spans.add(span);
+      }
+      return spans;
+    }
+
+    public Iterator<Span> iterator() {
+      return Collections.unmodifiableSortedSet(treeSet).iterator();
+    }
+  }
+
+  public static class SpansByProcessId {
+    private static Comparator<Span> COMPARATOR =
+        new Comparator<Span>() {
+          @Override
+          public int compare(Span a, Span b) {
+            int cmp = a.getProcessId().compareTo(b.getProcessId());
+            if (cmp != 0) {
+              return cmp;
+            } else if (a.getSpanId() < b.getSpanId()) {
+              return -1;
+            } else if (a.getSpanId() > b.getSpanId()) {
+              return 1;
+            } else {
+              return 0;
+            }
+          }
+        };
+
+    private final TreeSet<Span> treeSet;
+
+    SpansByProcessId(Collection<Span> spans) {
+      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
+      for (Span span : spans) {
+        treeSet.add(span);
+      }
+      this.treeSet = treeSet;
+    }
+
+    public List<Span> find(String processId) {
+      List<Span> spans = new ArrayList<Span>();
+      Span span = new MilliSpan("", Long.MIN_VALUE,
+          Long.MIN_VALUE, Long.MIN_VALUE, processId);
+      while (true) {
+        span = treeSet.higher(span);
+        if (span == null) {
+          break;
+        }
+        if (span.getProcessId().equals(processId)) {
+          break;
+        }
+        spans.add(span);
+      }
+      return spans;
+    }
+
+    public Iterator<Span> iterator() {
+      return Collections.unmodifiableSortedSet(treeSet).iterator();
+    }
+  }
+
+  private final SpansByParent spansByParent;
+  private final SpansByProcessId spansByProcessId;
 
   /**
    * Create a new TraceTree
@@ -41,55 +147,15 @@ public class TraceTree {
    *              Span.ROOT_SPAN_ID
    */
   public TraceTree(Collection<Span> spans) {
-    this.spans = ImmutableList.copyOf(spans);
-    this.spansByParentID = HashMultimap.<Long, Span>create();
-    this.spansByPid = HashMultimap.<String, Span>create();
-
-    for (Span s : this.spans) {
-      if (s.getProcessId() != null) {
-        spansByPid.put(s.getProcessId(), s);
-      } else {
-        LOG.warn("Encountered span with null processId. This should not happen. Span: "
-            + s);
-      }
-      spansByParentID.put(s.getParentId(), s);
-    }
+    this.spansByParent = new SpansByParent(spans);
+    this.spansByProcessId = new SpansByProcessId(spans);
   }
 
-  /**
-   * @return The collection of spans given to this TraceTree at construction.
-   */
-  public Collection<Span> getSpans() {
-    return spans;
+  public SpansByParent getSpansByParent() {
+    return spansByParent;
   }
 
-  /**
-   * @return A copy of the MultiMap from parent span ID -> children of span with
-   *         that ID.
-   */
-  public Multimap<Long, Span> getSpansByParentIdMap() {
-    return HashMultimap.<Long, Span>create(spansByParentID);
-  }
-
-  /**
-   * @return A collection of the root spans (spans with parent ID =
-   *         Span.ROOT_SPAN_ID) in this tree.
-   */
-  public Collection<Span> getRoots() {
-    Collection<Span> roots = spansByParentID.get(Span.ROOT_SPAN_ID);
-    if (roots != null) {
-      return roots;
-    }
-    throw new IllegalStateException(
-        "TraceTree is not correctly formed - there are no root spans in the collection provided at construction.");
-  }
-
-  /**
-   * @return A copy of the Multimap from String process ID -> spans with that
-   *         process ID. If process ID was not set in Trace.java, all spans will
-   *         have empty string process IDs.
-   */
-  public Multimap<String, Span> getSpansByPidMap() {
-    return HashMultimap.<String, Span>create(spansByPid);
+  public SpansByProcessId getSpansByProcessId() {
+    return spansByProcessId;
   }
 }

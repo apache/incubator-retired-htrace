@@ -16,7 +16,6 @@
  */
 package org.apache.htrace;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

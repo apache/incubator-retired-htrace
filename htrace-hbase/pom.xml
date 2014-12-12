@@ -30,7 +30,7 @@ language governing permissions and limitations under the License. -->
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hbase.version>2.0.0-SNAPSHOT</hbase.version>
+    <hbase.version>0.99.2</hbase.version>
     <!-- <hbase.version>0.99.0-SNAPSHOT</hbase.version> -->
     <hadoop.version>2.4.0</hadoop.version>
     <!-- <hadoop.version>3.0.0-SNAPSHOT</hadoop.version> -->

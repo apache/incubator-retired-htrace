@@ -16,12 +16,11 @@
  */
 package org.apache.htrace;
 
-import com.google.common.collect.Multimap;
-
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.TraceTree;
+import org.apache.htrace.TraceTree.SpansByParent;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.apache.htrace.impl.POJOSpanReceiver;
 import org.apache.htrace.impl.StandardOutSpanReceiver;
@@ -78,7 +77,8 @@ public class TestHTrace {
 
     Collection<Span> spans = psr.getSpans();
     TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getRoots();
+    Collection<Span> roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+    Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
     Assert.assertEquals(numTraces, roots.size());
 
     Map<String, Span> descriptionToRootSpan = new HashMap<String, Span>();
@@ -93,21 +93,21 @@ public class TestHTrace {
     Assert.assertTrue(descriptionToRootSpan.keySet().contains(
         TraceCreator.THREADED_TRACE_ROOT));
 
-    Multimap<Long, Span> spansByParentId = traceTree.getSpansByParentIdMap();
+    SpansByParent spansByParentId = traceTree.getSpansByParent();
     Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
-    Assert.assertEquals(1, spansByParentId.get(rpcTraceRoot.getSpanId()).size());
+    Assert.assertEquals(1, spansByParentId.find(rpcTraceRoot.getSpanId()).size());
 
-    Span rpcTraceChild1 = spansByParentId.get(rpcTraceRoot.getSpanId())
+    Span rpcTraceChild1 = spansByParentId.find(rpcTraceRoot.getSpanId())
         .iterator().next();
-    Assert.assertEquals(1, spansByParentId.get(rpcTraceChild1.getSpanId()).size());
+    Assert.assertEquals(1, spansByParentId.find(rpcTraceChild1.getSpanId()).size());
 
-    Span rpcTraceChild2 = spansByParentId.get(rpcTraceChild1.getSpanId())
+    Span rpcTraceChild2 = spansByParentId.find(rpcTraceChild1.getSpanId())
         .iterator().next();
-    Assert.assertEquals(1, spansByParentId.get(rpcTraceChild2.getSpanId()).size());
+    Assert.assertEquals(1, spansByParentId.find(rpcTraceChild2.getSpanId()).size());
 
-    Span rpcTraceChild3 = spansByParentId.get(rpcTraceChild2.getSpanId())
+    Span rpcTraceChild3 = spansByParentId.find(rpcTraceChild2.getSpanId())
         .iterator().next();
-    Assert.assertEquals(0, spansByParentId.get(rpcTraceChild3.getSpanId()).size());
+    Assert.assertEquals(0, spansByParentId.find(rpcTraceChild3.getSpanId()).size());
   }
 
   private void runTraceCreatorTraces(TraceCreator tc) {
