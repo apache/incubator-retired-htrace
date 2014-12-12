@@ -131,6 +131,16 @@ HTrace includes  a sampler that always returns true, a
 sampler that always returns false and a sampler returns true some
 percentage of the time (you pass in the percentage as a decimal at construction).
 
+HTrace comes with several standard samplers, including `AlwaysSampler`,
+`NeverSampler`, `ProbabilitySampler`, and `CountSampler`.  An application can
+use the `SamplerBuilder` to create one of these standard samplers based on the
+current configuration.
+
+````java
+  HTraceConfiguration hconf = createMyHTraceConfiguration();
+  Sampler sampler = new SamplerBuilder(hconf).build();
+````
+
 ####Trace.startSpan()
 There is a single method to create and start spans: `startSpan()`.
 For the `startSpan()` methods that do not take an explicit Sampler, the
@@ -172,27 +182,30 @@ that is a child of `this`.
 In order to use the tracing information consisting of spans,
 you need an implementation of `SpanReceiver` interface which collects spans
 and typically writes it to files or databases or collector services.
-The `SpanReceiver` implementation must provide `receiveSpan` method which
+The `SpanReceiver` implementation must provide a `receiveSpan` method which
 is called from `Trace.deliver` method.
 You do not need to explicitly call `Trace.deliver`
 because it is internally called by the implementation of `Span`.
 
 ````java
     public interface SpanReceiver extends Closeable {
-      public void configure(HTraceConfiguration conf);
       public void receiveSpan(Span span);
     }
 ````
 
-Each application process using HTrace needs to
-initialize the SpanReceiver implementation and register it first
-by calling `Trace.addReceiver` method.
+HTrace comes with several standard span receivers, such as
+`LocalFileSpanReceiver`.  An application can use the `SpanReceiverBuilder` to
+create a particular type of standard `SpanReceiver` based on the current
+configuration.  Once a SpanReceiver has been created, it should be registered
+with the HTrace framework by calling `Trace.addReceiver`.
 
 ````java
-    // load and instanciate SpanReceiver impl.
-    // ...
-    impl.configure(conf);
-    Trace.addReceiver(impl);
+    HTraceConfiguration hconf = createMyHTraceConfiguration();
+    SpanReceiverBuilder builder = new SpanReceiverBuilder(hconf);
+    SpanReceiver spanReceiver = builder.build();
+    if (spanReceiver != null) {
+      Trace.addReceiver(spanReceiver);
+    }
 ````
 
 ####Zipkin
