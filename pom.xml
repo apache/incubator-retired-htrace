@@ -51,7 +51,7 @@ language governing permissions and limitations under the License. -->
     </developer>
   </developers>
 
-  <url>https://github.com/cloudera/htrace</url>
+  <url>http://incubator.apache.org/projects/htrace.html</url>
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -61,9 +61,9 @@ language governing permissions and limitations under the License. -->
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git@github.com:cloudera/htrace.git</connection>
-    <developerConnection>scm:git:git@github.com:cloudera/htrace.git</developerConnection>
-    <url>scm:git:git@github.com:cloudera/htrace.git</url>
+    <connection>scm:git:https://incubator.apache.org/projects/htrace.html</connection>
+    <developerConnection>scm:git:https://incubator.apache.org/projects/htrace.html</developerConnection>
+    <url>scm:git:https://incubator.apache.org/projects/htrace.html</url>
   </scm>
   <build>
     <pluginManagement>
@@ -200,6 +200,7 @@ language governing permissions and limitations under the License. -->
   </build>
   <properties>
     <targetJdk>1.6</targetJdk>
+    <failIfNoTests>false</failIfNoTests>
   </properties>
   <dependencyManagement>
     <dependencies>

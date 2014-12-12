@@ -24,9 +24,9 @@ language governing permissions and limitations under the License. -->
   <name>htrace-hbase</name>
   <description>
     htrace-hbase is the tools to send tracing information
-    to a HBase database for analysis later.
+    to an HBase database for analysis later.
   </description>
-  <url>https://github.com/cloudera/htrace</url>
+  <url>http://incubator.apache.org/projects/htrace.html</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
