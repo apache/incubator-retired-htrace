@@ -61,4 +61,8 @@ public class TraceRunnable implements Runnable {
   private String getDescription() {
     return this.description == null ? Thread.currentThread().getName() : description;
   }
+
+  public Runnable getRunnable() {
+    return runnable;
+  }
 }
