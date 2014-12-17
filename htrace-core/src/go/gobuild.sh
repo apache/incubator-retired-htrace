@@ -71,7 +71,7 @@ else
     which ldconfig &> /dev/null
     [ $? -eq 0 ] && ldconfig=ldconfig
 fi
-if [ -v ldconfig ]; then
+if [ -n "${ldconfig}" ]; then
     if "${ldconfig}" -p | grep -q libleveldb; then
         :
     else
