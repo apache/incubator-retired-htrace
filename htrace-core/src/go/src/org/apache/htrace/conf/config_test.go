@@ -28,7 +28,7 @@ import (
 func TestParseArgV(t *testing.T) {
 	t.Parallel()
 	argv := []string{"-Dfoo=bar", "-Dbaz=123", "-DsillyMode"}
-	bld := &ConfigBuilder{Argv: argv}
+	bld := &Builder{Argv: argv}
 	cnf, err := bld.Build()
 	if err != nil {
 		t.Fatal()
@@ -57,7 +57,7 @@ func TestDefaults(t *testing.T) {
 		"baz":  "456",
 		"foo2": "4611686018427387904",
 	}
-	bld := &ConfigBuilder{Argv: argv, Defaults: defaults}
+	bld := &Builder{Argv: argv, Defaults: defaults}
 	cnf, err := bld.Build()
 	if err != nil {
 		t.Fatal()
@@ -100,7 +100,7 @@ func TestXmlConfigurationFile(t *testing.T) {
 		"foo.bar":     "789",
 		"cmdline.opt": "4611686018427387904",
 	}
-	bld := &ConfigBuilder{Argv: argv, Defaults: defaults, Reader: xmlReader}
+	bld := &Builder{Argv: argv, Defaults: defaults, Reader: xmlReader}
 	cnf, err := bld.Build()
 	if err != nil {
 		t.Fatal()

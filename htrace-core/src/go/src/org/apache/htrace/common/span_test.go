@@ -20,7 +20,6 @@
 package common
 
 import (
-	"math/rand"
 	"testing"
 )
 

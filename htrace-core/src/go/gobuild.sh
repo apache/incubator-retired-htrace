@@ -80,4 +80,4 @@ if [ -n "${ldconfig}" ]; then
     fi
 fi
 
-go "${ACTION}" -v org/apache/htrace/htraced org/apache/htrace/htrace "$@"
+go "${ACTION}" -v org/apache/htrace/... "$@"
