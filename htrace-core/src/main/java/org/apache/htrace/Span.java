@@ -113,4 +113,9 @@ public interface Span {
    * @return
    */
   String getProcessId();
+
+  /**
+   * Serialize to Json
+   */
+  String toJson();
 }

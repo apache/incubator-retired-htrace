@@ -19,10 +19,12 @@ package org.apache.htrace.impl;
 import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.Tracer;
+import org.mortbay.util.ajax.JSON;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -157,5 +159,28 @@ public class MilliSpan implements Span {
   @Override
   public String getProcessId() {
     return processId;
+  }
+  
+  @Override
+  public String toJson() {
+    Map<String, Object> values = new LinkedHashMap<String, Object>();
+    values.put("TraceID", traceId);
+    values.put("SpanID", spanId);
+    values.put("ParentID", parentSpanId);
+    if (processId != null) {
+      values.put("ProcessID", processId);
+    }
+    values.put("Start", start);
+    values.put("Stop", stop);
+    if (description != null) {
+      values.put("Description", description);
+    }
+    if (timeline != null) {
+      values.put("TLAnnotations", timeline);
+    }
+    if (traceInfo != null){
+      values.put("KVAnnotations", traceInfo);
+    }
+    return JSON.toString(values);
   }
 }

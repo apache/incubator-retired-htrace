@@ -221,5 +221,8 @@ public class TestHBaseSpanReceiver {
     public Span child(String description) {
       return null;
     }
+
+    @Override
+    public String toJson() { return null; }
   }
 }

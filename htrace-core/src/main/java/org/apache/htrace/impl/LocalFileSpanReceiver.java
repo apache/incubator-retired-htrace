@@ -21,13 +21,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
-import org.mortbay.util.ajax.JSON;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -48,7 +45,6 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private String file;
   private FileWriter fwriter;
   private BufferedWriter bwriter;
-  private Map<String, Object> values;
   private ExecutorService executor;
   private long executorTerminationTimeoutDuration;
 
@@ -67,7 +63,6 @@ public class LocalFileSpanReceiver implements SpanReceiver {
       throw new RuntimeException(ioe);
     }
     this.bwriter = new BufferedWriter(fwriter);
-    this.values = new LinkedHashMap<String, Object>();
   }
 
 
@@ -81,19 +76,9 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     @Override
     public void run() {
       try {
-        values.put("TraceID", span.getTraceId());
-        values.put("SpanID", span.getSpanId());
-        values.put("ParentID", span.getParentId());
-        values.put("ProcessID", span.getProcessId());
-        values.put("Start", span.getStartTimeMillis());
-        values.put("Stop", span.getStopTimeMillis());
-        values.put("Description", span.getDescription());
-        values.put("KVAnnotations", span.getKVAnnotations());
-        values.put("TLAnnotations", span.getTimelineAnnotations());
-        bwriter.write(JSON.toString(values));
+        bwriter.write(span.toJson());
         bwriter.newLine();
         bwriter.flush();
-        values.clear();
       } catch (IOException e) {
         LOG.error("Error when writing to file: " + file, e);
       }
