@@ -32,10 +32,10 @@ func TestSpanToJson(t *testing.T) {
 			Description: "getFileDescriptors",
 			TraceId:     999,
 			ParentId:    INVALID_SPAN_ID,
-			ProcessId:   331,
+			ProcessId:   "testProcessId",
 		}}
 	ExpectStrEqual(t,
-		`{"sid":"2305843009213693952","start":"123","stop":"456","desc":"getFileDescriptors","tid":"999","prid":"0","pid":331}`,
+		`{"sid":"2305843009213693952","start":"123","stop":"456","desc":"getFileDescriptors","tid":"999","prid":"0","pid":"testProcessId"}`,
 		string(span.ToJson()))
 }
 
@@ -48,7 +48,7 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			Description: "getFileDescriptors2",
 			TraceId:     999,
 			ParentId:    INVALID_SPAN_ID,
-			ProcessId:   331,
+			ProcessId:   "testAnnotatedProcessId",
 			TimelineAnnotations: []TimelineAnnotation{
 				TimelineAnnotation{
 					Time: 7777,
@@ -61,6 +61,6 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			},
 		}}
 	ExpectStrEqual(t,
-		`{"sid":"1305813009213693952","start":"1234","stop":"4567","desc":"getFileDescriptors2","tid":"999","prid":"0","pid":331,"ta":[{"time":"7777","msg":"contactedServer"},{"time":"8888","msg":"passedFd"}]}`,
+		`{"sid":"1305813009213693952","start":"1234","stop":"4567","desc":"getFileDescriptors2","tid":"999","prid":"0","pid":"testAnnotatedProcessId","ta":[{"time":"7777","msg":"contactedServer"},{"time":"8888","msg":"passedFd"}]}`,
 		string(span.ToJson()))
 }

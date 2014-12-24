@@ -20,6 +20,7 @@
 package test
 
 import (
+	"fmt"
 	"math/rand"
 	"org/apache/htrace/common"
 )
@@ -66,6 +67,6 @@ func NewRandomSpan(rnd *rand.Rand, potentialParents []*common.Span) *common.Span
 			Description: "getFileDescriptors",
 			TraceId:     NonZeroRand64(rnd),
 			ParentId:    parentId,
-			ProcessId:   NonZeroRand32(rnd),
+			ProcessId:   fmt.Sprintf("process%d", NonZeroRand32(rnd)),
 		}}
 }

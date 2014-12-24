@@ -57,7 +57,7 @@ type SpanData struct {
 	TraceId             int64                `json:"tid,string"`
 	ParentId            int64                `json:"prid,string"`
 	Info                TraceInfoMap         `json:"info,omitempty"`
-	ProcessId           int32                `json:"pid"`
+	ProcessId           string               `json:"pid"`
 	TimelineAnnotations []TimelineAnnotation `json:"ta,omitempty"`
 }
 
