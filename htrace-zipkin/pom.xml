@@ -19,6 +19,7 @@ language governing permissions and limitations under the License. -->
     <artifactId>htrace</artifactId>
     <groupId>org.apache.htrace</groupId>
     <version>3.1.0-SNAPSHOT</version>
+    <relativePath>..</relativePath>
   </parent>
 
   <name>htrace-zipkin</name>
@@ -30,6 +31,13 @@ language governing permissions and limitations under the License. -->
 
   <build>
     <plugins>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>

@@ -11,6 +11,13 @@ OF ANY KIND, either express or implied. See the License for the specific
 language governing permissions and limitations under the License. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>12</version>
+    <relativePath/>
+    <!-- no parent resolution -->
+  </parent>
 
   <groupId>org.apache.htrace</groupId>
   <artifactId>htrace</artifactId>
@@ -26,13 +33,6 @@ language governing permissions and limitations under the License. -->
     <module>htrace-hbase</module>
     <module>htrace-flume</module>
   </modules>
-
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
-
 
   <licenses>
     <license>
@@ -250,9 +250,22 @@ language governing permissions and limitations under the License. -->
         </dependency>
         </dependencies>
         <configuration>
-          <siteDirectory>${basedir}/site</siteDirectory>
+          <siteDirectory>${basedir}/src/main/site</siteDirectory>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.5.3</version>
+        <configuration>
+          <!--Do not attach assembly to project.-->
+          <attach>false</attach>
+          <tarLongFileMode>gnu</tarLongFileMode>
+          <finalName>htrace-${project.version}</finalName>
+          <descriptors>
+            <descriptor>src/main/assembly/src.xml</descriptor>
+          </descriptors>
         </configuration>
       </plugin>
     </plugins>
