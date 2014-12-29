@@ -80,4 +80,9 @@ if [ -n "${ldconfig}" ]; then
     fi
 fi
 
+if [ "$ACTION" == "get" ]; then
+    go run "$SCRIPT_DIR/src/org/apache/htrace/bundler/bundler.go" \
+        --src="$SCRIPT_DIR/../web/" --dst="$SCRIPT_DIR/src/org/apache/htrace/resource/" \
+            || die "bundler failed"
+fi
 go "${ACTION}" -v org/apache/htrace/... "$@"

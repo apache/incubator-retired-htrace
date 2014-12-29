@@ -11,3 +11,4 @@
 dependency-reduced-pom.xml
 htrace-core/src/go/bin
 htrace-core/src/go/pkg
+htrace-core/src/go/src/org/apache/htrace/resource

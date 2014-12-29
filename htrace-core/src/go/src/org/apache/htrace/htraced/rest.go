@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
+	"org/apache/htrace/resource"
 	"strconv"
 )
 
@@ -125,6 +126,18 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	w.Write(jbytes)
 }
 
+type defaultServeHandler struct {
+}
+
+func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	rsc := resource.Catalog[req.URL.Path]
+	if rsc == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.Write([]byte(rsc))
+}
+
 func startRestServer(cnf *conf.Config, store *dataStore) {
 	mux := http.NewServeMux()
 
@@ -136,6 +149,9 @@ func startRestServer(cnf *conf.Config, store *dataStore) {
 
 	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store}}
 	mux.Handle("/findChildren", findChildrenH)
+
+	defaultServeH := &defaultServeHandler{}
+	mux.Handle("/", defaultServeH)
 
 	http.ListenAndServe(cnf.Get(conf.HTRACE_WEB_ADDRESS), mux)
 	log.Println("Started REST server...")
