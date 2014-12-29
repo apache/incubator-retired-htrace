@@ -2,7 +2,7 @@ Apache HTrace is an <a href="http://htrace.incubator.apache.org">Apache Incubato
 project. To add HTrace to your project, see detail on how to add it as a
 <a href="dependency-info.html">dependency</a>.
 
-Formally, HTrace was available at org.htrace.
+Formerly, HTrace was available at org.htrace.
 
 API
 ---
