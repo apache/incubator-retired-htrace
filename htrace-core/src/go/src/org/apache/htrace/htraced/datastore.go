@@ -189,13 +189,15 @@ func (shd *shard) writeSpan(span *common.Span) error {
 	if err != nil {
 		return err
 	}
-	batch.Put(makeKey('s', span.SpanId), spanDataBuf.Bytes())
+	batch.Put(makeKey('s', span.Id.Val()), spanDataBuf.Bytes())
 
 	// Add this to the parent index.
-	batch.Put(makeSecondaryKey('p', span.ParentId, span.SpanId), EMPTY_BYTE_BUF)
+	for parentIdx := range span.Parents {
+		batch.Put(makeSecondaryKey('p', span.Parents[parentIdx].Val(), span.Id.Val()), EMPTY_BYTE_BUF)
+	}
 
 	// Add this to the timeline index.
-	batch.Put(makeSecondaryKey('t', span.ParentId, span.SpanId), EMPTY_BYTE_BUF)
+	batch.Put(makeSecondaryKey('t', span.Begin, span.Id.Val()), EMPTY_BYTE_BUF)
 
 	err = shd.ldb.Write(shd.store.writeOpts, batch)
 	if err != nil {
@@ -375,7 +377,7 @@ func (store *dataStore) getShardIndex(spanId int64) int {
 }
 
 func (store *dataStore) WriteSpan(span *common.Span) {
-	store.shards[store.getShardIndex(span.SpanId)].incoming <- span
+	store.shards[store.getShardIndex(span.Id.Val())].incoming <- span
 }
 
 func (store *dataStore) FindSpan(sid int64) *common.Span {
@@ -392,7 +394,6 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 			shd.path, sid, err.Error())
 		return nil
 	}
-	// check for empty buf here?
 	r := bytes.NewBuffer(buf)
 	decoder := gob.NewDecoder(r)
 	data := common.SpanData{}
@@ -402,7 +403,12 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 			shd.path, sid, err.Error())
 		return nil
 	}
-	return &common.Span{SpanId: sid, SpanData: data}
+	// Gob encoding translates empty slices to nil.  Reverse this so that we're always dealing with
+	// non-nil slices.
+	if data.Parents == nil {
+		data.Parents = []common.SpanId{}
+	}
+	return &common.Span{Id: common.SpanId(sid), SpanData: data}
 }
 
 // Find the children of a given span id.

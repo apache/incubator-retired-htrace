@@ -38,31 +38,31 @@ func TestCreateDatastore(t *testing.T) {
 }
 
 var SIMPLE_TEST_SPANS []common.Span = []common.Span{
-	common.Span{SpanId: 1,
+	common.Span{Id: 1,
 		SpanData: common.SpanData{
-			Start:       123,
-			Stop:        456,
+			Begin:       123,
+			End:         456,
 			Description: "getFileDescriptors",
 			TraceId:     999,
-			ParentId:    common.INVALID_SPAN_ID,
+			Parents:     []common.SpanId{},
 			ProcessId:   "firstd",
 		}},
-	common.Span{SpanId: 2,
+	common.Span{Id: 2,
 		SpanData: common.SpanData{
-			Start:       125,
-			Stop:        200,
+			Begin:       125,
+			End:         200,
 			Description: "openFd",
 			TraceId:     999,
-			ParentId:    1,
+			Parents:     []common.SpanId{1},
 			ProcessId:   "secondd",
 		}},
-	common.Span{SpanId: 3,
+	common.Span{Id: 3,
 		SpanData: common.SpanData{
-			Start:       200,
-			Stop:        456,
+			Begin:       200,
+			End:         456,
 			Description: "passFd",
 			TraceId:     999,
-			ParentId:    1,
+			Parents:     []common.SpanId{1},
 			ProcessId:   "thirdd",
 		}},
 }
@@ -95,10 +95,10 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 	if span == nil {
 		t.Fatal()
 	}
-	if span.SpanId != 1 {
+	if span.Id != 1 {
 		t.Fatal()
 	}
-	common.ExpectSpansEqual(t, span, &SIMPLE_TEST_SPANS[0])
+	common.ExpectSpansEqual(t, &SIMPLE_TEST_SPANS[0], span)
 	children := ht.Store.FindChildren(1, 1)
 	if len(children) != 1 {
 		t.Fatalf("expected 1 child, but got %d\n", len(children))

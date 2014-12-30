@@ -21,25 +21,19 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 )
 
 //
 // Represents a trace span.
 //
 // Compatibility notes:
-// We use signed numbers here, even in cases where unsigned would make more sense.  This is because
-// Java doesn't support unsigned integers, and we'd like to match the representation used by the
-// Java client.  For example, if we log a message about a span id in the Java client, it would be
-// nice if we could match it up with a log message about the same span id in this server, without
-// doing a mental conversion from signed to unsigned.
+// When converting to JSON, we store the 64-bit numbers as hexadecimal strings rather than as
+// integers.  This is because JavaScript lacks the ability to handle 64-bit integers.  Numbers above
+// about 55 bits will be rounded by Javascript.  Since the Javascript UI is a primary consumer of
+// this JSON data, we have to simply pass it as a string.
 //
-// When converting to JSON, we store the 64-bit numbers as strings rather than as integers.  This is
-// because JavaScript lacks the ability to handle 64-bit integers.  Numbers above about 55 bits will
-// be rounded by Javascript.  Since the Javascript UI is a primary consumer of this JSON data, we
-// have to simply pass it as a string.
-//
-
-const INVALID_SPAN_ID = 0
 
 type TraceInfoMap map[string][]byte
 
@@ -48,36 +42,42 @@ type TimelineAnnotation struct {
 	Msg  string `json:"msg"`
 }
 
-type SpanIdSlice []int64
+type SpanId int64
+
+func (id SpanId) String() string {
+	return fmt.Sprintf("%08x", id)
+}
+
+func (id SpanId) Val() int64 {
+	return int64(id)
+}
+
+func (id SpanId) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
+}
+
+func (id SpanId) UnMarshalJSON() ([]byte, error) {
+	return []byte(`"` + strconv.FormatUint(uint64(id), 16) + `"`), nil
+}
 
 type SpanData struct {
-	Start               int64                `json:"start,string"`
-	Stop                int64                `json:"stop,string"`
-	Description         string               `json:"desc"`
-	TraceId             int64                `json:"tid,string"`
-	ParentId            int64                `json:"prid,string"`
-	Info                TraceInfoMap         `json:"info,omitempty"`
-	ProcessId           string               `json:"pid"`
-	TimelineAnnotations []TimelineAnnotation `json:"ta,omitempty"`
+	Begin               int64                `json:"b,string"`
+	End                 int64                `json:"e,string"`
+	Description         string               `json:"d"`
+	TraceId             SpanId               `json:"i"`
+	Parents             []SpanId             `json:"p"`
+	Info                TraceInfoMap         `json:"n,omitempty"`
+	ProcessId           string               `json:"r"`
+	TimelineAnnotations []TimelineAnnotation `json:"t,omitempty"`
 }
 
 type Span struct {
-	SpanId int64 `json:"sid,string"`
+	Id SpanId `json:"s,string"`
 	SpanData
 }
 
 func (span *Span) ToJson() []byte {
 	jbytes, err := json.Marshal(*span)
-	if err != nil {
-		panic(err)
-	}
-	return jbytes
-}
-
-type SpanSlice []Span
-
-func (spans SpanSlice) ToJson() []byte {
-	jbytes, err := json.Marshal(spans)
 	if err != nil {
 		panic(err)
 	}

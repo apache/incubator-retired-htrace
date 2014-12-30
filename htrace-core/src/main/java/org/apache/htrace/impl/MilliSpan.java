@@ -41,7 +41,7 @@ public class MilliSpan implements Span {
   private long stop;
   private final String description;
   private final long traceId;
-  private final long parentSpanId;
+  private final long parents[];
   private final long spanId;
   private Map<byte[], byte[]> traceInfo = null;
   private final String processId;
@@ -55,7 +55,11 @@ public class MilliSpan implements Span {
   public MilliSpan(String description, long traceId, long parentSpanId, long spanId, String processId) {
     this.description = description;
     this.traceId = traceId;
-    this.parentSpanId = parentSpanId;
+    if (parentSpanId == Span.ROOT_SPAN_ID) {
+      this.parents = new long[0];
+    } else {
+      this.parents = new long[] { parentSpanId };
+    } 
     this.spanId = spanId;
     this.start = System.currentTimeMillis();
     this.stop = 0;
@@ -93,7 +97,7 @@ public class MilliSpan implements Span {
 
   @Override
   public String toString() {
-    return String.format("Span{Id:0x%16x,parentId:0x%16x,desc:%s}", spanId, parentSpanId, description);
+    return toJson();
   }
 
   @Override
@@ -106,9 +110,14 @@ public class MilliSpan implements Span {
     return spanId;
   }
 
+  // TODO: Fix API callers to deal with multiple parents, and get rid of
+  // Span.ROOT_SPAN_ID.
   @Override
   public long getParentId() {
-    return parentSpanId;
+    if (parents.length == 0) {
+      return Span.ROOT_SPAN_ID;
+    }
+    return parents[0];
   }
 
   @Override
@@ -160,26 +169,26 @@ public class MilliSpan implements Span {
   public String getProcessId() {
     return processId;
   }
-  
+
   @Override
   public String toJson() {
     Map<String, Object> values = new LinkedHashMap<String, Object>();
-    values.put("TraceID", traceId);
-    values.put("SpanID", spanId);
-    values.put("ParentID", parentSpanId);
-    if (processId != null) {
-      values.put("ProcessID", processId);
+    values.put("i", String.format("%016x", traceId));
+    values.put("s", String.format("%016x", spanId));
+    String parentStrs[] = new String[parents.length];
+    for (int parentIdx = 0; parentIdx < parents.length; parentIdx++) {
+      parentStrs[parentIdx] = String.format("%016x", parents[parentIdx]);
     }
-    values.put("Start", start);
-    values.put("Stop", stop);
-    if (description != null) {
-      values.put("Description", description);
-    }
+    values.put("p", parentStrs);
+    values.put("r", processId);
+    values.put("b", Long.toString(start));
+    values.put("e", Long.toString(stop));
+    values.put("d", description);
     if (timeline != null) {
-      values.put("TLAnnotations", timeline);
+      values.put("t", timeline);
     }
     if (traceInfo != null){
-      values.put("KVAnnotations", traceInfo);
+      values.put("n", traceInfo);
     }
     return JSON.toString(values);
   }

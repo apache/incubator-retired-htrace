@@ -53,20 +53,20 @@ func NonZeroRand32(rnd *rand.Rand) int32 {
 
 // Create a random span.
 func NewRandomSpan(rnd *rand.Rand, potentialParents []*common.Span) *common.Span {
-	var parentId int64 = common.INVALID_SPAN_ID
+	parents := []common.SpanId{}
 	if potentialParents != nil {
 		parentIdx := rnd.Intn(len(potentialParents) + 1)
 		if parentIdx < len(potentialParents) {
-			parentId = potentialParents[parentIdx].SpanId
+			parents = []common.SpanId{potentialParents[parentIdx].Id}
 		}
 	}
-	return &common.Span{SpanId: NonZeroRand64(rnd),
+	return &common.Span{Id: common.SpanId(NonZeroRand64(rnd)),
 		SpanData: common.SpanData{
-			Start:       NonZeroRand64(rnd),
-			Stop:        NonZeroRand64(rnd),
+			Begin:       NonZeroRand64(rnd),
+			End:         NonZeroRand64(rnd),
 			Description: "getFileDescriptors",
-			TraceId:     NonZeroRand64(rnd),
-			ParentId:    parentId,
+			TraceId:     common.SpanId(NonZeroRand64(rnd)),
+			Parents:     parents,
 			ProcessId:   fmt.Sprintf("process%d", NonZeroRand32(rnd)),
 		}}
 }

@@ -81,8 +81,8 @@ public interface Span {
   String toString();
 
   /**
-   * Return the pseudo-unique (random) number of the parent span, returns
-   * ROOT_SPAN_ID if this is the root span
+   * Return the pseudo-unique (random) number of the first parent span, returns
+   * ROOT_SPAN_ID if there are no parents.
    */
   long getParentId();
 

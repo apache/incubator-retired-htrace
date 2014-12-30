@@ -25,29 +25,29 @@ import (
 
 func TestSpanToJson(t *testing.T) {
 	t.Parallel()
-	span := Span{SpanId: 2305843009213693952,
+	span := Span{Id: 2305843009213693952,
 		SpanData: SpanData{
-			Start:       123,
-			Stop:        456,
+			Begin:       123,
+			End:         456,
 			Description: "getFileDescriptors",
 			TraceId:     999,
-			ParentId:    INVALID_SPAN_ID,
+			Parents:     []SpanId{},
 			ProcessId:   "testProcessId",
 		}}
 	ExpectStrEqual(t,
-		`{"sid":"2305843009213693952","start":"123","stop":"456","desc":"getFileDescriptors","tid":"999","prid":"0","pid":"testProcessId"}`,
+		`{"s":"2000000000000000","b":"123","e":"456","d":"getFileDescriptors","i":"00000000000003e7","p":[],"r":"testProcessId"}`,
 		string(span.ToJson()))
 }
 
 func TestAnnotatedSpanToJson(t *testing.T) {
 	t.Parallel()
-	span := Span{SpanId: 1305813009213693952,
+	span := Span{Id: 1305813009213693952,
 		SpanData: SpanData{
-			Start:       1234,
-			Stop:        4567,
+			Begin:       1234,
+			End:         4567,
 			Description: "getFileDescriptors2",
 			TraceId:     999,
-			ParentId:    INVALID_SPAN_ID,
+			Parents:     []SpanId{},
 			ProcessId:   "testAnnotatedProcessId",
 			TimelineAnnotations: []TimelineAnnotation{
 				TimelineAnnotation{
@@ -61,6 +61,6 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			},
 		}}
 	ExpectStrEqual(t,
-		`{"sid":"1305813009213693952","start":"1234","stop":"4567","desc":"getFileDescriptors2","tid":"999","prid":"0","pid":"testAnnotatedProcessId","ta":[{"time":"7777","msg":"contactedServer"},{"time":"8888","msg":"passedFd"}]}`,
+		`{"s":"121f2e036d442000","b":"1234","e":"4567","d":"getFileDescriptors2","i":"00000000000003e7","p":[],"r":"testAnnotatedProcessId","t":[{"time":"7777","msg":"contactedServer"},{"time":"8888","msg":"passedFd"}]}`,
 		string(span.ToJson()))
 }
