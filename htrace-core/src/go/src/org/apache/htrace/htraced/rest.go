@@ -27,6 +27,7 @@ import (
 	"org/apache/htrace/conf"
 	"org/apache/htrace/resource"
 	"strconv"
+	"strings"
 )
 
 type serverInfoHandler struct {
@@ -130,8 +131,11 @@ type defaultServeHandler struct {
 }
 
 func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	rsc := resource.Catalog[req.URL.Path]
+	ident := strings.TrimLeft(req.URL.Path, "/")
+	ident = strings.Replace(ident, "/", "__", -1)
+	rsc := resource.Catalog[ident]
 	if rsc == "" {
+		log.Printf("failed to find entry for %s\n", ident)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

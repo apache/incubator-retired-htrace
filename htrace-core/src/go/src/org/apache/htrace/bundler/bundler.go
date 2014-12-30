@@ -32,6 +32,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -57,6 +58,8 @@ const APACHE_HEADER = `/*
 
 const GENERATED_CODE_COMMENT = "// THIS IS GENERATED CODE.  DO NOT EDIT."
 
+var SEP string = string(os.PathSeparator)
+
 // Return true if a file contains a given string.
 func fileContainsString(path, line string) (bool, error) {
 	file, err := os.Open(path)
@@ -76,12 +79,17 @@ func fileContainsString(path, line string) (bool, error) {
 	return false, nil
 }
 
+// Converts a source file path to a destination file path
+func sfileToDfile(sfile string) string {
+	return strings.Replace(sfile, SEP, "__", -1) + ".go"
+}
+
 // Delete generated files that are in dfiles but not sfiles.
 // sfiles and dfiles must be sorted by file name.
-func deleteUnusedDst(sfiles []os.FileInfo, dst string, dfiles []os.FileInfo) error {
+func deleteUnusedDst(sfiles []string, dst string, dfiles []os.FileInfo) error {
 	s := 0
 	for d := range dfiles {
-		fullDst := dst + string(os.PathSeparator) + dfiles[d].Name()
+		fullDst := dst + SEP + dfiles[d].Name()
 		generated, err := fileContainsString(fullDst, GENERATED_CODE_COMMENT)
 		if err != nil {
 			return err
@@ -95,11 +103,12 @@ func deleteUnusedDst(sfiles []os.FileInfo, dst string, dfiles []os.FileInfo) err
 			if s >= len(sfiles) {
 				break
 			}
-			if sfiles[s].Name()+".go" == dfiles[d].Name() {
+			tgt := sfileToDfile(sfiles[s])
+			if tgt == dfiles[d].Name() {
 				found = true
 				break
 			}
-			if sfiles[s].Name()+".go" > dfiles[d].Name() {
+			if tgt > dfiles[d].Name() {
 				break
 			}
 			s++
@@ -115,17 +124,10 @@ func deleteUnusedDst(sfiles []os.FileInfo, dst string, dfiles []os.FileInfo) err
 	return nil
 }
 
-func stripSuffixes(str string) string {
-	idx := strings.Index(str, ".")
-	if idx < 0 {
-		return str
-	}
-	return str[0:idx]
-}
-
-func createBundleFile(pkg, src, sfile, tdir string) error {
+func createBundleFile(pkg, src, sfile, dst string) error {
 	// Open destination file and write header.
-	fullDst := tdir + string(os.PathSeparator) + sfile + ".go"
+	tgt := sfileToDfile(sfile)
+	fullDst := dst + SEP + tgt
 	out, err := os.Create(fullDst)
 	if err != nil {
 		return err
@@ -143,13 +145,13 @@ func createBundleFile(pkg, src, sfile, tdir string) error {
 	if err != nil {
 		return err
 	}
-	_, err = out.WriteString(fmt.Sprintf("var _ = addResource(\"/%s\", `\n", stripSuffixes(sfile)))
+	_, err = out.WriteString(fmt.Sprintf("var _ = addResource(\"%s\", `\n", tgt[:len(tgt)-3]))
 	if err != nil {
 		return err
 	}
 
 	// Open source file and create scanner.
-	fullSrc := src + string(os.PathSeparator) + sfile
+	fullSrc := src + SEP + sfile
 	in, err := os.Open(fullSrc)
 	if err != nil {
 		return err
@@ -186,9 +188,28 @@ func main() {
 	if *dst == "" {
 		log.Fatal("You must supply a dst directory for output.")
 	}
-	sfiles, err := ioutil.ReadDir(*src)
+	sfiles := make([]string, 0, 32)
+	absSrc, err := filepath.Abs(filepath.Clean(*src))
 	if err != nil {
-		log.Fatal("Error listing files in src directory %s: %s\n", *src, err.Error())
+		log.Fatalf("Error getting absolute path for %s: %s\n", *src, err.Error())
+	}
+	err = filepath.Walk(absSrc, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		var suffix string
+		suffix, err = filepath.Rel(absSrc, path)
+		if err != nil {
+			return err
+		}
+		sfiles = append(sfiles, suffix)
+		return nil
+	})
+	if err != nil {
+		log.Fatal("Error listing files in src directory %s: %s\n", absSrc, err.Error())
 	}
 	var dfiles []os.FileInfo
 	dfiles, err = ioutil.ReadDir(*dst)
@@ -197,11 +218,11 @@ func main() {
 	}
 	deleteUnusedDst(sfiles, *dst, dfiles)
 	for s := range sfiles {
-		err = createBundleFile(*pkg, *src, sfiles[s].Name(), *dst)
+		err = createBundleFile(*pkg, absSrc, sfiles[s], *dst)
 		if err != nil {
-			log.Fatal("Error creating bundle file for %s in %s: %s\n",
+			log.Fatalf("Error creating bundle file for %s in %s: %s\n",
 				sfiles[s], *dst, err.Error())
 		}
-		log.Printf("Bundled %s\n", *dst+string(os.PathSeparator)+sfiles[s].Name())
+		log.Printf("Bundled %s as %s\n", absSrc, absSrc + SEP + sfileToDfile(sfiles[s]))
 	}
 }
