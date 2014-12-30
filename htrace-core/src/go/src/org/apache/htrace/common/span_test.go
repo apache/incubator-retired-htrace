@@ -35,7 +35,7 @@ func TestSpanToJson(t *testing.T) {
 			ProcessId:   "testProcessId",
 		}}
 	ExpectStrEqual(t,
-		`{"s":"2000000000000000","b":"123","e":"456","d":"getFileDescriptors","i":"00000000000003e7","p":[],"r":"testProcessId"}`,
+		`{"s":"2000000000000000","b":123,"e":456,"d":"getFileDescriptors","i":"00000000000003e7","p":[],"r":"testProcessId"}`,
 		string(span.ToJson()))
 }
 
@@ -61,6 +61,6 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			},
 		}}
 	ExpectStrEqual(t,
-		`{"s":"121f2e036d442000","b":"1234","e":"4567","d":"getFileDescriptors2","i":"00000000000003e7","p":[],"r":"testAnnotatedProcessId","t":[{"time":"7777","msg":"contactedServer"},{"time":"8888","msg":"passedFd"}]}`,
+		`{"s":"121f2e036d442000","b":1234,"e":4567,"d":"getFileDescriptors2","i":"00000000000003e7","p":[],"r":"testAnnotatedProcessId","t":[{"t":7777,"m":"contactedServer"},{"t":8888,"m":"passedFd"}]}`,
 		string(span.ToJson()))
 }

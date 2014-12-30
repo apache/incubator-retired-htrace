@@ -61,8 +61,8 @@ language governing permissions and limitations under the License. -->
                   <shadedPattern>org.apache.htrace.commons.logging</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>org.mortbay</pattern>
-                  <shadedPattern>org.apache.htrace.mortbay</shadedPattern>
+                  <pattern>com.fasterxml.jackson.core</pattern>
+                  <shadedPattern>org.apache.htrace.fasterxml.jackson.core</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -137,9 +137,14 @@ language governing permissions and limitations under the License. -->
       <artifactId>commons-logging</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty-util</artifactId>
-      <version>6.1.26</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.4.0</version>
     </dependency>
   </dependencies>
 </project>

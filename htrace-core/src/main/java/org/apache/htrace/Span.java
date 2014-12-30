@@ -16,6 +16,12 @@
  */
 package org.apache.htrace;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +33,7 @@ import java.util.Map;
  * Spans form a tree structure with the parent relationship. The first span in a
  * trace has no parent span.
  */
+@JsonSerialize(using = Span.SpanSerializer.class)
 public interface Span {
   public static final long ROOT_SPAN_ID = 0x74ace;
 
@@ -118,4 +125,45 @@ public interface Span {
    * Serialize to Json
    */
   String toJson();
+
+  public static class SpanSerializer extends JsonSerializer<Span> {
+    @Override
+    public void serialize(Span span, JsonGenerator jgen, SerializerProvider provider)
+        throws IOException {
+      jgen.writeStartObject();
+      jgen.writeStringField("i", String.format("%016x", span.getTraceId()));
+      jgen.writeStringField("s", String.format("%016x", span.getSpanId()));
+      jgen.writeNumberField("b", span.getStartTimeMillis());
+      jgen.writeNumberField("e", span.getStopTimeMillis());
+      jgen.writeStringField("d", span.getDescription());
+      jgen.writeStringField("r", span.getProcessId());
+      jgen.writeArrayFieldStart("p");
+      if (span.getParentId() != ROOT_SPAN_ID) {
+        jgen.writeString(String.format("%016x", span.getParentId()));
+      }
+      jgen.writeEndArray();
+      Map<byte[], byte[]> traceInfoMap = span.getKVAnnotations();
+      if (!traceInfoMap.isEmpty()) {
+        jgen.writeObjectFieldStart("n");
+        for (Map.Entry<byte[], byte[]> e : traceInfoMap.entrySet()) {
+          jgen.writeStringField(new String(e.getKey(), "UTF-8"),
+              new String(e.getValue(), "UTF-8"));
+        }
+        jgen.writeEndObject();
+      }
+      List<TimelineAnnotation> timelineAnnotations =
+          span.getTimelineAnnotations();
+      if (!timelineAnnotations.isEmpty()) {
+        jgen.writeArrayFieldStart("t");
+        for (TimelineAnnotation tl : timelineAnnotations) {
+          jgen.writeStartObject();
+          jgen.writeNumberField("t", tl.getTime());
+          jgen.writeStringField("m", tl.getMessage());
+          jgen.writeEndObject();
+        }
+        jgen.writeEndArray();
+      }
+      jgen.writeEndObject();
+    }
+  }
 }

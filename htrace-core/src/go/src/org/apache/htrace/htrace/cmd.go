@@ -90,7 +90,7 @@ func printServerInfo(restAddr string) int {
 
 // Print information about a trace span.
 func doFindSpan(restAddr string, sid int64) int {
-	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findSid?sid=%d", sid))
+	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findSid?sid=%016x", sid))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
@@ -113,7 +113,7 @@ func doFindSpan(restAddr string, sid int64) int {
 
 // Find information about the children of a span.
 func doFindChildren(restAddr string, sid int64, lim int) int {
-	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findChildren?sid=%d&lim=%d", sid, lim))
+	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findChildren?sid=%016x&lim=%d", sid, lim))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1

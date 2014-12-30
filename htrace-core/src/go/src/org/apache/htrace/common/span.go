@@ -38,14 +38,14 @@ import (
 type TraceInfoMap map[string][]byte
 
 type TimelineAnnotation struct {
-	Time int64  `json:"time,string"`
-	Msg  string `json:"msg"`
+	Time int64  `json:"t"`
+	Msg  string `json:"m"`
 }
 
 type SpanId int64
 
 func (id SpanId) String() string {
-	return fmt.Sprintf("%08x", id)
+	return fmt.Sprintf("%016x", id)
 }
 
 func (id SpanId) Val() int64 {
@@ -56,13 +56,18 @@ func (id SpanId) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
 }
 
-func (id SpanId) UnMarshalJSON() ([]byte, error) {
-	return []byte(`"` + strconv.FormatUint(uint64(id), 16) + `"`), nil
+func (id *SpanId) UnMarshalJSON(b []byte) error {
+	v, err := strconv.ParseUint(string(b), 16, 64)
+	if err != nil {
+		return err
+	}
+	*id = SpanId(v)
+	return nil
 }
 
 type SpanData struct {
-	Begin               int64                `json:"b,string"`
-	End                 int64                `json:"e,string"`
+	Begin               int64                `json:"b"`
+	End                 int64                `json:"e"`
 	Description         string               `json:"d"`
 	TraceId             SpanId               `json:"i"`
 	Parents             []SpanId             `json:"p"`

@@ -16,15 +16,24 @@
  */
 package org.apache.htrace.impl;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.Tracer;
-import org.mortbay.util.ajax.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -33,12 +42,13 @@ import java.util.Random;
  * A Span implementation that stores its information in milliseconds since the
  * epoch.
  */
+@JsonDeserialize(using = MilliSpan.MilliSpanDeserializer.class)
 public class MilliSpan implements Span {
 
   private static Random rand = new Random();
 
-  private long start;
-  private long stop;
+  private long begin;
+  private long end;
   private final String description;
   private final long traceId;
   private final long parents[];
@@ -52,6 +62,94 @@ public class MilliSpan implements Span {
     return new MilliSpan(description, traceId, spanId, rand.nextLong(), processId);
   }
 
+  /**
+   * The public interface for constructing a MilliSpan.
+   */
+  public static class Builder {
+    private long begin;
+    private long end;
+    private String description;
+    private long traceId;
+    private long parents[];
+    private long spanId;
+    private Map<byte[], byte[]> traceInfo = null;
+    private String processId;
+    private List<TimelineAnnotation> timeline = null;
+
+    public Builder() {
+    }
+
+    public Builder begin(long begin) {
+      this.begin = begin;
+      return this;
+    }
+
+    public Builder end(long end) {
+      this.end = end;
+      return this;
+    }
+
+    public Builder description(String description) {
+      this.description = description;
+      return this;
+    }
+
+    public Builder traceId(long traceId) {
+      this.traceId = traceId;
+      return this;
+    }
+
+    public Builder parents(long parents[]) {
+      this.parents = parents;
+      return this;
+    }
+
+    public Builder parents(List<Long> parentList) {
+      long[] parents = new long[parentList.size()];
+      for (int i = 0; i < parentList.size(); i++) {
+        parents[i] = parentList.get(i).longValue();
+      }
+      this.parents = parents;
+      return this;
+    }
+
+    public Builder spanId(long spanId) {
+      this.spanId = spanId;
+      return this;
+    }
+
+    public Builder traceInfo(Map<byte[], byte[]> traceInfo) {
+      this.traceInfo = traceInfo.isEmpty() ? null : traceInfo;
+      return this;
+    }
+
+    public Builder processId(String processId) {
+      this.processId = processId;
+      return this;
+    }
+
+    public Builder timeline(List<TimelineAnnotation> timeline) {
+      this.timeline = timeline.isEmpty() ? null : timeline;
+      return this;
+    }
+
+    public MilliSpan build() {
+      return new MilliSpan(this);
+    }
+  }
+
+  private MilliSpan(Builder builder) {
+    this.begin = builder.begin;
+    this.end = builder.end;
+    this.description = builder.description;
+    this.traceId = builder.traceId;
+    this.parents = builder.parents;
+    this.spanId = builder.spanId;
+    this.traceInfo = builder.traceInfo;
+    this.processId = builder.processId;
+    this.timeline = builder.timeline;
+  }
+
   public MilliSpan(String description, long traceId, long parentSpanId, long spanId, String processId) {
     this.description = description;
     this.traceId = traceId;
@@ -61,18 +159,18 @@ public class MilliSpan implements Span {
       this.parents = new long[] { parentSpanId };
     } 
     this.spanId = spanId;
-    this.start = System.currentTimeMillis();
-    this.stop = 0;
+    this.begin = System.currentTimeMillis();
+    this.end = 0;
     this.processId = processId;
   }
 
   @Override
   public synchronized void stop() {
-    if (stop == 0) {
-      if (start == 0)
+    if (end == 0) {
+      if (begin == 0)
         throw new IllegalStateException("Span for " + description
             + " has not been started");
-      stop = System.currentTimeMillis();
+      end = System.currentTimeMillis();
       Tracer.getInstance().deliver(this);
     }
   }
@@ -83,16 +181,16 @@ public class MilliSpan implements Span {
 
   @Override
   public synchronized boolean isRunning() {
-    return start != 0 && stop == 0;
+    return begin != 0 && end == 0;
   }
 
   @Override
   public synchronized long getAccumulatedMillis() {
-    if (start == 0)
+    if (begin == 0)
       return 0;
-    if (stop > 0)
-      return stop - start;
-    return currentTimeMillis() - start;
+    if (end > 0)
+      return end - begin;
+    return currentTimeMillis() - begin;
   }
 
   @Override
@@ -127,12 +225,12 @@ public class MilliSpan implements Span {
 
   @Override
   public long getStartTimeMillis() {
-    return start;
+    return begin;
   }
 
   @Override
   public long getStopTimeMillis() {
-    return stop;
+    return end;
   }
 
   @Override
@@ -172,24 +270,62 @@ public class MilliSpan implements Span {
 
   @Override
   public String toJson() {
-    Map<String, Object> values = new LinkedHashMap<String, Object>();
-    values.put("i", String.format("%016x", traceId));
-    values.put("s", String.format("%016x", spanId));
-    String parentStrs[] = new String[parents.length];
-    for (int parentIdx = 0; parentIdx < parents.length; parentIdx++) {
-      parentStrs[parentIdx] = String.format("%016x", parents[parentIdx]);
+    StringWriter writer = new StringWriter();
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      mapper.writeValue(writer, this);
+    } catch (IOException e) {
+      // An IOException should not be possible when writing to a string.
+      throw new RuntimeException(e);
     }
-    values.put("p", parentStrs);
-    values.put("r", processId);
-    values.put("b", Long.toString(start));
-    values.put("e", Long.toString(stop));
-    values.put("d", description);
-    if (timeline != null) {
-      values.put("t", timeline);
+    return writer.toString();
+  }
+
+  public static class MilliSpanDeserializer
+        extends JsonDeserializer<MilliSpan> {
+    @Override
+    public MilliSpan deserialize(JsonParser jp, DeserializationContext ctxt)
+          throws IOException, JsonProcessingException {
+      JsonNode root = jp.getCodec().readTree(jp);
+      Builder builder = new Builder();
+      builder.begin(root.get("b").asLong()).
+              end(root.get("e").asLong()).
+              description(root.get("d").asText()).
+              traceId(Long.parseLong(root.get("i").asText(), 16)).
+              spanId(Long.parseLong(root.get("s").asText(), 16)).
+              processId(root.get("r").asText());
+      JsonNode parentsNode = root.get("p");
+      LinkedList<Long> parents = new LinkedList<Long>();
+      for (Iterator<JsonNode> iter = parentsNode.elements();
+           iter.hasNext(); ) {
+        JsonNode parentIdNode = iter.next();
+        parents.add(Long.parseLong(parentIdNode.asText(), 16));
+      }
+      builder.parents(parents);
+      JsonNode traceInfoNode = root.get("n");
+      if (traceInfoNode != null) {
+        HashMap<byte[], byte[]> traceInfo = new HashMap<byte[], byte[]>();
+        for (Iterator<String> iter = traceInfoNode.fieldNames();
+             iter.hasNext(); ) {
+          String field = iter.next();
+          traceInfo.put(field.getBytes("UTF-8"),
+              traceInfoNode.get(field).asText().getBytes("UTF-8"));
+        }
+        builder.traceInfo(traceInfo);
+      }
+      JsonNode timelineNode = root.get("t");
+      if (timelineNode != null) {
+        LinkedList<TimelineAnnotation> timeline =
+            new LinkedList<TimelineAnnotation>();
+        for (Iterator<JsonNode> iter = timelineNode.elements();
+             iter.hasNext(); ) {
+          JsonNode ann = iter.next();
+          timeline.add(new TimelineAnnotation(ann.get("t").asLong(),
+              ann.get("m").asText()));
+        }
+        builder.timeline(timeline);
+      }
+      return builder.build();
     }
-    if (traceInfo != null){
-      values.put("n", traceInfo);
-    }
-    return JSON.toString(values);
   }
 }

@@ -55,13 +55,13 @@ func (hand *dataStoreHandler) getReqField64(fieldName string, w http.ResponseWri
 		w.Write([]byte("No " + fieldName + " specified."))
 		return -1, false
 	}
-	val, err := strconv.ParseInt(str, 10, 64)
+	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Error parsing " + fieldName + ": " + err.Error()))
 		return -1, false
 	}
-	return val, true
+	return int64(val), true
 }
 
 func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWriter,
@@ -72,7 +72,7 @@ func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWri
 		w.Write([]byte("No " + fieldName + " specified."))
 		return -1, false
 	}
-	val, err := strconv.ParseInt(str, 10, 32)
+	val, err := strconv.ParseUint(str, 16, 32)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Error parsing " + fieldName + ": " + err.Error()))
