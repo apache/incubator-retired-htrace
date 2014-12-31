@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -282,6 +283,10 @@ public class MilliSpan implements Span {
     return writer.toString();
   }
 
+  private static long parseUnsignedLong(String s) {
+    return new BigInteger(s, 16).longValue();
+  }
+
   public static class MilliSpanDeserializer
         extends JsonDeserializer<MilliSpan> {
     @Override
@@ -292,15 +297,15 @@ public class MilliSpan implements Span {
       builder.begin(root.get("b").asLong()).
               end(root.get("e").asLong()).
               description(root.get("d").asText()).
-              traceId(Long.parseLong(root.get("i").asText(), 16)).
-              spanId(Long.parseLong(root.get("s").asText(), 16)).
+              traceId(parseUnsignedLong(root.get("i").asText())).
+              spanId(parseUnsignedLong(root.get("s").asText())).
               processId(root.get("r").asText());
       JsonNode parentsNode = root.get("p");
       LinkedList<Long> parents = new LinkedList<Long>();
       for (Iterator<JsonNode> iter = parentsNode.elements();
            iter.hasNext(); ) {
         JsonNode parentIdNode = iter.next();
-        parents.add(Long.parseLong(parentIdNode.asText(), 16));
+        parents.add(parseUnsignedLong(parentIdNode.asText()));
       }
       builder.parents(parents);
       JsonNode traceInfoNode = root.get("n");

@@ -24,11 +24,13 @@ import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
 import org.junit.Test;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public class TestMilliSpan {
   private void compareSpans(Span expected, Span got) throws Exception {
@@ -86,6 +88,39 @@ public class TestMilliSpan {
         processId("b2404.halxg.com:8080").
         spanId(989L).
         traceId(444).build();
+    String json = span.toJson();
+    ObjectMapper mapper = new ObjectMapper();
+    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    compareSpans(span, dspan);
+  }
+
+  @Test
+  public void testJsonSerializationWithNegativeLongValue() throws Exception {
+    MilliSpan span = new MilliSpan.Builder().
+        description("foospan").
+        begin(-1L).
+        end(-1L).
+        parents(new long[] { -1L }).
+        processId("b2404.halxg.com:8080").
+        spanId(-1L).
+        traceId(-1L).build();
+    String json = span.toJson();
+    ObjectMapper mapper = new ObjectMapper();
+    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    compareSpans(span, dspan);
+  }
+
+  @Test
+  public void testJsonSerializationWithRandomLongValue() throws Exception {
+    Random random = new SecureRandom();
+    MilliSpan span = new MilliSpan.Builder().
+        description("foospan").
+        begin(random.nextLong()).
+        end(random.nextLong()).
+        parents(new long[] { random.nextLong() }).
+        processId("b2404.halxg.com:8080").
+        spanId(random.nextLong()).
+        traceId(random.nextLong()).build();
     String json = span.toJson();
     ObjectMapper mapper = new ObjectMapper();
     MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
