@@ -54,11 +54,11 @@ func main() {
 	case version.FullCommand():
 		os.Exit(printVersion())
 	case serverInfo.FullCommand():
-		os.Exit(printServerInfo(addr.String()))
+		os.Exit(printServerInfo((*addr).String()))
 	case findSpan.FullCommand():
-		os.Exit(doFindSpan(addr.String(), *findSpanId))
+		os.Exit(doFindSpan((*addr).String(), *findSpanId))
 	case findChildren.FullCommand():
-		os.Exit(doFindChildren(addr.String(), *parentSpanId, *childLim))
+		os.Exit(doFindChildren((*addr).String(), *parentSpanId, *childLim))
 	}
 
 	app.UsageErrorf(os.Stderr, "You must supply a command to run.")
