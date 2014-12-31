@@ -61,8 +61,8 @@ language governing permissions and limitations under the License. -->
                   <shadedPattern>org.apache.htrace.commons.logging</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>com.fasterxml.jackson.core</pattern>
-                  <shadedPattern>org.apache.htrace.fasterxml.jackson.core</shadedPattern>
+                  <pattern>com.fasterxml.jackson</pattern>
+                  <shadedPattern>org.apache.htrace.fasterxml.jackson</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
