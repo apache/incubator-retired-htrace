@@ -27,8 +27,8 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v1"
 	"io/ioutil"
 	"log"
 	"os"
@@ -176,12 +176,12 @@ func createBundleFile(pkg, src, sfile, dst string) error {
 	return nil
 }
 
+var src = flag.String("src", "", "Source path for bundled resources.")
+var dst = flag.String("dst", "", "Destination path for bundled resources.")
+var pkg = flag.String("pkg", "resource", "Package name to use for bundled resources")
+
 func main() {
-	app := kingpin.New("bundler", "The HTrace resource bundling build utility.")
-	src := app.Flag("src", "Source path for bundled resources.").Default("").String()
-	dst := app.Flag("dst", "Destination path for bundled resources.").Default("").String()
-	pkg := app.Flag("pkg", "Package name to use for bundled resources.").Default("resource").String()
-	kingpin.MustParse(app.Parse(os.Args[1:]))
+	flag.Parse()
 	if *src == "" {
 		log.Fatal("You must supply a src directory to bundle.")
 	}
@@ -209,12 +209,12 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		log.Fatal("Error listing files in src directory %s: %s\n", absSrc, err.Error())
+		log.Fatalf("Error listing files in src directory %s: %s\n", absSrc, err.Error())
 	}
 	var dfiles []os.FileInfo
 	dfiles, err = ioutil.ReadDir(*dst)
 	if err != nil {
-		log.Fatal("Error listing files in output directory %s: %s\n", *dst, err.Error())
+		log.Fatalf("Error listing files in output directory %s: %s\n", *dst, err.Error())
 	}
 	deleteUnusedDst(sfiles, *dst, dfiles)
 	for s := range sfiles {
@@ -223,6 +223,6 @@ func main() {
 			log.Fatalf("Error creating bundle file for %s in %s: %s\n",
 				sfiles[s], *dst, err.Error())
 		}
-		log.Printf("Bundled %s as %s\n", absSrc, absSrc + SEP + sfileToDfile(sfiles[s]))
+		log.Printf("Bundled %s as %s\n", absSrc, absSrc+SEP+sfileToDfile(sfiles[s]))
 	}
 }
