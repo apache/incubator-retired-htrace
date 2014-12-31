@@ -34,7 +34,8 @@ type serverInfoHandler struct {
 }
 
 func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	version := common.ServerInfo{Version: common.RELEASE_VERSION}
+	version := common.ServerInfo{ReleaseVersion: common.RELEASE_VERSION,
+		GitVersion: common.GIT_VERSION}
 	buf, err := json.Marshal(&version)
 	if err != nil {
 		log.Printf("error marshalling ServerInfo: %s\n", err.Error())

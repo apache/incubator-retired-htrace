@@ -84,7 +84,7 @@ func printServerInfo(restAddr string) int {
 			string(buf), err.Error())
 		return 1
 	}
-	fmt.Printf("HTraced server version %s\n", info.Version)
+	fmt.Printf("HTraced server version %s (%s)\n", info.ReleaseVersion, info.GitVersion)
 	return 0
 }
 

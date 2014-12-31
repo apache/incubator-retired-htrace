@@ -44,6 +44,7 @@ if [ $# -gt 0 ]; then
     fi
     shift
 fi
+RELEASE_VERSION=${RELEASE_VERSION:-unknown}
 
 SCRIPT_DIR="$(cd "$( dirname $0 )" && pwd)"
 export GOPATH="$GOPATH:${SCRIPT_DIR}"
@@ -84,5 +85,6 @@ if [ "$ACTION" == "get" ]; then
     go run "$SCRIPT_DIR/src/org/apache/htrace/bundler/bundler.go" \
         --src="$SCRIPT_DIR/../web/" --dst="$SCRIPT_DIR/src/org/apache/htrace/resource/" \
             || die "bundler failed"
+    ${SCRIPT_DIR}/generate_version.sh "${RELEASE_VERSION}"
 fi
 go "${ACTION}" -v org/apache/htrace/... "$@"

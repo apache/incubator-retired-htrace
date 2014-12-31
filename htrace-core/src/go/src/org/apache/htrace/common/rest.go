@@ -22,5 +22,8 @@ package common
 // Info returned by /serverInfo
 type ServerInfo struct {
 	// The server release version.
-	Version string
+	ReleaseVersion string
+
+	// The git hash that this software was built with.
+	GitVersion string
 }
