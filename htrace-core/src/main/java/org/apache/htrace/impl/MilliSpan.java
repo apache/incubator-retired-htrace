@@ -283,7 +283,7 @@ public class MilliSpan implements Span {
     return writer.toString();
   }
 
-  private static long parseUnsignedLong(String s) {
+  private static long parseUnsignedHexLong(String s) {
     return new BigInteger(s, 16).longValue();
   }
 
@@ -297,15 +297,15 @@ public class MilliSpan implements Span {
       builder.begin(root.get("b").asLong()).
               end(root.get("e").asLong()).
               description(root.get("d").asText()).
-              traceId(parseUnsignedLong(root.get("i").asText())).
-              spanId(parseUnsignedLong(root.get("s").asText())).
+              traceId(parseUnsignedHexLong(root.get("i").asText())).
+              spanId(parseUnsignedHexLong(root.get("s").asText())).
               processId(root.get("r").asText());
       JsonNode parentsNode = root.get("p");
       LinkedList<Long> parents = new LinkedList<Long>();
       for (Iterator<JsonNode> iter = parentsNode.elements();
            iter.hasNext(); ) {
         JsonNode parentIdNode = iter.next();
-        parents.add(parseUnsignedLong(parentIdNode.asText()));
+        parents.add(parseUnsignedHexLong(parentIdNode.asText()));
       }
       builder.parents(parents);
       JsonNode traceInfoNode = root.get("n");
