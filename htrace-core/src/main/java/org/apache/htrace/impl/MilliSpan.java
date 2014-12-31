@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
@@ -46,6 +47,7 @@ import java.util.Random;
 public class MilliSpan implements Span {
 
   private static Random rand = new Random();
+  private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
 
   private long begin;
   private long end;
@@ -271,9 +273,8 @@ public class MilliSpan implements Span {
   @Override
   public String toJson() {
     StringWriter writer = new StringWriter();
-    ObjectMapper mapper = new ObjectMapper();
     try {
-      mapper.writeValue(writer, this);
+      JSON_WRITER.writeValue(writer, this);
     } catch (IOException e) {
       // An IOException should not be possible when writing to a string.
       throw new RuntimeException(e);
