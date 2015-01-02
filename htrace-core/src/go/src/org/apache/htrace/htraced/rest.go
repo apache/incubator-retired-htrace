@@ -22,10 +22,12 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"mime"
 	"net/http"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"org/apache/htrace/resource"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -140,6 +142,9 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	file_ext := filepath.Ext(req.URL.Path)
+	mime_type := mime.TypeByExtension(file_ext)
+	w.Header().Set("Content-Type", mime_type)
 	w.Write([]byte(rsc))
 }
 
