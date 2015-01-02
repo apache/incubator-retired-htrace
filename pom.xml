@@ -164,6 +164,7 @@ language governing permissions and limitations under the License. -->
               <!-- Pulled down sources -->
               <exclude>**/gopkg.in/**</exclude>
               <exclude>**/github.com/**</exclude>
+              <exclude>**/golang.org/**</exclude>
             </excludes>
           </configuration>
         </plugin>

@@ -16,3 +16,6 @@ It is by alecthomas: https://github.com/alecthomas/units
 Kingpin, a go command line and flag parser is licensed MIT
 (https://github.com/alecthomas/kingpin/blob/master/COPYING)
 by alecthomas
+
+Gorilla mux gorilla/mux implements a request router and dispatcher is BSD licensed
+( https://github.com/gorilla/mux/blob/master/LICENSE 

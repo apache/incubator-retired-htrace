@@ -21,6 +21,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"log"
 	"mime"
 	"net/http"
@@ -51,18 +52,11 @@ type dataStoreHandler struct {
 	store *dataStore
 }
 
-func (hand *dataStoreHandler) getReqField64(fieldName string, w http.ResponseWriter,
-	req *http.Request) (int64, bool) {
-	str := req.FormValue(fieldName)
-	if str == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("No " + fieldName + " specified."))
-		return -1, false
-	}
+func (hand *dataStoreHandler) parse64(w http.ResponseWriter, str string) (int64, bool) {
 	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error parsing " + fieldName + ": " + err.Error()))
+		w.Write([]byte("Error parsing : " + err.Error()))
 		return -1, false
 	}
 	return int64(val), true
@@ -91,7 +85,9 @@ type findSidHandler struct {
 
 func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
-	sid, ok := hand.getReqField64("sid", w, req)
+	vars := mux.Vars(req)
+	stringSid := vars["id"]
+	sid, ok := hand.parse64(w, stringSid)
 	if !ok {
 		return
 	}
@@ -109,7 +105,9 @@ type findChildrenHandler struct {
 
 func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
-	sid, ok := hand.getReqField64("sid", w, req)
+	vars := mux.Vars(req)
+	stringSid := vars["id"]
+	sid, ok := hand.parse64(w, stringSid)
 	if !ok {
 		return
 	}
@@ -149,20 +147,20 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 }
 
 func startRestServer(cnf *conf.Config, store *dataStore) {
-	mux := http.NewServeMux()
 
-	serverInfoH := &serverInfoHandler{}
-	mux.Handle("/serverInfo", serverInfoH)
+	r := mux.NewRouter().StrictSlash(false)
+	// Default Handler. This will serve requests for static requests.
+	r.Handle("/", &defaultServeHandler{})
 
+	r.Handle("/server/info", &serverInfoHandler{}).Methods("GET")
+
+	span := r.PathPrefix("/span").Subrouter()
 	findSidH := &findSidHandler{dataStoreHandler: dataStoreHandler{store: store}}
-	mux.Handle("/findSid", findSidH)
+	span.Handle("/{id}", findSidH).Methods("GET")
 
 	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store}}
-	mux.Handle("/findChildren", findChildrenH)
+	span.Handle("/{id}/children", findChildrenH).Methods("GET")
 
-	defaultServeH := &defaultServeHandler{}
-	mux.Handle("/", defaultServeH)
-
-	http.ListenAndServe(cnf.Get(conf.HTRACE_WEB_ADDRESS), mux)
+	http.ListenAndServe(cnf.Get(conf.HTRACE_WEB_ADDRESS), r)
 	log.Println("Started REST server...")
 }
