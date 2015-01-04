@@ -22,6 +22,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"io"
 	"log"
 	"mime"
 	"net/http"
@@ -128,6 +129,33 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	w.Write(jbytes)
 }
 
+type writeSpansHandler struct {
+	dataStoreHandler
+}
+
+func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	dec := json.NewDecoder(req.Body)
+	spans := make([]*common.Span, 0, 32)
+	for {
+		var span common.Span
+		err := dec.Decode(&span)
+		if err != nil {
+			if err != io.EOF {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Printf("Error parsing spans: %s\n", err.Error())
+				w.Write([]byte("Error parsing spans : " + err.Error()))
+				return
+			}
+			break
+		}
+		spans = append(spans, &span)
+	}
+	for spanIdx := range spans {
+		log.Printf("writing span %s\n", spans[spanIdx].ToJson())
+		hand.store.WriteSpan(spans[spanIdx])
+	}
+}
+
 type defaultServeHandler struct {
 }
 
@@ -156,6 +184,9 @@ func startRestServer(cnf *conf.Config, store *dataStore) {
 	r.Handle("/", &defaultServeHandler{})
 
 	r.Handle("/server/info", &serverInfoHandler{}).Methods("GET")
+
+	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	r.Handle("/writeSpans", writeSpansH).Methods("POST")
 
 	span := r.PathPrefix("/span").Subrouter()
 	findSidH := &findSidHandler{dataStoreHandler: dataStoreHandler{store: store}}

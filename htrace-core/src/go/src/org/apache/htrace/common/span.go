@@ -21,6 +21,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -56,8 +57,16 @@ func (id SpanId) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
 }
 
-func (id *SpanId) UnMarshalJSON(b []byte) error {
-	v, err := strconv.ParseUint(string(b), 16, 64)
+const DOUBLE_QUOTE = 0x22
+
+func (id *SpanId) UnmarshalJSON(b []byte) error {
+	if b[0] != DOUBLE_QUOTE {
+		return errors.New("Expected spanID to start with a string quote.")
+	}
+	if b[len(b)-1] != DOUBLE_QUOTE {
+		return errors.New("Expected spanID to end with a string quote.")
+	}
+	v, err := strconv.ParseUint(string(b[1:len(b)-1]), 16, 64)
 	if err != nil {
 		return err
 	}
@@ -77,7 +86,7 @@ type SpanData struct {
 }
 
 type Span struct {
-	Id SpanId `json:"s,string"`
+	Id SpanId `json:"s"`
 	SpanData
 }
 

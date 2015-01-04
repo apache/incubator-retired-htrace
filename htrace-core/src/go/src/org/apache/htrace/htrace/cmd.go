@@ -20,10 +20,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v1"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"org/apache/htrace/common"
@@ -48,6 +50,8 @@ func main() {
 	parentSpanId := findChildren.Flag("id", "Span ID to print children for, as a signed decimal 64-bit "+
 		"number").Required().Int64()
 	childLim := findChildren.Flag("lim", "Maximum number of child IDs to print.").Default("20").Int()
+	writeSpans := app.Command("writeSpans", "Write spans to the server in JSON form.")
+	spanJson := writeSpans.Flag("json", "The JSON span data to write to the server.").Required().String()
 
 	// Handle operation
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
@@ -59,6 +63,8 @@ func main() {
 		os.Exit(doFindSpan((*addr).String(), *findSpanId))
 	case findChildren.FullCommand():
 		os.Exit(doFindChildren((*addr).String(), *parentSpanId, *childLim))
+	case writeSpans.FullCommand():
+		os.Exit(doWriteSpans(addr.String(), *spanJson))
 	}
 
 	app.UsageErrorf(os.Stderr, "You must supply a command to run.")
@@ -70,9 +76,9 @@ func printVersion() int {
 	return 0
 }
 
-// Print information retrieved from an htraced server via /serverInfo
+// Print information retrieved from an htraced server via /server/info
 func printServerInfo(restAddr string) int {
-	buf, err := makeRestRequest(restAddr, "serverInfo")
+	buf, err := makeGetRequest(restAddr, "server/info")
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
@@ -90,7 +96,7 @@ func printServerInfo(restAddr string) int {
 
 // Print information about a trace span.
 func doFindSpan(restAddr string, sid int64) int {
-	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findSid?sid=%016x", sid))
+	buf, err := makeGetRequest(restAddr, fmt.Sprintf("%016x", sid))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
@@ -111,9 +117,19 @@ func doFindSpan(restAddr string, sid int64) int {
 	return 0
 }
 
+func doWriteSpans(restAddr string, spanJson string) int {
+	body := []byte(spanJson)
+	_, err := makeRestRequest("POST", restAddr, "writeSpans", bytes.NewReader(body))
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return 1
+	}
+	return 0
+}
+
 // Find information about the children of a span.
 func doFindChildren(restAddr string, sid int64, lim int) int {
-	buf, err := makeRestRequest(restAddr, fmt.Sprintf("findChildren?sid=%016x&lim=%d", sid, lim))
+	buf, err := makeGetRequest(restAddr, fmt.Sprintf("%016x/children&lim=%d", sid, lim))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
@@ -134,10 +150,15 @@ func doFindChildren(restAddr string, sid int64, lim int) int {
 	return 0
 }
 
+func makeGetRequest(restAddr string, reqName string) ([]byte, error) {
+	return makeRestRequest("GET", restAddr, reqName, nil)
+}
+
 // Print information retrieved from an htraced server via /serverInfo
-func makeRestRequest(restAddr string, reqName string) ([]byte, error) {
+func makeRestRequest(reqType string, restAddr string, reqName string,
+	reqBody io.Reader) ([]byte, error) {
 	url := fmt.Sprintf("http://%s/%s", restAddr, reqName)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(reqType, url, reqBody)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
