@@ -133,6 +133,9 @@ type defaultServeHandler struct {
 
 func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ident := strings.TrimLeft(req.URL.Path, "/")
+	if ident == "" {
+		ident = "index.html" // default to index.html
+	}
 	ident = strings.Replace(ident, "/", "__", -1)
 	rsc := resource.Catalog[ident]
 	if rsc == "" {
