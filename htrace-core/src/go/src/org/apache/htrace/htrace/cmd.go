@@ -64,7 +64,7 @@ func main() {
 	case findChildren.FullCommand():
 		os.Exit(doFindChildren((*addr).String(), *parentSpanId, *childLim))
 	case writeSpans.FullCommand():
-		os.Exit(doWriteSpans(addr.String(), *spanJson))
+		os.Exit(doWriteSpans((*addr).String(), *spanJson))
 	}
 
 	app.UsageErrorf(os.Stderr, "You must supply a command to run.")
