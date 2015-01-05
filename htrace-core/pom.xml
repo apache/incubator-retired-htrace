@@ -104,6 +104,23 @@ language governing permissions and limitations under the License. -->
               </tasks>
             </configuration>
           </execution>
+          <execution>
+            <phase>clean</phase>
+            <id>go_clean</id>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <tasks>
+                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                  <arg value="-c"/>
+                  <arg value="./gobuild.sh clean"/>
+                </exec>
+                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                  <arg value="-c"/>
+                  <arg value="rm -f ./bin/*"/>
+                </exec>
+              </tasks>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
