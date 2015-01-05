@@ -46,7 +46,7 @@ type TimelineAnnotation struct {
 type SpanId int64
 
 func (id SpanId) String() string {
-	return fmt.Sprintf("%016x", id)
+	return fmt.Sprintf("%016x", uint64(id))
 }
 
 func (id SpanId) Val() int64 {

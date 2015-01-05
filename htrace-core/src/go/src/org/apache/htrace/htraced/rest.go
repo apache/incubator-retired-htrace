@@ -21,6 +21,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"log"
@@ -34,16 +35,31 @@ import (
 	"strings"
 )
 
+// Set the response headers.
+func setResponseHeaders(hdr http.Header) {
+	hdr.Set("Content-Type", "application/json")
+}
+
+// Write a JSON error response.
+func writeError(w http.ResponseWriter, errCode int, fstr string, args ...interface{}) {
+	str := fmt.Sprintf(fstr, args)
+	str = strings.Replace(str, `"`, `'`, -1)
+	log.Println(str)
+	w.WriteHeader(errCode)
+	w.Write([]byte(`{ "error" : "` + str + `"}`))
+}
+
 type serverInfoHandler struct {
 }
 
 func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
 	version := common.ServerInfo{ReleaseVersion: common.RELEASE_VERSION,
 		GitVersion: common.GIT_VERSION}
 	buf, err := json.Marshal(&version)
 	if err != nil {
-		log.Printf("error marshalling ServerInfo: %s\n", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError,
+			"error marshalling ServerInfo: %s\n", err.Error())
 		return
 	}
 	w.Write(buf)
@@ -56,7 +72,8 @@ type dataStoreHandler struct {
 func (hand *dataStoreHandler) parse64(w http.ResponseWriter, str string) (int64, bool) {
 	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "Failed to parse span ID %s: %s",
+			str, err.Error())
 		w.Write([]byte("Error parsing : " + err.Error()))
 		return -1, false
 	}
@@ -67,14 +84,12 @@ func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWri
 	req *http.Request) (int32, bool) {
 	str := req.FormValue(fieldName)
 	if str == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("No " + fieldName + " specified."))
+		writeError(w, http.StatusBadRequest, "No %s specified.", fieldName)
 		return -1, false
 	}
 	val, err := strconv.ParseUint(str, 16, 32)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error parsing " + fieldName + ": " + err.Error()))
+		writeError(w, http.StatusBadRequest, "Error parsing %s: %s.", fieldName, err.Error())
 		return -1, false
 	}
 	return int32(val), true
@@ -85,6 +100,7 @@ type findSidHandler struct {
 }
 
 func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
 	req.ParseForm()
 	vars := mux.Vars(req)
 	stringSid := vars["id"]
@@ -94,7 +110,7 @@ func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 	span := hand.store.FindSpan(sid)
 	if span == nil {
-		w.WriteHeader(http.StatusNoContent)
+		writeError(w, http.StatusNoContent, "No spans were specified.")
 		return
 	}
 	w.Write(span.ToJson())
@@ -105,6 +121,7 @@ type findChildrenHandler struct {
 }
 
 func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
 	req.ParseForm()
 	vars := mux.Vars(req)
 	stringSid := vars["id"]
@@ -118,10 +135,6 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		return
 	}
 	children := hand.store.FindChildren(sid, lim)
-	if len(children) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
 	jbytes, err := json.Marshal(children)
 	if err != nil {
 		panic(err)
@@ -134,6 +147,7 @@ type writeSpansHandler struct {
 }
 
 func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
 	dec := json.NewDecoder(req.Body)
 	spans := make([]*common.Span, 0, 32)
 	for {
@@ -141,9 +155,7 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		err := dec.Decode(&span)
 		if err != nil {
 			if err != io.EOF {
-				w.WriteHeader(http.StatusBadRequest)
-				log.Printf("Error parsing spans: %s\n", err.Error())
-				w.Write([]byte("Error parsing spans : " + err.Error()))
+				writeError(w, http.StatusBadRequest, "Error parsing spans: %s", err.Error())
 				return
 			}
 			break

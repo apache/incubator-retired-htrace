@@ -45,10 +45,10 @@ func main() {
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
 	findSpanId := findSpan.Flag("id", "Span ID to find, as a signed decimal 64-bit "+
-		"number").Required().Int64()
+		"number").Required().Uint64()
 	findChildren := app.Command("findChildren", "Print out the span IDs that are children of a given span ID.")
 	parentSpanId := findChildren.Flag("id", "Span ID to print children for, as a signed decimal 64-bit "+
-		"number").Required().Int64()
+		"number").Required().Uint64()
 	childLim := findChildren.Flag("lim", "Maximum number of child IDs to print.").Default("20").Int()
 	writeSpans := app.Command("writeSpans", "Write spans to the server in JSON form.")
 	spanJson := writeSpans.Flag("json", "The JSON span data to write to the server.").Required().String()
@@ -95,8 +95,8 @@ func printServerInfo(restAddr string) int {
 }
 
 // Print information about a trace span.
-func doFindSpan(restAddr string, sid int64) int {
-	buf, err := makeGetRequest(restAddr, fmt.Sprintf("%016x", sid))
+func doFindSpan(restAddr string, sid uint64) int {
+	buf, err := makeGetRequest(restAddr, fmt.Sprintf("span/%016x", sid))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
@@ -128,13 +128,13 @@ func doWriteSpans(restAddr string, spanJson string) int {
 }
 
 // Find information about the children of a span.
-func doFindChildren(restAddr string, sid int64, lim int) int {
-	buf, err := makeGetRequest(restAddr, fmt.Sprintf("%016x/children&lim=%d", sid, lim))
+func doFindChildren(restAddr string, sid uint64, lim int) int {
+	buf, err := makeGetRequest(restAddr, fmt.Sprintf("span/%016x/children?lim=%d", sid, lim))
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return 1
 	}
-	var spanIds []int64
+	var spanIds []common.SpanId
 	err = json.Unmarshal(buf, &spanIds)
 	if err != nil {
 		fmt.Printf("Error: error unmarshalling response body %s: %s\n",
@@ -159,6 +159,7 @@ func makeRestRequest(reqType string, restAddr string, reqName string,
 	reqBody io.Reader) ([]byte, error) {
 	url := fmt.Sprintf("http://%s/%s", restAddr, reqName)
 	req, err := http.NewRequest(reqType, url, reqBody)
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
