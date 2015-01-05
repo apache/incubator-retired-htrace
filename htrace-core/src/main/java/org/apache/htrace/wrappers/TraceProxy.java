@@ -27,9 +27,6 @@ import java.lang.reflect.Proxy;
 public class TraceProxy {
   /**
    * Returns an object that will trace all calls to itself.
-   *
-   * @param instance
-   * @return
    */
   public static <T> T trace(T instance) {
     return trace(instance, Sampler.ALWAYS);
@@ -37,11 +34,6 @@ public class TraceProxy {
 
   /**
    * Returns an object that will trace all calls to itself.
-   *
-   * @param <V>
-   * @param instance
-   * @param sampler
-   * @return
    */
   @SuppressWarnings("unchecked")
   public static <T, V> T trace(final T instance, final Sampler<V> sampler) {

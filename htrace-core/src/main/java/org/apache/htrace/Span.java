@@ -116,8 +116,6 @@ public interface Span {
   /**
    * Return a unique id for the node or process from which this Span originated.
    * IP address is a reasonable choice.
-   *
-   * @return
    */
   String getProcessId();
 

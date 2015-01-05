@@ -38,7 +38,6 @@ public class Trace {
    * NullSpan.
    *
    * @param description Description of the span to be created.
-   * @return
    */
   public static TraceScope startSpan(String description) {
     return startSpan(description, TrueIfTracingSampler.INSTANCE);
@@ -52,7 +51,6 @@ public class Trace {
    * @param description Description of the span to be created.
    * @param parent      The parent that should be used to create the child span that is to
    *                    be returned.
-   * @return
    */
   public static TraceScope startSpan(String description, Span parent) {
     if (parent == null) return startSpan(description);
@@ -99,8 +97,7 @@ public class Trace {
   /**
    * Set the processId to be used for all Spans created by this Tracer.
    *
-   * @param processId
-   * @see Span.java
+   * @see Span
    */
   public static void setProcessId(String processId) {
     Tracer.processId = processId;
@@ -108,8 +105,6 @@ public class Trace {
 
   /**
    * Removes the given SpanReceiver from the list of SpanReceivers.
-   *
-   * @param rcvr
    */
   public static void removeReceiver(SpanReceiver rcvr) {
     Tracer.getInstance().removeReceiver(rcvr);
@@ -118,8 +113,6 @@ public class Trace {
   /**
    * Adds the given SpanReceiver to the current Tracer instance's list of
    * SpanReceivers.
-   *
-   * @param rcvr
    */
   public static void addReceiver(SpanReceiver rcvr) {
     Tracer.getInstance().addReceiver(rcvr);
@@ -147,8 +140,6 @@ public class Trace {
 
   /**
    * Returns true if the current thread is a part of a trace, false otherwise.
-   *
-   * @return
    */
   public static boolean isTracing() {
     return Tracer.getInstance().isTracing();
@@ -166,7 +157,6 @@ public class Trace {
   /**
    * Wrap the callable in a TraceCallable, if tracing.
    *
-   * @param callable
    * @return The callable provided, wrapped if tracing, 'callable' if not.
    */
   public static <V> Callable<V> wrap(Callable<V> callable) {
@@ -180,7 +170,6 @@ public class Trace {
   /**
    * Wrap the runnable in a TraceRunnable, if tracing
    *
-   * @param runnable
    * @return The runnable provided, wrapped if tracing, 'runnable' if not.
    */
   public static Runnable wrap(Runnable runnable) {
@@ -195,7 +184,7 @@ public class Trace {
    * Wrap the runnable in a TraceRunnable, if tracing
    *
    * @param description name of the span to be created.
-   * @param runnable
+   * @param runnable The runnable that will have tracing info associated with it if tracing.
    * @return The runnable provided, wrapped if tracing, 'runnable' if not.
    */
   public static Runnable wrap(String description, Runnable runnable) {
