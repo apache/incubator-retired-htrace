@@ -24,10 +24,15 @@ import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.io.IOException;
+import java.util.UUID;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.concurrent.ExecutorService;
@@ -125,5 +130,38 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     } catch (IOException e) {
       LOG.error("Error closing writer for file: " + file, e);
     }
+  }
+
+  public static String getUniqueLocalTraceFileName() {
+    String tmp = System.getProperty("java.io.tmpdir", "/tmp");
+    String nonce = null;
+    BufferedReader reader = null;
+    try {
+      // On Linux we can get a unique local file name by reading the process id
+      // out of /proc/self/stat.  (There isn't any portable way to get the
+      // process ID from Java.)
+      reader = new BufferedReader(
+          new InputStreamReader(new FileInputStream("/proc/self/stat"),
+                                "UTF-8"));
+      String line = reader.readLine();
+      if (line == null) {
+        throw new EOFException();
+      }
+      nonce = line.split(" ")[0];
+    } catch (IOException e) {
+    } finally {
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch(IOException e) {
+          LOG.debug("Exception in closing " + reader, e);
+        }
+      }
+    }
+    if (nonce == null) {
+      // If we can't use the process ID, use a random nonce.
+      nonce = UUID.randomUUID().toString();
+    }
+    return new File(tmp, nonce).getAbsolutePath();
   }
 }

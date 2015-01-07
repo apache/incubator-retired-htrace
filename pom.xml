@@ -274,6 +274,9 @@ language governing permissions and limitations under the License. -->
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <systemPropertyVariables>
+            <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>
