@@ -23,8 +23,11 @@ import com.twitter.zipkin.gen.Endpoint;
 import com.twitter.zipkin.gen.Span;
 import com.twitter.zipkin.gen.zipkinCoreConstants;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.TimelineAnnotation;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +75,7 @@ import java.util.Map;
  * <p/>
  */
 public class HTraceToZipkinConverter {
+  private static final Log LOG = LogFactory.getLog(HTraceToZipkinConverter.class);
 
   private final int ipv4Address;
   private final short port;
@@ -145,11 +149,15 @@ public class HTraceToZipkinConverter {
   private List<BinaryAnnotation> createZipkinBinaryAnnotations(org.apache.htrace.Span span,
                                                                Endpoint ep) {
     List<BinaryAnnotation> l = new ArrayList<BinaryAnnotation>();
-    for (Map.Entry<byte[], byte[]> e : span.getKVAnnotations().entrySet()) {
+    for (Map.Entry<String, String> e : span.getKVAnnotations().entrySet()) {
       BinaryAnnotation binaryAnn = new BinaryAnnotation();
       binaryAnn.setAnnotation_type(AnnotationType.BYTES);
-      binaryAnn.setKey(new String(e.getKey()));
-      binaryAnn.setValue(e.getValue());
+      binaryAnn.setKey(e.getKey());
+      try {
+        binaryAnn.setValue(e.getValue().getBytes("UTF-8"));
+      } catch (UnsupportedEncodingException ex) {
+        LOG.error("Error encoding string as UTF-8", ex);
+      }
       binaryAnn.setHost(ep);
       l.add(binaryAnn);
     }

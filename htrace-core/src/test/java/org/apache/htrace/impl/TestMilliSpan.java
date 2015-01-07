@@ -41,24 +41,14 @@ public class TestMilliSpan {
     assertEquals(expected.getSpanId(), got.getSpanId());
     assertEquals(expected.getProcessId(), got.getProcessId());
     assertEquals(expected.getParentId(), got.getParentId());
-    Map<byte[], byte[]> expectedT = expected.getKVAnnotations();
-    Map<byte[], byte[]> gotT = got.getKVAnnotations();
+    Map<String, String> expectedT = expected.getKVAnnotations();
+    Map<String, String> gotT = got.getKVAnnotations();
     if (expectedT == null) {
       assertEquals(null, gotT);
     } else {
       assertEquals(expectedT.size(), gotT.size());
-      Map<String, String> expectedTMap = new HashMap<String, String>();
-      for (byte[] key : expectedT.keySet()) {
-        expectedTMap.put(new String(key, "UTF-8"),
-            new String(expectedT.get(key), "UTF-8"));
-      }
-      Map<String, String> gotTMap = new HashMap<String, String>();
-      for (byte[] key : gotT.keySet()) {
-        gotTMap.put(new String(key, "UTF-8"),
-            new String(gotT.get(key), "UTF-8"));
-      }
-      for (String key : expectedTMap.keySet()) {
-        assertEquals(expectedTMap.get(key), gotTMap.get(key));
+      for (String key : expectedT.keySet()) {
+        assertEquals(expectedT.get(key), gotT.get(key));
       }
     }
     List<TimelineAnnotation> expectedTimeline =
@@ -137,9 +127,9 @@ public class TestMilliSpan {
         processId("b2408.halxg.com:8080").
         spanId(111111111L).
         traceId(4443);
-    Map<byte[], byte[]> traceInfo = new HashMap<byte[], byte[]>();
-    traceInfo.put("abc".getBytes("UTF-8"), "123".getBytes("UTF-8"));
-    traceInfo.put("def".getBytes("UTF-8"), "456".getBytes("UTF-8"));
+    Map<String, String> traceInfo = new HashMap<String, String>();
+    traceInfo.put("abc", "123");
+    traceInfo.put("def", "456");
     builder.traceInfo(traceInfo);
     List<TimelineAnnotation> timeline = new LinkedList<TimelineAnnotation>();
     timeline.add(new TimelineAnnotation(310L, "something happened"));

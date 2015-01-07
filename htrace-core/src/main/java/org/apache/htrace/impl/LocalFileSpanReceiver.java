@@ -16,6 +16,8 @@
  */
 package org.apache.htrace.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
@@ -23,8 +25,11 @@ import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 
 import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -42,9 +47,9 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   public static final int CAPACITY_DEFAULT = 5000;
   // default timeout duration when calling executor.awaitTermination()
   public static final long EXECUTOR_TERMINATION_TIMEOUT_DURATION_DEFAULT = 60;
+  private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
   private String file;
-  private FileWriter fwriter;
-  private BufferedWriter bwriter;
+  private Writer writer;
   private ExecutorService executor;
   private long executorTerminationTimeoutDuration;
 
@@ -57,14 +62,27 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     }
     this.executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(capacity));
+    boolean success = false;
+    FileOutputStream fos = null;
     try {
-      this.fwriter = new FileWriter(this.file, true);
+      fos = new FileOutputStream(file, true);
+      this.writer = new BufferedWriter(
+          new OutputStreamWriter(fos,"UTF-8"));
+      success = true;
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
+    } finally {
+      if (!success) {
+        if (fos == null) {
+          try {
+            fos.close();
+          } catch (IOException e) {
+            LOG.error("Error closing output stream for " + file, e);
+          }
+        }
+      }
     }
-    this.bwriter = new BufferedWriter(fwriter);
   }
-
 
   private class WriteSpanRunnable implements Runnable {
     public final Span span;
@@ -76,9 +94,8 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     @Override
     public void run() {
       try {
-        bwriter.write(span.toJson());
-        bwriter.newLine();
-        bwriter.flush();
+        JSON_WRITER.writeValue(writer, this);
+        writer.write("%n");
       } catch (IOException e) {
         LOG.error("Error when writing to file: " + file, e);
       }
@@ -104,14 +121,9 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     }
 
     try {
-      fwriter.close();
+      writer.close();
     } catch (IOException e) {
-      LOG.error("Error closing filewriter for file: " + file, e);
-    }
-    try {
-      bwriter.close();
-    } catch (IOException e) {
-      LOG.error("Error closing bufferedwriter for file: " + file, e);
+      LOG.error("Error closing writer for file: " + file, e);
     }
   }
 }

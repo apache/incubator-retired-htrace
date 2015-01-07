@@ -189,7 +189,7 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public Map<byte[], byte[]> getKVAnnotations() {
+    public Map<String, String> getKVAnnotations() {
       return Collections.emptyMap();
     }
 
@@ -200,6 +200,9 @@ public class TestHBaseSpanReceiver {
 
     @Override
     public void addKVAnnotation(byte[] key, byte[] value) {}
+
+    @Override
+    public void addKVAnnotation(String key, String value) {}
 
     @Override
     public void addTimelineAnnotation(String msg) {}

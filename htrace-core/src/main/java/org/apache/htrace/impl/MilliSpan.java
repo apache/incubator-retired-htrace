@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,7 +57,7 @@ public class MilliSpan implements Span {
   private final long traceId;
   private final long parents[];
   private final long spanId;
-  private Map<byte[], byte[]> traceInfo = null;
+  private Map<String, String> traceInfo = null;
   private final String processId;
   private List<TimelineAnnotation> timeline = null;
 
@@ -75,7 +76,7 @@ public class MilliSpan implements Span {
     private long traceId;
     private long parents[];
     private long spanId;
-    private Map<byte[], byte[]> traceInfo = null;
+    private Map<String, String> traceInfo = null;
     private String processId;
     private List<TimelineAnnotation> timeline = null;
 
@@ -121,7 +122,7 @@ public class MilliSpan implements Span {
       return this;
     }
 
-    public Builder traceInfo(Map<byte[], byte[]> traceInfo) {
+    public Builder traceInfo(Map<String, String> traceInfo) {
       this.traceInfo = traceInfo.isEmpty() ? null : traceInfo;
       return this;
     }
@@ -237,9 +238,19 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public void addKVAnnotation(byte[] key, byte[] value) {
+  public void addKVAnnotation(byte[] key, byte[] value)  {
+    // TODO: remove this method
+    try {
+      addKVAnnotation(new String(key, "UTF-8"), new String(value, "UTF-8"));
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void addKVAnnotation(String key, String value) {
     if (traceInfo == null)
-      traceInfo = new HashMap<byte[], byte[]>();
+      traceInfo = new HashMap<String, String>();
     traceInfo.put(key, value);
   }
 
@@ -252,7 +263,7 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public Map<byte[], byte[]> getKVAnnotations() {
+  public Map<String, String> getKVAnnotations() {
     if (traceInfo == null)
       return Collections.emptyMap();
     return Collections.unmodifiableMap(traceInfo);
@@ -310,12 +321,11 @@ public class MilliSpan implements Span {
       builder.parents(parents);
       JsonNode traceInfoNode = root.get("n");
       if (traceInfoNode != null) {
-        HashMap<byte[], byte[]> traceInfo = new HashMap<byte[], byte[]>();
+        HashMap<String, String> traceInfo = new HashMap<String, String>();
         for (Iterator<String> iter = traceInfoNode.fieldNames();
              iter.hasNext(); ) {
           String field = iter.next();
-          traceInfo.put(field.getBytes("UTF-8"),
-              traceInfoNode.get(field).asText().getBytes("UTF-8"));
+          traceInfo.put(field, traceInfoNode.get(field).asText());
         }
         builder.traceInfo(traceInfo);
       }

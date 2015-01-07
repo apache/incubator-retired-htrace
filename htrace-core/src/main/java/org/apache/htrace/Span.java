@@ -96,6 +96,12 @@ public interface Span {
   /**
    * Add a data annotation associated with this span
    */
+  void addKVAnnotation(String key, String value);
+
+  /**
+   * Add a data annotation associated with this span
+   */
+  @Deprecated
   void addKVAnnotation(byte[] key, byte[] value);
 
   /**
@@ -106,7 +112,7 @@ public interface Span {
   /**
    * Get data associated with this span (read only)
    */
-  Map<byte[], byte[]> getKVAnnotations();
+  Map<String, String> getKVAnnotations();
 
   /**
    * Get any timeline annotations (read only)
@@ -140,12 +146,11 @@ public interface Span {
         jgen.writeString(String.format("%016x", span.getParentId()));
       }
       jgen.writeEndArray();
-      Map<byte[], byte[]> traceInfoMap = span.getKVAnnotations();
+      Map<String, String> traceInfoMap = span.getKVAnnotations();
       if (!traceInfoMap.isEmpty()) {
         jgen.writeObjectFieldStart("n");
-        for (Map.Entry<byte[], byte[]> e : traceInfoMap.entrySet()) {
-          jgen.writeStringField(new String(e.getKey(), "UTF-8"),
-              new String(e.getValue(), "UTF-8"));
+        for (Map.Entry<String, String> e : traceInfoMap.entrySet()) {
+          jgen.writeStringField(e.getKey(), e.getValue());
         }
         jgen.writeEndObject();
       }
