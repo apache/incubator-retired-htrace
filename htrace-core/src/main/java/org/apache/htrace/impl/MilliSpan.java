@@ -305,12 +305,12 @@ public class MilliSpan implements Span {
           throws IOException, JsonProcessingException {
       JsonNode root = jp.getCodec().readTree(jp);
       Builder builder = new Builder();
-      builder.begin(root.get("b").asLong()).
-              end(root.get("e").asLong()).
-              description(root.get("d").asText()).
-              traceId(parseUnsignedHexLong(root.get("i").asText())).
-              spanId(parseUnsignedHexLong(root.get("s").asText())).
-              processId(root.get("r").asText());
+      builder.begin(root.get("b").asLong());
+      builder.end(root.get("e").asLong());
+      builder.description(root.get("d").asText());
+      builder.traceId(parseUnsignedHexLong(root.get("i").asText()));
+      builder.spanId(parseUnsignedHexLong(root.get("s").asText()));
+      builder.processId(root.get("r").asText());
       JsonNode parentsNode = root.get("p");
       LinkedList<Long> parents = new LinkedList<Long>();
       for (Iterator<JsonNode> iter = parentsNode.elements();

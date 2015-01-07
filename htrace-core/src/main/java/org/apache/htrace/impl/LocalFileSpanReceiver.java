@@ -29,6 +29,7 @@ import java.io.BufferedWriter;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -99,7 +100,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     @Override
     public void run() {
       try {
-        JSON_WRITER.writeValue(writer, this);
+        JSON_WRITER.writeValue(writer, span);
         writer.write("%n");
       } catch (IOException e) {
         LOG.error("Error when writing to file: " + file, e);

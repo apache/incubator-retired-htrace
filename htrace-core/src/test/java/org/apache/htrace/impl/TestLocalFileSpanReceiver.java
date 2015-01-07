@@ -33,7 +33,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 
-@Ignore
 public class TestLocalFileSpanReceiver {
   @Test
   public void testUniqueLocalTraceFileName() {
