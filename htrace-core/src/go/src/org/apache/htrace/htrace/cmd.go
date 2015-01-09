@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v1"
+	"github.com/alecthomas/kingpin"
 	"io/ioutil"
 	"net/http"
 	"org/apache/htrace/common"

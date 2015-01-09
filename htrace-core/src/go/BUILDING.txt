@@ -20,6 +20,7 @@ Dependencies
 You will need to install:
 * The Go programming language
 * The development package for leveldb (some Linux distros call this "leveldb-devel") containing libleveldb.so
+* Version 0 of the "godep" tool from https://github.com/tools/godep/releases
 
 htraced requires libleveldb.so to be in your shared library path in order to run.
 You can set LD_LIBRARY_PATH to the path for this library, or simply install

@@ -1,0 +1,26 @@
+{
+    "ImportPath": "git-wip-us.apache.org/repos/asf/incubator-htrace.git",
+    "GoVersion": "go1.3.1",
+    "Deps": [
+        {
+            "ImportPath": "github.com/alecthomas/kingpin",
+            "Rev": "afafa8aab106d31c9dc8f5e562b3f30f6246c3d4"
+        },
+        {
+            "ImportPath": "github.com/alecthomas/units",
+            "Rev": "6b4e7dc5e3143b85ea77909c72caf89416fc2915"
+        },
+        {
+            "ImportPath": "github.com/gorilla/context",
+            "Rev": "215affda49addc4c8ef7e2534915df2c8c35c6cd"
+        },
+        {
+            "ImportPath": "github.com/gorilla/mux",
+            "Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+        },
+        {
+            "ImportPath": "github.com/jmhodges/levigo",
+            "Rev": "2c43dde93d0e056173706534afd514fcbc1dd578"
+        }
+    ]
+}

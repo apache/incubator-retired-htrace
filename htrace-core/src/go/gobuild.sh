@@ -32,7 +32,7 @@ die() {
     exit 1
 }
 
-ACTION=get
+ACTION=build
 if [ $# -gt 0 ]; then
     if [ "x${1}" == "xbench" ]; then
         # run benchmarks
@@ -47,6 +47,7 @@ fi
 RELEASE_VERSION=${RELEASE_VERSION:-unknown}
 
 SCRIPT_DIR="$(cd "$( dirname $0 )" && pwd)"
+cd $SCRIPT_DIR || die "failed to cd to $SCRIPT_DIR"
 export GOPATH="$GOPATH:${SCRIPT_DIR}"
 export GOBIN="${SCRIPT_DIR}/bin"
 mkdir -p ${GOBIN} || die "failed to create ${GOBIN}"
@@ -81,7 +82,15 @@ if [ -n "${ldconfig}" ]; then
     fi
 fi
 
-if [ "$ACTION" == "get" ]; then
+if [ "$ACTION" == "build" ]; then
+    PATH="${PATH}:${GOBIN}"
+    which godep &> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Installing godep..."
+        go get github.com/tools/godep || die "failed to get godep"
+    fi
+    echo "godep restore..."
+    godep restore || die "failed to set up dependencies"
     go run "$SCRIPT_DIR/src/org/apache/htrace/bundler/bundler.go" \
         --src="$SCRIPT_DIR/../web/" --dst="$SCRIPT_DIR/src/org/apache/htrace/resource/" \
             || die "bundler failed"
