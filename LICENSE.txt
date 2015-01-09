@@ -207,8 +207,11 @@ of dependencies that are NOT Apache Licensed.
 levigo, a go wrapper for leveldb, is Copyright (c) 2012 Jeffrey M Hodges
 and MIT licensed: https://github.com/jmhodges/levigo/blob/master/LICENSE
 
-Kingpin, a go command line and flag parser is Copyright (c) 2014 Alec Thomas
+Kingpin, a go command line and flag parser, is Copyright (c) 2014 Alec Thomas
 and MIT licensed: https://github.com/alecthomas/kingpin/blob/master/COPYING
+
+Units, a string formatting go library, is Copyright (c) 2014 Alec Thomas
+and MIT licensed: https://github.com/alecthomas/units/blob/master/COPYING
 
 D3, a javascript library for manipulating data, used by htrace-hbase
 is Copyright 2010-2014, Michael Bostock and BSD licensed:
