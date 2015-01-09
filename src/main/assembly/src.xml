@@ -42,6 +42,7 @@
               <exclude>.git</exclude>
               <exclude>.gitignore</exclude>
               <exclude>.settings/</exclude>
+              <exclude>**/src/go/bin/**</exclude>
             </excludes>
           </fileSet>
         </fileSets>
@@ -78,6 +79,7 @@
         <include>LICENSE.txt</include>
         <include>NOTICE.txt</include>
         <include>CHANGES.txt</include>
+        <include>DISCLAIMER.txt</include>
         <include>README.md</include>
       </includes>
       <fileMode>0644</fileMode>
