@@ -22,10 +22,11 @@ import org.apache.htrace.Sampler;
 import java.util.Random;
 
 /**
- * Sampler that returns true every N calls.
+ * Sampler that returns true every N calls. Specify the frequency interval by configuring a
+ * {@code long} value for {@link #SAMPLER_FREQUENCY_CONF_KEY}.
  */
 public class CountSampler implements Sampler<Object> {
-  private final static String SAMPLER_FREQUENCY_CONF_KEY = "sampler.frequency";
+  public final static String SAMPLER_FREQUENCY_CONF_KEY = "sampler.frequency";
 
   final static Random random = new Random();
 

@@ -21,10 +21,14 @@ import org.apache.htrace.Sampler;
 
 import java.util.Random;
 
+/**
+ * Sampler that returns true a certain percentage of the time. Specify the frequency interval by
+ * configuring a {@code double} value for {@link #SAMPLER_FRACTION_CONF_KEY}.
+ */
 public class ProbabilitySampler implements Sampler<Object> {
   public final double threshold;
   private Random random = new Random();
-  private final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
+  public final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
 
   public ProbabilitySampler(HTraceConfiguration conf) {
     this.threshold = Double.parseDouble(conf.get(SAMPLER_FRACTION_CONF_KEY));

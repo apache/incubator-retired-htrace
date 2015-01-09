@@ -31,17 +31,20 @@ import org.apache.htrace.impl.NeverSampler;
  * <p/>
  * For the example above, the next(T info) function may look like this
  * <p/>
- * public boolean next(T info){
- * if (info == null) {
- * return false;
- * } else if (info.getName().equals("get")) {
- * return Math.random() > 0.5;
- * } else if (info.getName().equals("put")) {
- * return Math.random() > 0.25;
- * } else {
- * return false;
+ * <pre>
+ * <code>public boolean next(T info) {
+ *   if (info == null) {
+ *     return false;
+ *   } else if (info.getName().equals("get")) {
+ *     return Math.random() > 0.5;
+ *   } else if (info.getName().equals("put")) {
+ *     return Math.random() > 0.25;
+ *   } else {
+ *     return false;
+ *   }
  * }
- * }
+ * </code>
+ * </pre>
  * This would trace 50% of all gets, 75% of all puts and would not trace any other requests.
  */
 public interface Sampler<T> {

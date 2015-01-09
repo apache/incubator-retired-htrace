@@ -21,13 +21,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * A {@link SpanReceiver} builder. It defaults finding class of span receiver to build in
- * the passed in configuration using the {@link #SPAN_RECEIVER_CONF_KEY} key.
+ * A {@link SpanReceiver} builder. It reads a {@link SpanReceiver} class name from the provided
+ * configuration using the {@link #SPAN_RECEIVER_CONF_KEY} key. Unqualified class names
+ * are interpreted as members of the {@code org.apache.htrace.impl} package. The {@link #build()}
+ * method constructs an instance of that class, initialized with the same configuration.
  */
 public class SpanReceiverBuilder {
   static final Log LOG = LogFactory.getLog(SpanReceiverBuilder.class);
 
   public final static String SPAN_RECEIVER_CONF_KEY = "span.receiver";
+  private final static String DEFAULT_PACKAGE = "org.apache.htrace.impl";
   private final static ClassLoader classLoader =
       SpanReceiverBuilder.class.getClassLoader();
   private final HTraceConfiguration conf;
@@ -40,7 +43,8 @@ public class SpanReceiverBuilder {
   }
 
   /**
-   * Set this builder back to defaults.
+   * Set this builder back to defaults. Any previous calls to {@link #spanReceiverClass(String)}
+   * are overridden by the value provided by configuration.
    * @return This instance
    */
   public SpanReceiverBuilder reset() {
@@ -49,6 +53,10 @@ public class SpanReceiverBuilder {
     return this;
   }
 
+  /**
+   * Override the {@code SpanReceiver} class name provided in configuration with a new value.
+   * @return This instance
+   */
   public SpanReceiverBuilder spanReceiverClass(final String spanReceiverClass) {
     this.spanReceiverClass = spanReceiverClass;
     return this;
@@ -56,6 +64,7 @@ public class SpanReceiverBuilder {
 
   /**
    * Configure whether we should log errors during build().
+   * @return This instance
    */
   public SpanReceiverBuilder logErrors(boolean logErrors) {
     this.logErrors = logErrors;
@@ -83,7 +92,7 @@ public class SpanReceiverBuilder {
     }
     String str = spanReceiverClass;
     if (!str.contains(".")) {
-      str = "org.apache.htrace.impl." + str;
+      str = DEFAULT_PACKAGE + "." + str;
     }
     Class cls = null;
     try {
