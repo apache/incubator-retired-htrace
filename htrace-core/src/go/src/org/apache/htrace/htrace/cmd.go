@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v1"
+	"github.com/alecthomas/kingpin"
 	"io"
 	"io/ioutil"
 	"net/http"
