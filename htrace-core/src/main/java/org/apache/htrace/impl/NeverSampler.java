@@ -19,6 +19,9 @@ package org.apache.htrace.impl;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
+/**
+ * A Sampler that never returns true.
+ */
 public final class NeverSampler implements Sampler<Object> {
 
   public static final NeverSampler INSTANCE = new NeverSampler(null);

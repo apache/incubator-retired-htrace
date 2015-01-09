@@ -22,8 +22,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.AlwaysSampler;
 import org.apache.htrace.impl.NeverSampler;
 
+/**
+ * A {@link Sampler} builder. It reads a {@link Sampler} class name from the provided
+ * configuration using the {@link #SAMPLER_CONF_KEY} key. Unqualified class names
+ * are interpreted as members of the {@code org.apache.htrace.impl} package. The {@link #build()}
+ * method constructs an instance of that class, initialized with the same configuration.
+ */
 public class SamplerBuilder {
-  private final static String SAMPLER_CONF_KEY = "sampler";
+
+  // TODO: should follow the same API as SpanReceiverBuilder
+
+  public final static String SAMPLER_CONF_KEY = "sampler";
+  private final static String DEFAULT_PACKAGE = "org.apache.htrace.impl";
   private final static ClassLoader classLoader =
       SamplerBuilder.class.getClassLoader();
   private final HTraceConfiguration conf;
@@ -39,7 +49,7 @@ public class SamplerBuilder {
       return NeverSampler.INSTANCE;
     }
     if (!str.contains(".")) {
-      str = "org.apache.htrace.impl." + str;
+      str = DEFAULT_PACKAGE + "." + str;
     }
     Class cls = null;
     try {

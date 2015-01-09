@@ -21,7 +21,7 @@ import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 
 /**
- * A Sampler that returns true if and only if tracing is on the current thread.
+ * A Sampler that returns true if and only if tracing is enabled for the current thread.
  */
 public class TrueIfTracingSampler implements Sampler<Object> {
 

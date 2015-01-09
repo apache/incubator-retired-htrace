@@ -21,14 +21,19 @@ import java.io.Closeable;
 
 
 /**
- * The collector within a process that is the destination of Spans when a trace
- * is running.
+ * The collector within a process that is the destination of Spans when a trace is running.
+ * {@code SpanReceiver} implementations are expected to provide a constructor with the signature
+ * <p>
+ * <pre>
+ * <code>public SpanReceiverImpl(HTraceConfiguration)</code>
+ * </pre>
+ * The helper class {@link org.apache.htrace.SpanReceiverBuilder} provides convenient factory
+ * methods for creating {@code SpanReceiver} instances from configuration.
+ * @see org.apache.htrace.SpanReceiverBuilder
  */
 public interface SpanReceiver extends Closeable {
   /**
    * Called when a Span is stopped and can now be stored.
-   *
-   * @param span
    */
   public void receiveSpan(Span span);
 }
