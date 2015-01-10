@@ -114,10 +114,9 @@ language governing permissions and limitations under the License. -->
                   <arg value="-c"/>
                   <arg value="./gobuild.sh clean"/>
                 </exec>
-                <exec executable="git" failonerror="true" dir="${basedir}/src/go">
-                  <arg value="clean"/>
-                  <arg value="-ffqdx"/>
-                  <arg value="."/>
+                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                  <arg value="-c"/>
+                  <arg value="rm -f ./bin/*"/>
                 </exec>
               </tasks>
             </configuration>
