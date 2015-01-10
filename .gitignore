@@ -15,3 +15,5 @@ htrace-core/src/go/src/org/apache/htrace/resource
 htrace-core/src/go/src/github.com/
 htrace-core/src/go/src/gopkg.in/
 htrace-core/src/go/src/org/apache/htrace/common/version.go
+htrace-core/src/go/src/code.google.com/
+htrace-core/src/go/src/golang.org/
