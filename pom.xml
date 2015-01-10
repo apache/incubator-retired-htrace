@@ -150,20 +150,24 @@ language governing permissions and limitations under the License. -->
           </executions>
           <configuration>
             <excludes>
-              <exclude>**/.settings/**</exclude>
-              <exclude>**/d3.min.js</exclude>
-              <exclude>**/dependency-reduced-pom.xml</exclude>
-              <exclude>**/generated/**</exclude>
-              <exclude>*/.settings/*</exclude>
-              <exclude>*/generated/*</exclude>
-              <exclude>*/gopkg.in/*</exclude>
-              <exclude>.git/**</exclude>
-              <exclude>htrace-core/src/go/bin/*</exclude>
-              <exclude>htrace-core/src/go/pkg/*</exclude>
-              <exclue>**/README.md</exclue>
-              <!-- Pulled down sources -->
-              <exclude>**/gopkg.in/**</exclude>
-              <exclude>**/github.com/**</exclude>
+                <exclude>**/.settings/**</exclude>
+                <exclude>**/dependency-reduced-pom.xml</exclude>
+                <exclude>**/generated/**</exclude>
+                <exclude>*/.settings/*</exclude>
+                <exclude>*/generated/*</exclude>
+                <exclude>.git/**</exclude>
+                <exclue>**/README.md</exclue>
+                <exclude>**/src/go/bin/*</exclude>
+                <exclude>**/src/go/pkg/*</exclude>
+                <!-- external projects -->
+                <exclude>**/bootstrap-3.3.1/**</exclude>
+                <exclude>**/*.min.js</exclude>
+                <exclude>**/d3.min.js</exclude>
+                <!-- Pulled down sources -->
+                <exclude>**/gopkg.in/**</exclude>
+                <exclude>**/github.com/**</exclude>
+                <exclude>**/golang.org/**</exclude>
+                <exclude>**/Godeps/**</exclude>
             </excludes>
           </configuration>
         </plugin>
