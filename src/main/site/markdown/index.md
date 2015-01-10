@@ -246,6 +246,23 @@ to create a simple visualization of the trace. Or you could write
 some javascript to make a better visualization, and send a pull
 request if you do :).
 
+Migrating to Apache HTrace (incubating) from org.htrace
+-------------------------------
+First, the package has changed from org.htrace to org.apache.htrace.
+
+Also, here are some notes on what had to be done migrating:
+
+HTRACE-1 changes the SpanReceiver interface. HBase was instantiating
+SpanReceivers itself and calling .configure(HTraceConfiguration) on each
+one. The expectation now is that SpanReceiver implementations
+provide a constructor that takes a single parameter of HTraceConfiguration.
+
+HTRACE-16 refactors the TraceTree interface. The handy
+getRoots() method has been replaced with the less obvious
+getSpansByParent().find(Span.ROOT_SPAN_ID) and .getSpansByParentIdMap() is
+also an invocation of getSpansByParent().find().
+
+
 Publishing to Maven Central
 -------------------------------
 See [OSSRH-8896](https://issues.sonatype.org/browse/OSSRH-8896)
