@@ -16,12 +16,68 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- 
+
+var Router = Backbone.Router.extend({
+
+  routes: {
+    "": "search",
+    "spans/:span": "span"
+  },
+
+  initialize: function() {
+    this.spansCollection = spans.clone();
+    this.spanViews = {};
+
+    this.listSpansView = new App.ListSpansView({
+      "collection": this.spansCollection,
+      "id": "span-list"
+    });
+    this.searchView = new App.SearchView({
+      "collection": this.spansCollection,
+      "el": $("#list").find("[role='form']")
+    });
+
+
+    this.spansCollection.trigger('change');
+  },
+
+  search: function() {
+    var root = $("#list");
+
+    $("*[role='application']").css('display', 'none');
+
+    root.find("*[role='main']").append(this.listSpansView.$el);
+
+    root.show();
+  },
+
+  span: function(span) {
+    var root = $("#span");
+
+    // Cache views to avoid leaks
+    if (!(span in this.spanViews)) {
+      this.spanViews[span] = new App.SpanView({
+        "model": this.spansCollection.findWhere({
+          "spanId": parseInt(span)
+        }),
+        "id": "span-details"
+      });
+    }
+
+    var view = this.spanViews[span];
+
+    $("*[role='application']").css('display', 'none');
+
+    view.render();
+    root.find("*[role='main']").empty();
+    root.find("*[role='main']").append(view.$el);
+
+    root.show();
+  }
+});
+
+window.urlconf = new Router();
+
 $(function() {
-  var spansCollection = spans.clone();
-
-  $("*[role='main']").append(new App.SpanView({"collection": spansCollection, "id": "span-list"}).$el);
-  spansCollection.trigger('change');
-
-  var search = new App.SearchView({"collection": spansCollection, "el": $("*[role='form']")});
-})
+  Backbone.history.start();
+});

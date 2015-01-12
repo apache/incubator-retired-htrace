@@ -17,10 +17,13 @@
  * under the License.
  */
  
-App.SpanView = Backbone.View.extend({
+App.ListSpansView = Backbone.View.extend({
   "tagName": "ul",
   "className": "spans",
-  "template": _.template($("#span-template").html()),
+  "template": _.template($("#list-span-template").html()),
+  "events": {
+    "click li": "spanClicked"
+  },
 
   initialize: function() {
     _.bindAll(this, "render");
@@ -30,9 +33,44 @@ App.SpanView = Backbone.View.extend({
   },
 
   "render": function() {
+    if (this.rendered) {
+      $(this.el).empty();
+    }
+
+    $(this.el).append(
+        this.template({
+          "spans": this.collection.toJSON()
+        }));
+
+    this.rendered = true;
+
+    return this;
+  },
+
+  "spanClicked": function(e) {
+    e.preventDefault();
+    var spanId = $(e.currentTarget).data("id");
+    window.urlconf.navigate("/spans/" + spanId, true);
+  }
+});
+
+App.SpanView = Backbone.View.extend({
+  "tagName": "div",
+  "className": "span",
+  "template": _.template($("#span-details-template").html()),
+
+  initialize: function() {
+    _.bindAll(this, "render");
+    this.model.bind('change', this.render);
+
+    this.rendered = false;
+  },
+
+  "render": function() {
     var context = {
-      "spans": this.collection.toJSON()
+      "span": this.model.toJSON()
     };
+    context["span"]["duration"] = this.model.duration();
 
     if (this.rendered) {
       $(this.el).empty();
