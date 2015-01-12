@@ -16,15 +16,22 @@
  */
 package org.apache.htrace;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class TestSpanReceiverBuilder {
+  public static final Log LOG =
+      LogFactory.getLog(TestSpanReceiverBuilder.class);
+
   /**
    * Test that if no span receiver is configured, the builder returns null.
    */
@@ -44,6 +51,9 @@ public class TestSpanReceiverBuilder {
     return builder.build();
   }
 
+  private static final File TMPDIR =
+      new File(System.getProperty("java.io.tmpdir"));
+
   /**
    * Test getting various SpanReceiver objects.
    */
@@ -52,18 +62,26 @@ public class TestSpanReceiverBuilder {
     HashMap<String, String> confMap = new HashMap<String, String>();
 
     // Create LocalFileSpanReceiver
-    confMap.put(LocalFileSpanReceiver.PATH_KEY, "/tmp/foo");
-    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
-        "org.apache.htrace.impl.LocalFileSpanReceiver");
-    SpanReceiver rcvr = createSpanReceiver(confMap);
-    Assert.assertEquals("org.apache.htrace.impl.LocalFileSpanReceiver",
-        rcvr.getClass().getName());
-    rcvr.close();
+    File testFile = new File(TMPDIR, UUID.randomUUID().toString());
+    try {
+      confMap.put(LocalFileSpanReceiver.PATH_KEY, testFile.getAbsolutePath());
+      confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
+          "org.apache.htrace.impl.LocalFileSpanReceiver");
+      SpanReceiver rcvr = createSpanReceiver(confMap);
+      Assert.assertNotNull(rcvr);
+      Assert.assertEquals("org.apache.htrace.impl.LocalFileSpanReceiver",
+          rcvr.getClass().getName());
+      rcvr.close();
+    } finally {
+      if (!testFile.delete()) {
+        LOG.debug("failed to delete " + testFile); // keep findbugs happy
+      }
+    }
 
     // Create POJOSpanReceiver
     confMap.remove(LocalFileSpanReceiver.PATH_KEY);
     confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY, "POJOSpanReceiver");
-    rcvr = createSpanReceiver(confMap);
+    SpanReceiver rcvr = createSpanReceiver(confMap);
     Assert.assertEquals("org.apache.htrace.impl.POJOSpanReceiver",
         rcvr.getClass().getName());
     rcvr.close();

@@ -88,6 +88,7 @@ public class SpanReceiverBuilder {
   public SpanReceiver build() {
     if ((this.spanReceiverClass == null) ||
         this.spanReceiverClass.isEmpty()) {
+      LOG.debug("No span receiver class specified.");
       return null;
     }
     String str = spanReceiverClass;
@@ -112,6 +113,7 @@ public class SpanReceiverBuilder {
       return null;
     }
     try {
+      LOG.debug("Creating new instance of " + str + "...");
       return ctor.newInstance(conf);
     } catch (ReflectiveOperationException e) {
       logError("SpanReceiverBuilder reflection error when constructing " + str +

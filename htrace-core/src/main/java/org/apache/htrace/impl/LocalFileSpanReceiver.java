@@ -76,10 +76,11 @@ public class LocalFileSpanReceiver implements SpanReceiver {
           new OutputStreamWriter(fos,"UTF-8"));
       success = true;
     } catch (IOException ioe) {
+      LOG.warn("Error opening " + file + ": " + ioe.getMessage());
       throw new RuntimeException(ioe);
     } finally {
       if (!success) {
-        if (fos == null) {
+        if (fos != null) {
           try {
             fos.close();
           } catch (IOException e) {
@@ -155,7 +156,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
         try {
           reader.close();
         } catch(IOException e) {
-          LOG.debug("Exception in closing " + reader, e);
+          LOG.warn("Exception in closing " + reader, e);
         }
       }
     }
