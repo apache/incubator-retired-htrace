@@ -24,6 +24,9 @@ import (
 	"org/apache/htrace/conf"
 )
 
+var RELEASE_VERSION string
+var GIT_VERSION string
+
 func main() {
 	cnf := conf.LoadApplicationConfig()
 	store, err := CreateDataStore(cnf, nil)

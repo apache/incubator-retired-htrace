@@ -54,8 +54,8 @@ type serverInfoHandler struct {
 
 func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
-	version := common.ServerInfo{ReleaseVersion: common.RELEASE_VERSION,
-		GitVersion: common.GIT_VERSION}
+	version := common.ServerInfo{ReleaseVersion: RELEASE_VERSION,
+		GitVersion: GIT_VERSION}
 	buf, err := json.Marshal(&version)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError,

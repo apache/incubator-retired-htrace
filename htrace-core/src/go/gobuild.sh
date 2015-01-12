@@ -32,25 +32,20 @@ die() {
     exit 1
 }
 
-ACTION=build
+ACTION=install
 if [ $# -gt 0 ]; then
-    if [ "x${1}" == "xbench" ]; then
-        # run benchmarks
-        ACTION="test"
-        set -- "$@" -test.bench=.
-    else
-        # run specified action
-        ACTION="${1}"
-    fi
+    ACTION="${1}"
     shift
 fi
 RELEASE_VERSION=${RELEASE_VERSION:-unknown}
 
+# Set up directories.  The build/ directory is where build dependencies and
+# build binaries should go.
 SCRIPT_DIR="$(cd "$( dirname $0 )" && pwd)"
-cd $SCRIPT_DIR || die "failed to cd to $SCRIPT_DIR"
-export GOPATH="$GOPATH:${SCRIPT_DIR}"
-export GOBIN="${SCRIPT_DIR}/bin"
-mkdir -p ${GOBIN} || die "failed to create ${GOBIN}"
+export GOBIN="${SCRIPT_DIR}/build"
+mkdir -p "${GOBIN}" || die "failed to mkdir -p ${GOBIN}"
+cd "${GOBIN}" || die "failed to cd to ${SCRIPT_DIR}"
+export GOPATH="${GOBIN}:${SCRIPT_DIR}"
 
 # Check for go
 which go &> /dev/null
@@ -82,18 +77,40 @@ if [ -n "${ldconfig}" ]; then
     fi
 fi
 
-if [ "$ACTION" == "build" ]; then
+case $ACTION in
+clean)
+    rm -rf -- "${GOBIN}" pkg
+    find "${SCRIPT_DIR}/src/org/apache/htrace/resource" ! -name 'catalog.go' \
+        -type f -exec rm -f {} +
+    ;;
+install)
+    # Ensure that we have the godep program.
     PATH="${PATH}:${GOBIN}"
     which godep &> /dev/null
     if [ $? -ne 0 ]; then
         echo "Installing godep..."
         go get github.com/tools/godep || die "failed to get godep"
     fi
+
+    # Download dependencies into the build directory.
     echo "godep restore..."
     godep restore || die "failed to set up dependencies"
     go run "$SCRIPT_DIR/src/org/apache/htrace/bundler/bundler.go" \
         --src="$SCRIPT_DIR/../web/" --dst="$SCRIPT_DIR/src/org/apache/htrace/resource/" \
             || die "bundler failed"
-    ${SCRIPT_DIR}/generate_version.sh "${RELEASE_VERSION}"
-fi
-go "${ACTION}" -v org/apache/htrace/... "$@"
+
+    # Discover the git version
+    GIT_VERSION=$(git rev-parse HEAD)
+    [ $? -eq 0 ] || GIT_VERSION="unknown"
+
+    # Inject the release and git version into the htraced ldflags.
+    FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
+    go install -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
+    ;;
+bench)
+    go test -v org/apache/htrace/... -test.bench=. "$@"
+    ;;
+*)
+    go ${ACTION} -v org/apache/htrace/... "$@"
+    ;;
+esac
