@@ -9,11 +9,15 @@
 *~
 *.swp
 dependency-reduced-pom.xml
-htrace-core/src/go/bin
-htrace-core/src/go/pkg
 htrace-core/src/go/src/org/apache/htrace/resource
+<<<<<<< HEAD
 htrace-core/src/go/src/github.com/
 htrace-core/src/go/src/gopkg.in/
 htrace-core/src/go/src/org/apache/htrace/common/version.go
 htrace-core/src/go/src/code.google.com/
 htrace-core/src/go/src/golang.org/
+=======
+!htrace-core/src/go/src/org/apache/htrace/resource/catalog.go
+htrace-core/src/go/build
+htrace-core/src/go/pkg
+>>>>>>> 10f2c6a... HTRACE-67 The go build should put downloaded files into a separate directory (Colin Patrick McCabe)

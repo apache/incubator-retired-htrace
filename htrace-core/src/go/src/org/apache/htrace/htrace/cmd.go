@@ -31,6 +31,9 @@ import (
 	"os"
 )
 
+var RELEASE_VERSION string
+var GIT_VERSION string
+
 func main() {
 	// Load htraced configuration
 	cnf := conf.LoadApplicationConfig()
@@ -66,7 +69,7 @@ func main() {
 
 // Print the version of the htrace binary.
 func printVersion() int {
-	fmt.Printf("Running htrace command version %s.\n", common.RELEASE_VERSION)
+	fmt.Printf("Running htrace command version %s.\n", RELEASE_VERSION)
 	return 0
 }
 
