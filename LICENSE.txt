@@ -221,6 +221,9 @@ Bootstrap, an html, css, and javascript framework, is
 Copyright (c) 2011-2015 Twitter, Inc and MIT licensed:
 https://github.com/twbs/bootstrap/blob/master/LICENSE
 
+Gorilla mux gorilla/mux implements a request router and dispatcher is BSD
+licensed: https://github.com/gorilla/mux/blob/master/LICENSE
+
 godep, a build dependency is Copyright © 2013 Keith Rarick
 and portions Copyright (c) 2012 The Go Authors. Its a BSD
 license: https://github.com/tools/godep/blob/master/License
