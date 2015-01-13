@@ -79,7 +79,7 @@ fi
 
 case $ACTION in
 clean)
-    rm -rf -- "${GOBIN}" pkg
+    rm -rf -- "${GOBIN}" ${SCRIPT_DIR}/pkg
     find "${SCRIPT_DIR}/src/org/apache/htrace/resource" ! -name 'catalog.go' \
         -type f -exec rm -f {} +
     ;;
