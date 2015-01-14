@@ -38,12 +38,13 @@
               <exclude>target/</exclude>
               <exclude>test/</exclude>
               <exclude>.classpath</exclude>
+              <exclude>**/*.orig</exclude>
               <exclude>.project</exclude>
               <exclude>.git</exclude>
               <exclude>.gitignore</exclude>
               <exclude>.settings/</exclude>
               <exclude>**/src/go/bin/**</exclude>
-              <exclude>**/src/go/pkg/**</exclude>
+              <exclude>**/pkg/**</exclude>
             </excludes>
           </fileSet>
         </fileSets>
