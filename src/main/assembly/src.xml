@@ -45,6 +45,7 @@
               <exclude>.settings/</exclude>
               <exclude>**/src/go/bin/**</exclude>
               <exclude>**/pkg/**</exclude>
+              <exclude>**/build/**</exclude>
             </excludes>
           </fileSet>
         </fileSets>
