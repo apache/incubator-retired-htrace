@@ -229,3 +229,20 @@ and portions Copyright (c) 2012 The Go Authors. Its a BSD
 license: https://github.com/tools/godep/blob/master/License
 
 
+underscore, a javascript library of functional programming helpers, is
+(c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters
+& Editors and an MIT license:
+https://github.com/jashkenas/underscore/blob/master/LICENSE
+
+jquery, a javascript library, is Copyright jQuery Foundation and other
+contributors, https://jquery.org/. The software consists of
+voluntary contributions made by many individuals. For exact
+contribution history, see the revision history
+available at https://github.com/jquery/jquery
+It is MIT licensed:
+https://github.com/jquery/jquery/blob/master/LICENSE.txt
+
+backbone, is a javascript library, that is Copyright (c) 2010-2014
+Jeremy Ashkenas, DocumentCloud. It is MIT licensed:
+https://github.com/jashkenas/backbone/blob/master/LICENSE
+
