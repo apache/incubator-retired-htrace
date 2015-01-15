@@ -80,7 +80,11 @@ func (id *SpanId) UnmarshalJSON(b []byte) error {
 	if b[len(b)-1] != DOUBLE_QUOTE {
 		return errors.New("Expected spanID to end with a string quote.")
 	}
-	v, err := strconv.ParseUint(string(b[1:len(b)-1]), 16, 64)
+	return id.FromString(string(b[1 : len(b)-1]))
+}
+
+func (id *SpanId) FromString(str string) error {
+	v, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
 		return err
 	}
@@ -110,4 +114,9 @@ func (span *Span) ToJson() []byte {
 		panic(err)
 	}
 	return jbytes
+}
+
+// Compute the span duration.  We ignore overflow since we never deal with negative times.
+func (span *Span) Duration() int64 {
+	return span.End - span.Begin
 }

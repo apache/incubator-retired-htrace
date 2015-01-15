@@ -20,6 +20,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"math/rand"
 	"org/apache/htrace/common"
 	"org/apache/htrace/test"
@@ -114,6 +116,159 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 	if children[1] != 3 {
 		t.Fatal()
 	}
+}
+
+func testQuery(t *testing.T, ht *MiniHTraced, query *common.Query,
+	expectedSpans []common.Span) {
+	spans, err := ht.Store.HandleQuery(query)
+	if err != nil {
+		t.Fatalf("First query failed: %s\n", err.Error())
+	}
+	expectedBuf := new(bytes.Buffer)
+	dec := json.NewEncoder(expectedBuf)
+	err = dec.Encode(expectedSpans)
+	if err != nil {
+		t.Fatalf("Failed to encode expectedSpans to JSON: %s\n", err.Error())
+	}
+	spansBuf := new(bytes.Buffer)
+	dec = json.NewEncoder(spansBuf)
+	err = dec.Encode(spans)
+	if err != nil {
+		t.Fatalf("Failed to encode result spans to JSON: %s\n", err.Error())
+	}
+	t.Logf("len(spans) = %d, len(expectedSpans) = %d\n", len(spans),
+		len(expectedSpans))
+	common.ExpectStrEqual(t, string(expectedBuf.Bytes()), string(spansBuf.Bytes()))
+}
+
+// Test queries on the datastore.
+func TestSimpleQuery(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestSimpleQuery",
+		WrittenSpans: make(chan *common.Span, 100)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
+		t.Fatal()
+	}
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN_OR_EQUALS,
+				Field: common.BEGIN_TIME,
+				Val:   "125",
+			},
+		},
+		Lim: 5,
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[2]})
+}
+
+func TestQueries2(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueries2",
+		WrittenSpans: make(chan *common.Span, 100)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
+		t.Fatal()
+	}
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.BEGIN_TIME,
+				Val:   "125",
+			},
+		},
+		Lim: 5,
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[0]})
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.BEGIN_TIME,
+				Val:   "125",
+			},
+			common.Predicate{
+				Op:    common.EQUALS,
+				Field: common.DESCRIPTION,
+				Val:   "getFileDescriptors",
+			},
+		},
+		Lim: 2,
+	}, []common.Span{SIMPLE_TEST_SPANS[0]})
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.EQUALS,
+				Field: common.DESCRIPTION,
+				Val:   "getFileDescriptors",
+			},
+		},
+		Lim: 2,
+	}, []common.Span{SIMPLE_TEST_SPANS[0]})
+}
+
+func TestQueries3(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueries3",
+		WrittenSpans: make(chan *common.Span, 100)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
+		t.Fatal()
+	}
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.CONTAINS,
+				Field: common.DESCRIPTION,
+				Val:   "Fd",
+			},
+			common.Predicate{
+				Op:    common.GREATER_THAN_OR_EQUALS,
+				Field: common.BEGIN_TIME,
+				Val:   "100",
+			},
+		},
+		Lim: 5,
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[2]})
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.SPAN_ID,
+				Val:   "0",
+			},
+		},
+		Lim: 200,
+	}, []common.Span{})
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.SPAN_ID,
+				Val:   "2",
+			},
+		},
+		Lim: 200,
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[0]})
 }
 
 func BenchmarkDatastoreWrites(b *testing.B) {

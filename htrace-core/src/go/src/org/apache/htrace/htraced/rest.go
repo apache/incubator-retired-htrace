@@ -141,7 +141,9 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	children := hand.store.FindChildren(sid, lim)
 	jbytes, err := json.Marshal(children)
 	if err != nil {
-		panic(err)
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("Error marshalling children: %s", err.Error()))
+		return
 	}
 	w.Write(jbytes)
 }
@@ -171,6 +173,42 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
 		hand.store.WriteSpan(spans[spanIdx])
 	}
+}
+
+type queryHandler struct {
+	dataStoreHandler
+}
+
+func (hand *queryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
+	_, ok := hand.getReqField32("lim", w, req)
+	if !ok {
+		return
+	}
+	var query common.Query
+	dec := json.NewDecoder(req.Body)
+	err := dec.Decode(&query)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusBadRequest,
+			fmt.Sprintf("Error parsing query: %s", err.Error()))
+		return
+	}
+	var results []*common.Span
+	results, err = hand.store.HandleQuery(&query)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("Internal error processing query %s: %s",
+				query.String(), err.Error()))
+		return
+	}
+	var jbytes []byte
+	jbytes, err = json.Marshal(results)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("Error marshalling results: %s", err.Error()))
+		return
+	}
+	w.Write(jbytes)
 }
 
 type defaultServeHandler struct {
@@ -224,6 +262,9 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}
 	r.Handle("/writeSpans", writeSpansH).Methods("POST")
+
+	queryH := &queryHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	r.Handle("/query", queryH).Methods("GET")
 
 	span := r.PathPrefix("/span").Subrouter()
 	findSidH := &findSidHandler{dataStoreHandler: dataStoreHandler{store: store, lg: rsv.lg}}

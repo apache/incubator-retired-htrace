@@ -106,6 +106,25 @@ func (hcl *Client) FindChildren(sid common.SpanId, lim int) ([]common.SpanId, er
 	return spanIds, nil
 }
 
+// Make a query
+func (hcl *Client) Query(query *common.Query) ([]common.Span, error) {
+	in, err := json.Marshal(query)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error marshalling query: %s", err.Error()))
+	}
+	var out []byte
+	out, _, err = hcl.makeRestRequest("GET", "query", bytes.NewReader(in))
+	if err != nil {
+		return nil, err
+	}
+	var spans []common.Span
+	err = json.Unmarshal(out, &spans)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error unmarshalling results: %s", err.Error()))
+	}
+	return spans, nil
+}
+
 func (hcl *Client) makeGetRequest(reqName string) ([]byte, int, error) {
 	return hcl.makeRestRequest("GET", reqName, nil)
 }
