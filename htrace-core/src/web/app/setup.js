@@ -37,7 +37,6 @@ var Router = Backbone.Router.extend({
       "el": $("#list").find("[role='form']")
     });
 
-
     this.spansCollection.trigger('change');
   },
 
@@ -80,4 +79,7 @@ window.urlconf = new Router();
 
 $(function() {
   Backbone.history.start();
+
+  $(".datepicker").pickadate();
+  $(".timepicker").pickatime();
 });

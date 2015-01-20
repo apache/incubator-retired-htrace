@@ -243,3 +243,12 @@ https://github.com/jquery/jquery/blob/master/LICENSE.txt
 backbone, is a javascript library, that is Copyright (c) 2010-2014
 Jeremy Ashkenas, DocumentCloud. It is MIT licensed:
 https://github.com/jashkenas/backbone/blob/master/LICENSE
+
+moment.js is a front end time conversion project.
+It is (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
+and shared under the MIT license:
+https://github.com/moment/moment/blob/develop/LICENSE
+
+pickadate.js is an open source date and time widget.
+It is (c) 2014 Amsul, http://amsul.ca and MIT licensed:
+https://github.com/amsul/pickadate.js/blob/master/LICENSE.md

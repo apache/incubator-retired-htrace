@@ -24,22 +24,35 @@ App.SearchView = Backbone.View.extend({
   },
 
   "search": function() {
+    var now = new moment();
+    var begin, stop;
+
     var description = $(this.el).find("input[type='search']").val();
-    var begintime = $(this.el).find("#begintime").val();
-    var stoptime = $(this.el).find("#stoptime").val();
+    var startdate = $(this.el).find("#begindate").val();// || now.format("D MMMM, YYYY");
+    var starttime = $(this.el).find("#begintime").val() || now.format("H:mm A");
+    var enddate = $(this.el).find("#stopdate").val();// || now.format("D MMMM, YYYY");
+    var endtime = $(this.el).find("#stoptime").val() || now.format("H:mm A");
     var duration = $(this.el).find("#duration").val();
 
     var newSpans = spans.clone();
 
-    if (begintime) {
+    if (startdate) {
+      begin = new moment(startdate + " " + starttime).unix();
+    }
+
+    if (enddate) {
+      stop = new moment(enddate + " " + endtime).unix();
+    }
+
+    if (begin) {
       newSpans = newSpans.filter(function(span) {
-        return span.get("beginTime") > parseInt(begintime);
+        return span.get("beginTime") > parseInt(begin);
       });
     }
 
-    if (stoptime) {
+    if (stop) {
       newSpans = newSpans.filter(function(span) {
-        return span.get("stopTime") < parseInt(stoptime);
+        return span.get("stopTime") < parseInt(stop);
       });
     }
 
