@@ -59,11 +59,13 @@ type MiniHTraced struct {
 	Cnf      *conf.Config
 	DataDirs []string
 	Store    *dataStore
+	Rsv      *RestServer
 }
 
 func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	var err error
 	var store *dataStore
+	var rsv *RestServer
 	if bld.Name == "" {
 		bld.Name = "HTraceTest"
 	}
@@ -84,6 +86,9 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 					os.RemoveAll(dataDirs[idx])
 				}
 			}
+			if rsv != nil {
+				rsv.Close()
+			}
 		}
 	}()
 	for idx := range dataDirs {
@@ -94,6 +99,7 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 		}
 	}
 	bld.Cnf[conf.HTRACE_DATA_STORE_DIRECTORIES] = strings.Join(dataDirs, conf.PATH_LIST_SEP)
+	bld.Cnf[conf.HTRACE_WEB_ADDRESS] = ":0" // use a random port for the REST server
 	cnfBld := conf.Builder{Values: bld.Cnf, Defaults: conf.DEFAULTS}
 	cnf, err := cnfBld.Build()
 	if err != nil {
@@ -103,14 +109,25 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	if err != nil {
 		return nil, err
 	}
+	rsv, err = CreateRestServer(cnf, store)
+	if err != nil {
+		return nil, err
+	}
 	return &MiniHTraced{
 		Cnf:      cnf,
 		DataDirs: dataDirs,
 		Store:    store,
+		Rsv:      rsv,
 	}, nil
 }
 
+// Return a Config object that clients can use to connect to this MiniHTraceD.
+func (ht *MiniHTraced) ClientConf() *conf.Config {
+	return ht.Cnf.Clone(conf.HTRACE_WEB_ADDRESS, ht.Rsv.Addr().String())
+}
+
 func (ht *MiniHTraced) Close() {
+	ht.Rsv.Close()
 	ht.Store.Close()
 	for idx := range ht.DataDirs {
 		os.RemoveAll(ht.DataDirs[idx])

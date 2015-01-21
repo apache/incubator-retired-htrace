@@ -210,7 +210,7 @@ func (shd *shard) writeSpan(span *common.Span) error {
 	return nil
 }
 
-func (shd *shard) FindChildren(sid int64, childIds []int64, lim int32) ([]int64, int32, error) {
+func (shd *shard) FindChildren(sid int64, childIds []common.SpanId, lim int32) ([]common.SpanId, int32, error) {
 	searchKey := makeKey('p', sid)
 	iter := shd.ldb.NewIterator(shd.store.readOpts)
 	defer iter.Close()
@@ -226,7 +226,7 @@ func (shd *shard) FindChildren(sid int64, childIds []int64, lim int32) ([]int64,
 		if !bytes.HasPrefix(key, searchKey) {
 			break
 		}
-		id := keyToInt(key[9:])
+		id := common.SpanId(keyToInt(key[9:]))
 		childIds = append(childIds, id)
 		lim--
 		iter.Next()
@@ -390,7 +390,7 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 		if strings.Index(err.Error(), "NotFound:") != -1 {
 			return nil
 		}
-		log.Printf("Shard(%s): FindSpan(%d) error: %s\n",
+		log.Printf("Shard(%s): FindSpan(%016x) error: %s\n",
 			shd.path, sid, err.Error())
 		return nil
 	}
@@ -399,7 +399,7 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 	data := common.SpanData{}
 	err = decoder.Decode(&data)
 	if err != nil {
-		log.Printf("Shard(%s): FindSpan(%d) decode error: %s\n",
+		log.Printf("Shard(%s): FindSpan(%016x) decode error: %s\n",
 			shd.path, sid, err.Error())
 		return nil
 	}
@@ -412,8 +412,8 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 }
 
 // Find the children of a given span id.
-func (store *dataStore) FindChildren(sid int64, lim int32) []int64 {
-	childIds := make([]int64, 0)
+func (store *dataStore) FindChildren(sid int64, lim int32) []common.SpanId {
+	childIds := make([]common.SpanId, 0)
 	var err error
 
 	startIdx := store.getShardIndex(sid)
@@ -426,7 +426,7 @@ func (store *dataStore) FindChildren(sid int64, lim int32) []int64 {
 		shd := store.shards[idx]
 		childIds, lim, err = shd.FindChildren(sid, childIds, lim)
 		if err != nil {
-			log.Printf("Shard(%s): FindChildren(%d) error: %s\n",
+			log.Printf("Shard(%s): FindChildren(%016x) error: %s\n",
 				shd.path, sid, err.Error())
 		}
 		idx++

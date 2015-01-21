@@ -42,6 +42,9 @@ import (
 // For that reason, it is not necessary for the Get, GetInt, etc. functions to take a default value
 // argument.
 //
+// Configuration objects are immutable.  However, you can make a copy of a configuration which adds
+// some changes using Configuration#Clone().
+//
 
 type Config struct {
 	settings map[string]string
@@ -64,7 +67,7 @@ type Builder struct {
 
 // Load a configuration from the application's argv, configuration file, and the standard
 // defaults.
-func LoadApplicationConfig() *Config {
+func LoadApplicationConfig(values map[string]string) *Config {
 	reader, err := openFile(CONFIG_FILE_NAME, []string{"."})
 	if err != nil {
 		log.Fatal("Error opening config file: " + err.Error())
@@ -76,6 +79,9 @@ func LoadApplicationConfig() *Config {
 	}
 	bld.Argv = os.Args[1:]
 	bld.Defaults = DEFAULTS
+	if values != nil {
+		bld.Values = values
+	}
 	var cnf *Config
 	cnf, err = bld.Build()
 	if err != nil {
@@ -198,4 +204,24 @@ func (cnf *Config) GetInt64(key string) int64 {
 		return ret
 	}
 	return 0
+}
+
+// Make a deep copy of the given configuration.
+// Optionally, you can specify particular key/value pairs to change.
+// Example:
+// cnf2 := cnf.Copy("my.changed.key", "my.new.value")
+func (cnf *Config) Clone(args ...string) *Config {
+	if len(args)%2 != 0 {
+		panic("The arguments to Config#copy are key1, value1, " +
+			"key2, value2, and so on.  You must specify an even number of arguments.")
+	}
+	ncnf := &Config{defaults: cnf.defaults}
+	ncnf.settings = make(map[string]string)
+	for k, v := range cnf.settings {
+		ncnf.settings[k] = v
+	}
+	for i := 0; i < len(args); i += 2 {
+		ncnf.settings[args[i]] = args[i+1]
+	}
+	return ncnf
 }

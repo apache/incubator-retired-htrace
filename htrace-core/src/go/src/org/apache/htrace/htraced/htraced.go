@@ -22,16 +22,23 @@ package main
 import (
 	"log"
 	"org/apache/htrace/conf"
+	"time"
 )
 
 var RELEASE_VERSION string
 var GIT_VERSION string
 
 func main() {
-	cnf := conf.LoadApplicationConfig()
+	cnf := conf.LoadApplicationConfig(nil)
 	store, err := CreateDataStore(cnf, nil)
 	if err != nil {
 		log.Fatalf("Error creating datastore: %s\n", err.Error())
 	}
-	startRestServer(cnf, store)
+	_, err = CreateRestServer(cnf, store)
+	if err != nil {
+		log.Fatalf("Error creating REST server: %s\n", err.Error())
+	}
+	for {
+		time.Sleep(time.Duration(10) * time.Hour)
+	}
 }

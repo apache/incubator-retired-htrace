@@ -107,7 +107,7 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 	if len(children) != 2 {
 		t.Fatalf("expected 2 children, but got %d\n", len(children))
 	}
-	sort.Sort(common.Int64Slice(children))
+	sort.Sort(common.SpanIdSlice(children))
 	if children[0] != 2 {
 		t.Fatal()
 	}

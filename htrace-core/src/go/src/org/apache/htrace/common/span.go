@@ -57,6 +57,20 @@ func (id SpanId) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
 }
 
+type SpanIdSlice []SpanId
+
+func (s SpanIdSlice) Len() int {
+	return len(s)
+}
+
+func (s SpanIdSlice) Less(i, j int) bool {
+	return s[i] < s[j]
+}
+
+func (s SpanIdSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 const DOUBLE_QUOTE = 0x22
 
 func (id *SpanId) UnmarshalJSON(b []byte) error {

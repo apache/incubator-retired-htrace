@@ -26,6 +26,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
@@ -41,9 +42,8 @@ func setResponseHeaders(hdr http.Header) {
 }
 
 // Write a JSON error response.
-func writeError(w http.ResponseWriter, errCode int, fstr string, args ...interface{}) {
-	str := fmt.Sprintf(fstr, args)
-	str = strings.Replace(str, `"`, `'`, -1)
+func writeError(w http.ResponseWriter, errCode int, errStr string) {
+	str := strings.Replace(errStr, `"`, `'`, -1)
 	log.Println(str)
 	w.WriteHeader(errCode)
 	w.Write([]byte(`{ "error" : "` + str + `"}`))
@@ -59,7 +59,7 @@ func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 	buf, err := json.Marshal(&version)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError,
-			"error marshalling ServerInfo: %s\n", err.Error())
+			fmt.Sprintf("error marshalling ServerInfo: %s\n", err.Error()))
 		return
 	}
 	w.Write(buf)
@@ -72,8 +72,8 @@ type dataStoreHandler struct {
 func (hand *dataStoreHandler) parse64(w http.ResponseWriter, str string) (int64, bool) {
 	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Failed to parse span ID %s: %s",
-			str, err.Error())
+		writeError(w, http.StatusBadRequest,
+			fmt.Sprintf("Failed to parse span ID %s: %s", str, err.Error()))
 		w.Write([]byte("Error parsing : " + err.Error()))
 		return -1, false
 	}
@@ -84,12 +84,13 @@ func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWri
 	req *http.Request) (int32, bool) {
 	str := req.FormValue(fieldName)
 	if str == "" {
-		writeError(w, http.StatusBadRequest, "No %s specified.", fieldName)
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("No %s specified.", fieldName))
 		return -1, false
 	}
 	val, err := strconv.ParseUint(str, 16, 32)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Error parsing %s: %s.", fieldName, err.Error())
+		writeError(w, http.StatusBadRequest,
+			fmt.Sprintf("Error parsing %s: %s.", fieldName, err.Error()))
 		return -1, false
 	}
 	return int32(val), true
@@ -110,7 +111,8 @@ func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 	span := hand.store.FindSpan(sid)
 	if span == nil {
-		writeError(w, http.StatusNoContent, "No spans were specified.")
+		writeError(w, http.StatusNoContent, fmt.Sprintf("No such span as %s",
+			common.SpanId(sid)))
 		return
 	}
 	w.Write(span.ToJson())
@@ -155,7 +157,8 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		err := dec.Decode(&span)
 		if err != nil {
 			if err != io.EOF {
-				writeError(w, http.StatusBadRequest, "Error parsing spans: %s", err.Error())
+				writeError(w, http.StatusBadRequest,
+					fmt.Sprintf("Error parsing spans: %s", err.Error()))
 				return
 			}
 			break
@@ -189,7 +192,17 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	w.Write([]byte(rsc))
 }
 
-func startRestServer(cnf *conf.Config, store *dataStore) {
+type RestServer struct {
+	listener net.Listener
+}
+
+func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
+	var err error
+	rsv := &RestServer{}
+	rsv.listener, err = net.Listen("tcp", cnf.Get(conf.HTRACE_WEB_ADDRESS))
+	if err != nil {
+		return nil, err
+	}
 
 	r := mux.NewRouter().StrictSlash(false)
 	// Default Handler. This will serve requests for static requests.
@@ -207,6 +220,16 @@ func startRestServer(cnf *conf.Config, store *dataStore) {
 	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store}}
 	span.Handle("/{id}/children", findChildrenH).Methods("GET")
 
-	http.ListenAndServe(cnf.Get(conf.HTRACE_WEB_ADDRESS), r)
+	go http.Serve(rsv.listener, r)
+
 	log.Println("Started REST server...")
+	return rsv, nil
+}
+
+func (rsv *RestServer) Addr() net.Addr {
+	return rsv.listener.Addr()
+}
+
+func (rsv *RestServer) Close() {
+	rsv.listener.Close()
 }
