@@ -32,6 +32,7 @@ language governing permissions and limitations under the License. -->
     <module>htrace-zipkin</module>
     <module>htrace-hbase</module>
     <module>htrace-flume</module>
+    <module>htrace-htraced</module>
   </modules>
 
   <licenses>
@@ -212,14 +213,14 @@ language governing permissions and limitations under the License. -->
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.1</version>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
@@ -308,6 +309,16 @@ language governing permissions and limitations under the License. -->
         <artifactId>junit</artifactId>
         <version>4.10</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.4.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
