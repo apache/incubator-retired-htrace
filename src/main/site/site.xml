@@ -28,13 +28,14 @@
     <href>http://htrace.incubator.apache.org/</href>
   </bannerLeft>
   <bannerRight>
-    <name />
+    <src>http://htrace.incubator.apache.org/images/owl.png</src>
+    <href>http://htrace.incubator.apache.org/</href>
   </bannerRight>
   <body>
     <menu name="Apache HTrace Project">
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html" />
-      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/htrace/" />
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/incubator/htrace/" />
       <item name="Distribution" href="dependency-management.html" />
       <item name="Dependency" href="dependency-info.html" />
       <item name="Issue Tracking" href="issue-tracking.html" />
@@ -57,9 +58,6 @@
       <toc>top</toc>
       <highlightJs>true</highlightJs>
       <slogan position="bannerRight">A tracing framework for use with distributed systems written in java</slogan>
-      <bottomNav>
-        <column>Home</column>
-      </bottomNav>
     </reflowSkin>
  </custom>
     <skin>

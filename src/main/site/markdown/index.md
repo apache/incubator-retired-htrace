@@ -18,6 +18,9 @@ project. To add HTrace to your project, see detail on how to add it as a
 
 Formerly, HTrace was available at org.htrace.
 
+* We made our first release from Apache Incubator, htrace-3.1.0-incubating, January 20th, 2015. [Download it!](http://www.apache.org/dyn/closer.cgi/incubator/htrace/)
+
+
 API
 ---
 Using HTrace requires adding some instrumentation to your application.
