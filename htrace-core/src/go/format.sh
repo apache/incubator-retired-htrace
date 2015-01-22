@@ -37,4 +37,4 @@ which gofmt &> /dev/null
 
 # Find go sources.  We assume no newlines or whitespace in file names.
 SCRIPT_DIR="$(cd "$( dirname $0 )" && pwd)"
-find "${SCRIPT_DIR}" -noleaf -xdev -name '*.go' | xargs -L 1 gofmt -w
+find "${SCRIPT_DIR}/src" -noleaf -xdev -name '*.go' | xargs -L 1 gofmt -w
