@@ -32,10 +32,8 @@ language governing permissions and limitations under the License. -->
   <build>
     <plugins>
       <plugin>
-        <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
-          <skipAssembly>true</skipAssembly>
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
@@ -102,4 +100,22 @@ language governing permissions and limitations under the License. -->
       <version>1.7</version>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <!--Make it so assembly:single does nothing in here-->
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <skipAssembly>true</skipAssembly>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>

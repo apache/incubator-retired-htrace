@@ -10,7 +10,7 @@ After installing go, to build, run:
 
 To build a tarball, do:
 
- $ mvn clean install -DskipTests assembly:single
+ $ mvn clean install -DskipTests assembly:single -Pdist
 
 This will build a tarball into ./target.
 

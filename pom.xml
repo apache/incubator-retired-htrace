@@ -218,6 +218,10 @@ language governing permissions and limitations under the License. -->
           <artifactId>maven-shade-plugin</artifactId>
           <version>2.1</version>
         </plugin>
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.5.3</version>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -261,19 +265,6 @@ language governing permissions and limitations under the License. -->
           <siteDirectory>${basedir}/src/main/site</siteDirectory>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.5.3</version>
-        <configuration>
-          <!--Do not attach assembly to project.-->
-          <attach>false</attach>
-          <tarLongFileMode>gnu</tarLongFileMode>
-          <finalName>htrace-${project.version}</finalName>
-          <descriptors>
-            <descriptor>src/main/assembly/src.xml</descriptor>
-          </descriptors>
         </configuration>
       </plugin>
       <plugin>
@@ -332,4 +323,26 @@ language governing permissions and limitations under the License. -->
       <url>file:///tmp</url>
     </site>
   </distributionManagement>
+
+  <profiles>
+    <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <!--Do not attach assembly to project.-->
+              <attach>false</attach>
+              <tarLongFileMode>gnu</tarLongFileMode>
+              <finalName>htrace-${project.version}</finalName>
+              <descriptors>
+                <descriptor>src/main/assembly/src.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
