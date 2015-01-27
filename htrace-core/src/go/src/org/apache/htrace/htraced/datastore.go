@@ -23,7 +23,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"github.com/jmhodges/levigo"
-	"log"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
@@ -163,18 +162,20 @@ func (shd *shard) WriteMetadata(meta *dataStoreMetadata) error {
 
 // Process incoming spans for a shard.
 func (shd *shard) processIncoming() {
+	lg := shd.store.lg
 	for {
 		span := <-shd.incoming
 		if span == nil {
-			log.Printf("Shard processor for %s exiting.", shd.path)
+			lg.Infof("Shard processor for %s exiting.\n", shd.path)
 			shd.exited <- true
 			return
 		}
 		err := shd.writeSpan(span)
 		if err != nil {
-			log.Fatal("Shard processor for %s got fatal error %s.", shd.path, err.Error())
+			lg.Errorf("Shard processor for %s got fatal error %s.\n", shd.path, err.Error())
+		} else {
+			lg.Tracef("Shard processor for %s wrote span %s.\n", shd.path, span.ToJson())
 		}
-		//log.Printf("Shard processor for %s wrote span %s.", shd.path, span.ToJson())
 	}
 }
 
@@ -236,17 +237,20 @@ func (shd *shard) FindChildren(sid int64, childIds []common.SpanId, lim int32) (
 
 // Close a shard.
 func (shd *shard) Close() {
+	lg := shd.store.lg
 	shd.incoming <- nil
-	log.Printf("Waiting for %s to exit...", shd.path)
+	lg.Infof("Waiting for %s to exit...\n", shd.path)
 	if shd.exited != nil {
 		<-shd.exited
 	}
 	shd.ldb.Close()
-	log.Printf("Closed %s...", shd.path)
+	lg.Infof("Closed %s...\n", shd.path)
 }
 
 // The Data Store.
 type dataStore struct {
+	lg *common.Logger
+
 	// The shards which manage our LevelDB instances.
 	shards []*shard
 
@@ -272,7 +276,8 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 
 	// If we return an error, close the store.
 	var err error
-	store := &dataStore{shards: []*shard{}, WrittenSpans: writtenSpans}
+	lg := common.NewLogger("datastore", cnf)
+	store := &dataStore{lg: lg, shards: []*shard{}, WrittenSpans: writtenSpans}
 	defer func() {
 		if err != nil {
 			store.Close()
@@ -296,21 +301,21 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 			}
 			if !clearStored {
 				// TODO: implement re-opening saved data
-				log.Println("Error: path " + path + "already exists.")
+				lg.Error("Error: path " + path + "already exists.")
 				return nil, err
 			} else {
 				err = os.RemoveAll(path)
 				if err != nil {
-					log.Println("Failed to create " + path + ": " + err.Error())
+					lg.Error("Failed to create " + path + ": " + err.Error())
 					return nil, err
 				}
-				log.Println("Cleared " + path)
+				lg.Info("Cleared " + path)
 			}
 		}
 		var shd *shard
 		shd, err = CreateShard(store, cnf, path)
 		if err != nil {
-			log.Printf("Error creating shard %s: %s", path, err.Error())
+			lg.Errorf("Error creating shard %s: %s", path, err.Error())
 			return nil, err
 		}
 		store.shards = append(store.shards, shd)
@@ -320,7 +325,7 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 		shd := store.shards[idx]
 		err := shd.WriteMetadata(meta)
 		if err != nil {
-			log.Println("Failed to write metadata to " + store.shards[idx].path + ": " + err.Error())
+			lg.Error("Failed to write metadata to " + store.shards[idx].path + ": " + err.Error())
 			return nil, err
 		}
 		shd.exited = make(chan bool, 1)
@@ -339,7 +344,7 @@ func CreateShard(store *dataStore, cnf *conf.Config, path string) (*shard, error
 	//openOpts.SetFilterPolicy(filter)
 	ldb, err := levigo.Open(path, openOpts)
 	if err != nil {
-		log.Println("LevelDB failed to open " + path + ": " + err.Error())
+		store.lg.Errorf("LevelDB failed to open %s: %s\n", path, err.Error())
 		return nil, err
 	}
 	defer func() {
@@ -350,7 +355,7 @@ func CreateShard(store *dataStore, cnf *conf.Config, path string) (*shard, error
 	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
 	shd = &shard{store: store, ldb: ldb, path: path,
 		incoming: make(chan *common.Span, spanBufferSize)}
-	log.Println("LevelDB opened " + path)
+	store.lg.Infof("LevelDB opened %s\n", path)
 	return shd, nil
 }
 
@@ -362,12 +367,19 @@ func (store *dataStore) GetStatistics() *Statistics {
 func (store *dataStore) Close() {
 	for idx := range store.shards {
 		store.shards[idx].Close()
+		store.shards[idx] = nil
 	}
 	if store.readOpts != nil {
 		store.readOpts.Close()
+		store.readOpts = nil
 	}
 	if store.writeOpts != nil {
 		store.writeOpts.Close()
+		store.writeOpts = nil
+	}
+	if store.lg != nil {
+		store.lg.Close()
+		store.lg = nil
 	}
 }
 
@@ -385,12 +397,13 @@ func (store *dataStore) FindSpan(sid int64) *common.Span {
 }
 
 func (shd *shard) FindSpan(sid int64) *common.Span {
+	lg := shd.store.lg
 	buf, err := shd.ldb.Get(shd.store.readOpts, makeKey('s', sid))
 	if err != nil {
 		if strings.Index(err.Error(), "NotFound:") != -1 {
 			return nil
 		}
-		log.Printf("Shard(%s): FindSpan(%016x) error: %s\n",
+		lg.Warnf("Shard(%s): FindSpan(%016x) error: %s\n",
 			shd.path, sid, err.Error())
 		return nil
 	}
@@ -399,7 +412,7 @@ func (shd *shard) FindSpan(sid int64) *common.Span {
 	data := common.SpanData{}
 	err = decoder.Decode(&data)
 	if err != nil {
-		log.Printf("Shard(%s): FindSpan(%016x) decode error: %s\n",
+		lg.Errorf("Shard(%s): FindSpan(%016x) decode error: %s\n",
 			shd.path, sid, err.Error())
 		return nil
 	}
@@ -426,7 +439,7 @@ func (store *dataStore) FindChildren(sid int64, lim int32) []common.SpanId {
 		shd := store.shards[idx]
 		childIds, lim, err = shd.FindChildren(sid, childIds, lim)
 		if err != nil {
-			log.Printf("Shard(%s): FindChildren(%016x) error: %s\n",
+			store.lg.Errorf("Shard(%s): FindChildren(%016x) error: %s\n",
 				shd.path, sid, err.Error())
 		}
 		idx++

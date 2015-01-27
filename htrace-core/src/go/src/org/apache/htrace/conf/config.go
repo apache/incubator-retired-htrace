@@ -152,6 +152,12 @@ func (bld *Builder) Build() (*Config, error) {
 	return &cnf, nil
 }
 
+// Returns true if the configuration has a non-default value for the given key.
+func (cnf *Config) Contains(key string) bool {
+	_, ok := cnf.settings[key]
+	return ok
+}
+
 // Get a string configuration key.
 func (cnf *Config) Get(key string) string {
 	ret := cnf.settings[key]

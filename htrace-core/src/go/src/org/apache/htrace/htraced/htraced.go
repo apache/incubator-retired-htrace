@@ -20,8 +20,9 @@
 package main
 
 import (
-	"log"
+	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
+	"os"
 	"time"
 )
 
@@ -30,13 +31,17 @@ var GIT_VERSION string
 
 func main() {
 	cnf := conf.LoadApplicationConfig(nil)
+	lg := common.NewLogger("main", cnf)
+	defer lg.Close()
 	store, err := CreateDataStore(cnf, nil)
 	if err != nil {
-		log.Fatalf("Error creating datastore: %s\n", err.Error())
+		lg.Errorf("Error creating datastore: %s\n", err.Error())
+		os.Exit(1)
 	}
 	_, err = CreateRestServer(cnf, store)
 	if err != nil {
-		log.Fatalf("Error creating REST server: %s\n", err.Error())
+		lg.Errorf("Error creating REST server: %s\n", err.Error())
+		os.Exit(1)
 	}
 	for {
 		time.Sleep(time.Duration(10) * time.Hour)

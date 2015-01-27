@@ -52,6 +52,12 @@ const HTRACE_DATA_STORE_CLEAR = "data.store.clear"
 // How many writes to buffer before applying backpressure to span senders.
 const HTRACE_DATA_STORE_SPAN_BUFFER_SIZE = "data.store.span.buffer.size"
 
+// Path to put the logs from htrace, or the empty string to use stdout.
+const HTRACE_LOG_PATH = "log.path"
+
+// The log level to use for the logs in htrace.
+const HTRACE_LOG_LEVEL = "log.level"
+
 // Default values for HTrace configuration keys.
 var DEFAULTS = map[string]string{
 	HTRACE_WEB_ADDRESS: fmt.Sprintf("0.0.0.0:%d", HTRACE_WEB_ADDRESS_DEFAULT_PORT),
@@ -59,4 +65,6 @@ var DEFAULTS = map[string]string{
 		PATH_LIST_SEP + PATH_SEP + "tmp" + PATH_SEP + "htrace2",
 	HTRACE_DATA_STORE_CLEAR:            "false",
 	HTRACE_DATA_STORE_SPAN_BUFFER_SIZE: "100",
+	HTRACE_LOG_PATH:                    "",
+	HTRACE_LOG_LEVEL:                   "INFO",
 }

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
-	"log"
 	"mime"
 	"net"
 	"net/http"
@@ -42,23 +41,25 @@ func setResponseHeaders(hdr http.Header) {
 }
 
 // Write a JSON error response.
-func writeError(w http.ResponseWriter, errCode int, errStr string) {
+func writeError(lg *common.Logger, w http.ResponseWriter, errCode int,
+	errStr string) {
 	str := strings.Replace(errStr, `"`, `'`, -1)
-	log.Println(str)
+	lg.Info(str)
 	w.WriteHeader(errCode)
 	w.Write([]byte(`{ "error" : "` + str + `"}`))
 }
 
 type serverInfoHandler struct {
+	lg *common.Logger
 }
 
-func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (hand *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
 	version := common.ServerInfo{ReleaseVersion: RELEASE_VERSION,
 		GitVersion: GIT_VERSION}
 	buf, err := json.Marshal(&version)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError,
+		writeError(hand.lg, w, http.StatusInternalServerError,
 			fmt.Sprintf("error marshalling ServerInfo: %s\n", err.Error()))
 		return
 	}
@@ -66,13 +67,14 @@ func (handler *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 }
 
 type dataStoreHandler struct {
+	lg    *common.Logger
 	store *dataStore
 }
 
 func (hand *dataStoreHandler) parse64(w http.ResponseWriter, str string) (int64, bool) {
 	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest,
+		writeError(hand.lg, w, http.StatusBadRequest,
 			fmt.Sprintf("Failed to parse span ID %s: %s", str, err.Error()))
 		w.Write([]byte("Error parsing : " + err.Error()))
 		return -1, false
@@ -84,12 +86,12 @@ func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWri
 	req *http.Request) (int32, bool) {
 	str := req.FormValue(fieldName)
 	if str == "" {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("No %s specified.", fieldName))
+		writeError(hand.lg, w, http.StatusBadRequest, fmt.Sprintf("No %s specified.", fieldName))
 		return -1, false
 	}
 	val, err := strconv.ParseUint(str, 16, 32)
 	if err != nil {
-		writeError(w, http.StatusBadRequest,
+		writeError(hand.lg, w, http.StatusBadRequest,
 			fmt.Sprintf("Error parsing %s: %s.", fieldName, err.Error()))
 		return -1, false
 	}
@@ -111,7 +113,7 @@ func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 	span := hand.store.FindSpan(sid)
 	if span == nil {
-		writeError(w, http.StatusNoContent, fmt.Sprintf("No such span as %s",
+		writeError(hand.lg, w, http.StatusNoContent, fmt.Sprintf("No such span as %s\n",
 			common.SpanId(sid)))
 		return
 	}
@@ -157,7 +159,7 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		err := dec.Decode(&span)
 		if err != nil {
 			if err != io.EOF {
-				writeError(w, http.StatusBadRequest,
+				writeError(hand.lg, w, http.StatusBadRequest,
 					fmt.Sprintf("Error parsing spans: %s", err.Error()))
 				return
 			}
@@ -166,12 +168,13 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		spans = append(spans, &span)
 	}
 	for spanIdx := range spans {
-		log.Printf("writing span %s\n", spans[spanIdx].ToJson())
+		hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
 		hand.store.WriteSpan(spans[spanIdx])
 	}
 }
 
 type defaultServeHandler struct {
+	lg *common.Logger
 }
 
 func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -182,7 +185,7 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	ident = strings.Replace(ident, "/", "__", -1)
 	rsc := resource.Catalog[ident]
 	if rsc == "" {
-		log.Printf("failed to find entry for %s\n", ident)
+		hand.lg.Warnf("failed to find entry for %s\n", ident)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -194,6 +197,7 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 
 type RestServer struct {
 	listener net.Listener
+	lg       *common.Logger
 }
 
 func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
@@ -203,26 +207,36 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	if err != nil {
 		return nil, err
 	}
+	var success bool
+	defer func() {
+		if !success {
+			rsv.Close()
+		}
+	}()
+	rsv.lg = common.NewLogger("rest", cnf)
 
 	r := mux.NewRouter().StrictSlash(false)
 	// Default Handler. This will serve requests for static requests.
-	r.Handle("/", &defaultServeHandler{})
+	r.Handle("/", &defaultServeHandler{lg: rsv.lg})
 
-	r.Handle("/server/info", &serverInfoHandler{}).Methods("GET")
+	r.Handle("/server/info", &serverInfoHandler{lg: rsv.lg}).Methods("GET")
 
-	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{
+		store: store, lg: rsv.lg}}
 	r.Handle("/writeSpans", writeSpansH).Methods("POST")
 
 	span := r.PathPrefix("/span").Subrouter()
-	findSidH := &findSidHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	findSidH := &findSidHandler{dataStoreHandler: dataStoreHandler{store: store, lg: rsv.lg}}
 	span.Handle("/{id}", findSidH).Methods("GET")
 
-	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store,
+		lg: rsv.lg}}
 	span.Handle("/{id}/children", findChildrenH).Methods("GET")
 
 	go http.Serve(rsv.listener, r)
 
-	log.Println("Started REST server...")
+	rsv.lg.Infof("Started REST server on %s...\n", rsv.listener.Addr().String())
+	success = true
 	return rsv, nil
 }
 
