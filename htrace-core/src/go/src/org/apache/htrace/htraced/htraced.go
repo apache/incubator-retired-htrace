@@ -20,17 +20,48 @@
 package main
 
 import (
+	"fmt"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
+	"strings"
 	"time"
 )
 
 var RELEASE_VERSION string
 var GIT_VERSION string
 
+const USAGE = `htraced: the HTrace server daemon.
+
+htraced receives trace spans sent from HTrace clients.  It exposes a REST
+interface which others can query.  It also runs a web server with a graphical
+user interface.  htraced stores its span data in levelDB files on the local
+disks.
+
+Usage:
+--help: this help message
+
+-Dk=v: set configuration key 'k' to value 'v'
+For example -Dweb.address=127.0.0.1:8080 sets the web address to localhost,
+port 8080.
+
+-Dk: set configuration key 'k' to 'true'
+
+Normally, configuration options should be set in the ` + conf.CONFIG_FILE_NAME + `
+configuration file.  We find this file by searching the paths in the 
+` + conf.HTRACED_CONF_DIR + `. The command-line options are just an alternate way
+of setting configuration when launching the daemon.
+`
+
 func main() {
-	cnf := conf.LoadApplicationConfig(nil)
+	for idx := range os.Args {
+		arg := os.Args[idx]
+		if strings.HasPrefix(arg, "--h") || strings.HasPrefix(arg, "-h") {
+			fmt.Fprintf(os.Stderr, USAGE)
+			os.Exit(0)
+		}
+	}
+	cnf := conf.LoadApplicationConfig()
 	lg := common.NewLogger("main", cnf)
 	defer lg.Close()
 	store, err := CreateDataStore(cnf, nil)

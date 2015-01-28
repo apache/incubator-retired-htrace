@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -65,10 +66,19 @@ type Builder struct {
 	Argv []string
 }
 
+func getHTracedConfDirs() []string {
+	confDir := os.Getenv("HTRACED_CONF_DIR")
+	paths := filepath.SplitList(confDir)
+	if len(paths) < 1 {
+		return []string{"."}
+	}
+	return paths
+}
+
 // Load a configuration from the application's argv, configuration file, and the standard
 // defaults.
-func LoadApplicationConfig(values map[string]string) *Config {
-	reader, err := openFile(CONFIG_FILE_NAME, []string{"."})
+func LoadApplicationConfig() *Config {
+	reader, err := openFile(CONFIG_FILE_NAME, getHTracedConfDirs())
 	if err != nil {
 		log.Fatal("Error opening config file: " + err.Error())
 	}
@@ -79,9 +89,6 @@ func LoadApplicationConfig(values map[string]string) *Config {
 	}
 	bld.Argv = os.Args[1:]
 	bld.Defaults = DEFAULTS
-	if values != nil {
-		bld.Values = values
-	}
 	var cnf *Config
 	cnf, err = bld.Build()
 	if err != nil {

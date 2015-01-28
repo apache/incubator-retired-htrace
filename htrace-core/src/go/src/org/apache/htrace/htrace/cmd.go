@@ -39,20 +39,31 @@ const EXIT_FAILURE = 1
 
 var verbose *bool
 
+const USAGE = `The Apache HTrace command-line tool.  This tool retrieves and modifies settings and
+other data on a running htraced daemon.
+
+If we find an ` + conf.CONFIG_FILE_NAME + ` configuration file in the list of directories
+specified in ` + conf.HTRACED_CONF_DIR + `, we will use that configuration; otherwise, 
+the defaults will be used.
+`
+
 func main() {
+	// Load htraced configuration
+	cnf := conf.LoadApplicationConfig()
+
 	// Parse argv
-	app := kingpin.New("htrace", "The HTrace tracing utility.")
-	addr := app.Flag("addr", "Server address.").
-		Default(conf.DEFAULTS[conf.HTRACE_WEB_ADDRESS]).TCP()
+	app := kingpin.New(os.Args[0], USAGE)
+	app.Flag("Dmy.key", "Set configuration key 'my.key' to 'my.value'.  Replace 'my.key' "+
+		"with any key you want to set.").Default("my.value").String()
+	addr := app.Flag("addr", "Server address.").String()
 	verbose = app.Flag("verbose", "Verbose.").Default("false").Bool()
 	version := app.Command("version", "Print the version of this program.")
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
-	findSpanId := findSpan.Flag("id", "Span ID to find, as a signed decimal 64-bit "+
-		"number").Required().Uint64()
+	findSpanId := findSpan.Arg("id", "Span ID to find. Example: 0x123456789abcdef").Required().Uint64()
 	findChildren := app.Command("findChildren", "Print out the span IDs that are children of a given span ID.")
-	parentSpanId := findChildren.Flag("id", "Span ID to print children for, as a signed decimal 64-bit "+
-		"number").Required().Uint64()
+	parentSpanId := findChildren.Arg("id", "Span ID to print children for. Example: 0x123456789abcdef").
+		Required().Uint64()
 	childLim := findChildren.Flag("lim", "Maximum number of child IDs to print.").Default("20").Int()
 	writeSpans := app.Command("writeSpans", "Write spans to the server in JSON form.")
 	spanJson := writeSpans.Flag("json", "The JSON span data to write to the server.").String()
@@ -60,10 +71,10 @@ func main() {
 		"A file containing JSON span data to write to the server.").String()
 	cmd := kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	// Load htraced configuration
-	values := make(map[string]string)
-	values[conf.HTRACE_WEB_ADDRESS] = (*addr).String()
-	cnf := conf.LoadApplicationConfig(values)
+	// Add the command-line settings into the configuration.
+	if *addr != "" {
+		cnf = cnf.Clone(conf.HTRACE_WEB_ADDRESS, *addr)
+	}
 
 	// Create HTrace client
 	hcl, err := htrace.NewClient(cnf)

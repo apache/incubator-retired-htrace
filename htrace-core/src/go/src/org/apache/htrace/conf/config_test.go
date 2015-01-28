@@ -20,6 +20,7 @@
 package conf
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -116,6 +117,20 @@ func TestXmlConfigurationFile(t *testing.T) {
 		t.Fatal()
 	}
 	if 4611686018427387904 != cnf.GetInt64("cmdline.opt") {
+		t.Fatal()
+	}
+}
+
+// Test our handling of the HTRACE_CONF_DIR environment variable.
+func TestGetHTracedConfDirs(t *testing.T) {
+	os.Setenv("HTRACED_CONF_DIR", "")
+	dirs := getHTracedConfDirs()
+	if len(dirs) != 1 || dirs[0] != "." {
+		t.Fatal()
+	}
+	os.Setenv("HTRACED_CONF_DIR", "/foo/bar:/baz")
+	dirs = getHTracedConfDirs()
+	if len(dirs) != 2 || dirs[0] != "/foo/bar" || dirs[1] != "/baz" {
 		t.Fatal()
 	}
 }

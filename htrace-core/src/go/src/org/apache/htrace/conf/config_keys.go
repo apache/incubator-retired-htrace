@@ -35,7 +35,11 @@ var PATH_SEP string = fmt.Sprintf("%c", os.PathSeparator)
 var PATH_LIST_SEP string = fmt.Sprintf("%c", os.PathListSeparator)
 
 // The name of the XML configuration file to look for.
-const CONFIG_FILE_NAME = "htraced.xml"
+const CONFIG_FILE_NAME = "htraced-conf.xml"
+
+// An environment variable containing a list of paths to search for the
+// configuration file in.
+const HTRACED_CONF_DIR = "HTRACED_CONF_DIR"
 
 // The web address to start the REST server on.
 const HTRACE_WEB_ADDRESS = "web.address"
