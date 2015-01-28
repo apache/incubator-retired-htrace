@@ -51,5 +51,5 @@ App.Span = Backbone.Model.extend({
 });
 
 App.Spans = Backbone.Collection.extend({
-  "model": App.Span
+  model: App.Span
 });

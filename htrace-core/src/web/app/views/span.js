@@ -16,43 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- 
-App.ListSpansView = Backbone.View.extend({
-  "tagName": "ul",
-  "className": "spans",
-  "template": _.template($("#list-span-template").html()),
-  "events": {
-    "click li": "spanClicked"
-  },
-
-  initialize: function() {
-    _.bindAll(this, "render");
-    this.collection.bind('change', this.render);
-
-    this.rendered = false;
-  },
-
-  "render": function() {
-    if (this.rendered) {
-      $(this.el).empty();
-    }
-
-    $(this.el).append(
-        this.template({
-          "spans": this.collection.toJSON()
-        }));
-
-    this.rendered = true;
-
-    return this;
-  },
-
-  "spanClicked": function(e) {
-    e.preventDefault();
-    var spanId = $(e.currentTarget).data("id");
-    window.urlconf.navigate("/spans/" + spanId, true);
-  }
-});
 
 App.SpanView = Backbone.View.extend({
   "tagName": "div",
@@ -78,6 +41,51 @@ App.SpanView = Backbone.View.extend({
 
     $(this.el).append(this.template(context));
     this.rendered = true;
+
+    return this;
+  }
+});
+
+
+App.ListSpansView = Backbone.View.extend({
+  "tagName": "div",
+
+  "initialize": function() {
+    _.bindAll(this, "render");
+    this.collection.bind('change', this.render);
+
+    this.rendered = false;
+
+    this.listSpansView = new Backgrid.Grid({
+      collection: this.collection,
+      columns: [{
+        name: "spanId",
+        label: "ID",
+        cell: "string",
+        editable: false
+      }, {
+        name: "description",
+        label: "Description",
+        cell: "string",
+        editable: false
+      }],
+      row: Backgrid.Row.extend({
+        events: {
+          "click": "details"
+        },
+        details: function() {
+          urlconf.navigate("/spans/" + this.model.get("spanId"), true);
+        }
+      })
+    });
+  },
+
+  "render": function() {
+    $(this.listSpansView.$el).detach();
+
+    this.listSpansView.render();
+
+    $(this.$el).append(this.listSpansView.$el);
 
     return this;
   }

@@ -244,6 +244,10 @@ backbone, is a javascript library, that is Copyright (c) 2010-2014
 Jeremy Ashkenas, DocumentCloud. It is MIT licensed:
 https://github.com/jashkenas/backbone/blob/master/LICENSE
 
+backgrid, is a javascript library, that is Copyright (c) 2013
+Jimmy Yuen Ho Wong. It is MIT licensed:
+https://github.com/wyuenho/backgrid/blob/master/LICENSE-MIT
+
 moment.js is a front end time conversion project.
 It is (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
 and shared under the MIT license:

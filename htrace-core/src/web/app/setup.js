@@ -29,25 +29,19 @@ var Router = Backbone.Router.extend({
     this.spanViews = {};
 
     this.listSpansView = new App.ListSpansView({
-      "collection": this.spansCollection,
-      "id": "span-list"
-    });
+      "collection": this.spansCollection
+    }).render();
+    $("#list *[role='main']").append(this.listSpansView.$el);
+
     this.searchView = new App.SearchView({
       "collection": this.spansCollection,
       "el": $("#list").find("[role='form']")
     });
-
-    this.spansCollection.trigger('change');
   },
 
   search: function() {
-    var root = $("#list");
-
     $("*[role='application']").css('display', 'none');
-
-    root.find("*[role='main']").append(this.listSpansView.$el);
-
-    root.show();
+    $("#list").show();
   },
 
   span: function(span) {
