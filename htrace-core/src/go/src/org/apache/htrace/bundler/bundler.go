@@ -160,7 +160,10 @@ func createBundleFile(pkg, src, sfile, dst string) error {
 	reader := bufio.NewReader(in)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		_, err := out.WriteString(strings.Replace(scanner.Text(), "`", "` + \"`\" + `", -1) + "\n")
+		str := strings.Replace(scanner.Text(), "`", "` + \"`\" + `", -1) + "\n"
+		// Avoid "Unicode (UTF-8) BOM in middle of file" error.
+		str = strings.Replace(str, "\uFEFF", "` + \"\\uFEFF\" + `", -1)
+		_, err := out.WriteString(str)
 		if err != nil {
 			return err
 		}
@@ -223,6 +226,6 @@ func main() {
 			log.Fatalf("Error creating bundle file for %s in %s: %s\n",
 				sfiles[s], *dst, err.Error())
 		}
-		log.Printf("Bundled %s as %s\n", absSrc, absSrc+SEP+sfileToDfile(sfiles[s]))
+		log.Printf("Bundled %s as %s\n", absSrc, *dst+SEP+sfileToDfile(sfiles[s]))
 	}
 }
