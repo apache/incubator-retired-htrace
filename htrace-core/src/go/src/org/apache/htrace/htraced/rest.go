@@ -221,6 +221,7 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		ident = "index.html" // default to index.html
 	}
 	ident = strings.Replace(ident, "/", "__", -1)
+	hand.lg.Debugf("defaultServeHandler(path=%s, ident=%s)\n", req.URL.Path, ident)
 	rsc := resource.Catalog[ident]
 	if rsc == "" {
 		hand.lg.Warnf("failed to find entry for %s\n", ident)
@@ -254,8 +255,6 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	rsv.lg = common.NewLogger("rest", cnf)
 
 	r := mux.NewRouter().StrictSlash(false)
-	// Default Handler. This will serve requests for static requests.
-	r.Handle("/", &defaultServeHandler{lg: rsv.lg})
 
 	r.Handle("/server/info", &serverInfoHandler{lg: rsv.lg}).Methods("GET")
 
@@ -273,6 +272,9 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	findChildrenH := &findChildrenHandler{dataStoreHandler: dataStoreHandler{store: store,
 		lg: rsv.lg}}
 	span.Handle("/{id}/children", findChildrenH).Methods("GET")
+
+	// Default Handler. This will serve requests for static requests.
+	r.PathPrefix("/").Handler(&defaultServeHandler{lg: rsv.lg}).Methods("GET")
 
 	go http.Serve(rsv.listener, r)
 
