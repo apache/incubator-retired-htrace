@@ -104,7 +104,7 @@ func (path logPath) Open() *logSink {
 	if path == STDOUT_LOG_PATH {
 		return &logSink{path: path, file: os.Stdout}
 	}
-	file, err := os.OpenFile(string(path), os.O_WRONLY|os.O_APPEND, 0777)
+	file, err := os.OpenFile(string(path), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0777)
 	if err != nil {
 		sink := &logSink{path: STDOUT_LOG_PATH, file: os.Stdout}
 		fmt.Fprintf(os.Stderr, "Failed to open log file %s: %s\n",
