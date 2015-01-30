@@ -45,7 +45,7 @@ public class SamplerBuilder {
 
   public Sampler build() {
     String str = conf.get(SAMPLER_CONF_KEY);
-    if (str.isEmpty()) {
+    if (str == null || str.isEmpty()) {
       return NeverSampler.INSTANCE;
     }
     if (!str.contains(".")) {

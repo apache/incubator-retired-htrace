@@ -44,6 +44,11 @@ public class TestSampler {
         fromKeyValuePairs("sampler", "NonExistentSampler")).
         build();
     Assert.assertEquals(NeverSampler.class, neverSampler2.getClass());
+
+    Sampler neverSampler3 = new SamplerBuilder(HTraceConfiguration.
+        fromKeyValuePairs("sampler.is.not.defined", "NonExistentSampler")).
+        build();
+    Assert.assertEquals(NeverSampler.class, neverSampler3.getClass());
   }
 
   @Test
