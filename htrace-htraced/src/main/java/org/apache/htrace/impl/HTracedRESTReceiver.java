@@ -236,13 +236,15 @@ public class HTracedRESTReceiver implements SpanReceiver {
     return this.queue.isEmpty();
   }
 
+  private static long WARN_TIMEOUT_MS = 300000;
+
   @Override
   public void receiveSpan(Span span) {
     if (!this.queue.offer(span)) {
       // TODO: If failed the offer, run the background thread now. I can't block though?
-      long now = System.nanoTime();
+      long now = System.nanoTime() / 1000000L;
       // Only log every 5 minutes. Any more than this for a guest process is obnoxious
-      if ((now / 1000000) - lastAtCapacityWarningLog > 300000) {
+      if (now - lastAtCapacityWarningLog > WARN_TIMEOUT_MS) {
         LOG.warn("At capacity");
         this.lastAtCapacityWarningLog = now;
       }
