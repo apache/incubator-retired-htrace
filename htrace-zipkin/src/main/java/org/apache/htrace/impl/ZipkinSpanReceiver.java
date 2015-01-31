@@ -17,7 +17,6 @@
 
 package org.apache.htrace.impl;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.twitter.zipkin.gen.LogEntry;
 import com.twitter.zipkin.gen.Scribe;
 
@@ -45,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -119,7 +119,18 @@ public class ZipkinSpanReceiver implements SpanReceiver {
    * This will be the same factory for the lifetime of this object so that
    * no thread names will ever be duplicated.
    */
-  private final ThreadFactory tf;
+  private final ThreadFactory tf = new ThreadFactory() {
+    private final AtomicLong receiverIdx = new AtomicLong(0);
+
+    @Override
+    public Thread newThread(Runnable r) {
+      Thread t = new Thread(r);
+      t.setDaemon(true);
+      t.setName(String.format("zipkinSpanReceiver-%d",
+                receiverIdx.getAndIncrement()));
+      return t;
+    }
+  };
 
   ////////////////////
   /// Variables that will change on each call to configure()
@@ -133,10 +144,6 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   public ZipkinSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.protocolFactory = new TBinaryProtocol.Factory();
-
-    tf = new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("zipkinSpanReceiver-%d")
-        .build();
     configure(conf);
   }
 

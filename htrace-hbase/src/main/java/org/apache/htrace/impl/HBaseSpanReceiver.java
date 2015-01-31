@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,8 +50,6 @@ import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.protobuf.generated.SpanProtos;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HBase is an open source distributed datastore.
@@ -107,7 +106,18 @@ public class HBaseSpanReceiver implements SpanReceiver {
    * This will be the same factory for the lifetime of this object so that
    * no thread names will ever be duplicated.
    */
-  private final ThreadFactory tf;
+  private final ThreadFactory tf = new ThreadFactory() {
+    private final AtomicLong receiverIdx = new AtomicLong(0);
+
+    @Override
+    public Thread newThread(Runnable r) {
+      Thread t = new Thread(r);
+      t.setDaemon(true);
+      t.setName(String.format("hbaseSpanReceiver-%d",
+            receiverIdx.getAndIncrement()));
+      return t;
+    }
+  };
 
   private ExecutorService service;
   private final HTraceConfiguration conf;
@@ -119,9 +129,6 @@ public class HBaseSpanReceiver implements SpanReceiver {
 
   public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
-    this.tf = new ThreadFactoryBuilder().setDaemon(true)
-                                        .setNameFormat("hbaseSpanReceiver-%d")
-                                        .build();
     this.conf = conf;
     this.hconf = HBaseConfiguration.create();
     this.table = Bytes.toBytes(conf.get(TABLE_KEY, DEFAULT_TABLE));

@@ -49,9 +49,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.google.common.collect.Multimap;
-
-
 public class TestHBaseSpanReceiver {
   private static final Log LOG = LogFactory.getLog(TestHBaseSpanReceiver.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
