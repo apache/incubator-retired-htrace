@@ -43,6 +43,16 @@ public class Tracer {
   protected static String processId = null;
 
   /**
+   * Log a client error, and throw an exception.
+   *
+   * @param str     The message to use in the log and the exception.
+   */
+  static void clientError(String str) {
+    LOG.error(str);
+    throw new RuntimeException(str);
+  }
+
+  /**
    * Internal class for defered singleton idiom.
    * <p/>
    * https://en.wikipedia.org/wiki/Initialization_on_demand_holder_idiom

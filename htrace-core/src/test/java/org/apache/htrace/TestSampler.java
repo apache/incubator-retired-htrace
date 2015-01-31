@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
-import org.apache.htrace.TraceInfo;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.impl.AlwaysSampler;
 import org.apache.htrace.impl.NeverSampler;
@@ -64,7 +63,7 @@ public class TestSampler {
 
   @Test
   public void testAlwaysSampler() {
-    TraceScope cur = Trace.startSpan("test", new TraceInfo(0, 0));
+    TraceScope cur = Trace.startSpan("test");
     Assert.assertNotNull(cur);
     cur.close();
   }

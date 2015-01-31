@@ -16,6 +16,8 @@
  */
 package org.apache.htrace;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.MilliSpan;
 import org.apache.htrace.impl.TrueIfTracingSampler;
 import org.apache.htrace.wrappers.TraceCallable;
@@ -26,55 +28,81 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 
 /**
- * The primary way to interact with the library. Provides methods to start
- * spans, as well as set necessary tracing information.
+ * The Trace class is the primary way to interact with the library.  It provides
+ * methods to create and manipulate spans.
+ *
+ * A 'Span' represents a length of time.  It has many other attributes such as a
+ * description, ID, and even potentially a set of key/value strings attached to
+ * it.
+ *
+ * Each thread in your application has a single currently active currentSpan
+ * associated with it.  When this is non-null, it represents the current
+ * operation that the thread is doing.  Spans are NOT thread-safe, and must
+ * never be used by multiple threads at once.  With care, it is possible to
+ * safely pass a Span object between threads, but in most cases this is not
+ * necessary.
+ *
+ * A 'TraceScope' can either be empty, or contain a Span.  TraceScope objects
+ * implement the Java's Closeable interface.  Similar to file descriptors, they
+ * must be closed after they are created.  When a TraceScope contains a Span,
+ * this span is closed when the scope is closed.
+ *
+ * The 'startSpan' methods in this class do a few things:
+ * <ul>
+ *   <li>Create a new Span which has this thread's currentSpan as one of its parents.</li>
+ *   <li>Set currentSpan to the new Span.</li>
+ *   <li>Create a TraceSpan object to manage the new Span.</li>
+ * </ul>
+ *
+ * Closing a TraceScope does a few things:
+ * <ul>
+ *   <li>It closes the span which the scope was managing.</li>
+ *   <li>Set currentSpan to the previous currentSpan (which may be null).</li>
+ * </ul>
  */
 public class Trace {
+  private static final Log LOG = LogFactory.getLog(Trace.class);
   private final static Random random = new SecureRandom();
 
   /**
-   * Starts and returns a new span as the child of the current span if the
-   * default sampler (TrueIfTracingSampler) returns true, otherwise returns the
-   * NullSpan.
+   * Creates a new trace scope.
    *
-   * @param description Description of the span to be created.
+   * If this thread has a currently active trace span, the trace scope we create
+   * here will contain a new span descending from the currently active span.
+   * If there is no currently active trace span, the trace scope we create will
+   * be empty.
+   *
+   * @param description   The description field for the new span to create.
    */
   public static TraceScope startSpan(String description) {
     return startSpan(description, TrueIfTracingSampler.INSTANCE);
   }
 
   /**
-   * Starts and returns a new span as the child of the parameter 'parent'. This
-   * will always return a new span, even if tracing wasn't previously enabled for
-   * this thread.
+   * Creates a new trace scope.
    *
-   * @param description Description of the span to be created.
-   * @param parent      The parent that should be used to create the child span that is to
-   *                    be returned.
+   * If this thread has a currently active trace span, it must be the 'parent'
+   * span that you pass in here as a parameter.  The trace scope we create here
+   * will contain a new span which is a child of 'parent'.
+   *
+   * @param description   The description field for the new span to create.
    */
   public static TraceScope startSpan(String description, Span parent) {
-    if (parent == null) return startSpan(description);
+    if (parent == null) {
+      return startSpan(description);
+    }
+    Span currentSpan = currentSpan();
+    if ((currentSpan != null) && (currentSpan != parent)) {
+      Tracer.clientError("HTrace client error: thread " +
+          Thread.currentThread().getName() + " tried to start a new Span " +
+          "with parent " + parent.toString() + ", but there is already a " +
+          "currentSpan " + currentSpan);
+    }
     return continueSpan(parent.child(description));
-  }
-
-  public static TraceScope startSpan(String description, TraceInfo tinfo) {
-    if (tinfo == null) return continueSpan(null);
-    Span newSpan = new MilliSpan(description, tinfo.traceId, tinfo.spanId,
-        random.nextLong(), Tracer.getProcessId());
-    return continueSpan(newSpan);
   }
 
   public static <T> TraceScope startSpan(String description, Sampler<T> s) {
     return startSpan(description, s, null);
-  }
-
-  public static TraceScope startSpan(String description, Sampler<TraceInfo> s, TraceInfo tinfo) {
-    Span span = null;
-    if (isTracing() || s.next(tinfo)) {
-      span = new MilliSpan(description, tinfo.traceId, tinfo.spanId,
-          random.nextLong(), Tracer.getProcessId());
-    }
-    return continueSpan(span);
   }
 
   public static <T> TraceScope startSpan(String description, Sampler<T> s, T info) {

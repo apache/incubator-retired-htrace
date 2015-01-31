@@ -17,8 +17,12 @@
 package org.apache.htrace;
 
 import java.io.Closeable;
+import java.lang.Thread;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class TraceScope implements Closeable {
+  private static final Log LOG = LogFactory.getLog(TraceScope.class);
 
   /**
    * the span for this scope
@@ -49,12 +53,18 @@ public class TraceScope implements Closeable {
    * @return the same Span object
    */
   public Span detach() {
+    if (detached) {
+      Tracer.clientError("Tried to detach trace span " + span + " but " +
+          "it has already been detached.");
+    }
     detached = true;
 
     Span cur = Tracer.getInstance().currentSpan();
     if (cur != span) {
-      Tracer.LOG.debug("Closing trace span " + span + " but " +
-          cur + " was top-of-stack");
+      Tracer.clientError("Tried to detach trace span " + span + " but " +
+          "it is not the current span for the " +
+          Thread.currentThread().getName() + " thread.  You have " +
+          "probably forgotten to close or detach " + cur);
     } else {
       Tracer.getInstance().setCurrentSpan(savedSpan);
     }
@@ -71,12 +81,19 @@ public class TraceScope implements Closeable {
 
   @Override
   public void close() {
-    if (span == null) return;
-
-    if (!detached) {
-      // The span is done
+    if ((span == null) || detached) {
+      return;
+    }
+    detached = true;
+    Span cur = Tracer.getInstance().currentSpan();
+    if (cur != span) {
+      Tracer.clientError("Tried to close trace span " + span + " but " +
+          "it is not the current span for the " +
+          Thread.currentThread().getName() + " thread.  You have " +
+          "probably forgotten to close or detach " + cur);
+    } else {
       span.stop();
-      detach();
+      Tracer.getInstance().setCurrentSpan(savedSpan);
     }
   }
 }

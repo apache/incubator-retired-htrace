@@ -149,11 +149,11 @@ public class TraceCreator {
   }
 
   public void pretendRpcSend() {
-    pretendRpcReceiveWithTraceInfo(TraceInfo.fromSpan(Trace.currentSpan()));
+    pretendRpcReceiveWithTraceInfo(Trace.currentSpan());
   }
 
-  public void pretendRpcReceiveWithTraceInfo(TraceInfo traceInfo) {
-    TraceScope s = Trace.startSpan("received RPC", traceInfo);
+  public void pretendRpcReceiveWithTraceInfo(Span parent) {
+    TraceScope s = Trace.startSpan("received RPC", parent);
     try {
       importantWork1();
     } finally {

@@ -158,4 +158,16 @@ public class TraceTree {
   public SpansByProcessId getSpansByProcessId() {
     return spansByProcessId;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder bld = new StringBuilder();
+    String prefix = "";
+    for (Iterator<Span> iter = spansByParent.iterator(); iter.hasNext();) {
+      Span span = iter.next();
+      bld.append(prefix).append(span.toString());
+      prefix = "\n";
+    }
+    return bld.toString();
+  }
 }
