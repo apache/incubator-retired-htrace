@@ -20,6 +20,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -176,17 +177,20 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 }
 
 type queryHandler struct {
+	lg *common.Logger
 	dataStoreHandler
 }
 
 func (hand *queryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
-	_, ok := hand.getReqField32("lim", w, req)
-	if !ok {
+	queryString := req.FormValue("query")
+	if queryString == "" {
+		writeError(hand.lg, w, http.StatusBadRequest, "No query provided.\n")
 		return
 	}
 	var query common.Query
-	dec := json.NewDecoder(req.Body)
+	reader := bytes.NewBufferString(queryString)
+	dec := json.NewDecoder(reader)
 	err := dec.Decode(&query)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusBadRequest,
@@ -262,7 +266,7 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 		store: store, lg: rsv.lg}}
 	r.Handle("/writeSpans", writeSpansH).Methods("POST")
 
-	queryH := &queryHandler{dataStoreHandler: dataStoreHandler{store: store}}
+	queryH := &queryHandler{lg: rsv.lg, dataStoreHandler: dataStoreHandler{store: store}}
 	r.Handle("/query", queryH).Methods("GET")
 
 	span := r.PathPrefix("/span").Subrouter()

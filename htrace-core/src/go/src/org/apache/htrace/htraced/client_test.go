@@ -124,4 +124,16 @@ func TestClientOperations(t *testing.T) {
 		t.Fatalf("FindChildren(%d) returned an invalid number of "+
 			"children: expected %d, got %d\n", childlessSpan.Id, 0, len(children))
 	}
+
+	// Test Query
+	var query common.Query
+	query = common.Query{Lim: 10}
+	spans, err := hcl.Query(&query)
+	if err != nil {
+		t.Fatalf("Query({lim: %d}) failed: %s\n", 10, err.Error())
+	}
+	if len(spans) != 10 {
+		t.Fatalf("Query({lim: %d}) returned an invalid number of "+
+			"children: expected %d, got %d\n", 10, 10, len(spans))
+	}
 }

@@ -113,7 +113,8 @@ func (hcl *Client) Query(query *common.Query) ([]common.Span, error) {
 		return nil, errors.New(fmt.Sprintf("Error marshalling query: %s", err.Error()))
 	}
 	var out []byte
-	out, _, err = hcl.makeRestRequest("GET", "query", bytes.NewReader(in))
+	var url = fmt.Sprintf("query?query=%s", in)
+	out, _, err = hcl.makeGetRequest(url)
 	if err != nil {
 		return nil, err
 	}

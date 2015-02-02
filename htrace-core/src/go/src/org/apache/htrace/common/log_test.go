@@ -53,7 +53,7 @@ func verifyLines(t *testing.T, rdr io.Reader, lines []string) {
 		line := scanner.Text()
 		if !strings.Contains(line, lines[lineIdx]) {
 			t.Fatalf("Error on line %d: didn't find substring '%s' in line '%s'\n",
-					(lineIdx + 1), lines[lineIdx], line)
+				(lineIdx + 1), lines[lineIdx], line)
 		}
 		lineIdx++
 	}
@@ -80,7 +80,7 @@ func TestFileLogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open file %s: %s\n", logPath, err.Error())
 	}
-	verifyLines(t, logFile, []string {
+	verifyLines(t, logFile, []string{
 		"problem with the foobar",
 		"and another problem with the foobar",
 	})
@@ -110,7 +110,7 @@ func TestMultipleFileLogs(t *testing.T) {
 	}
 	fooLg.Tracef("Fizz buzz2\n")
 	barLg.Tracef("Fizz buzz3\n")
-	verifyLines(t, logFile, []string {
+	verifyLines(t, logFile, []string{
 		"The foo needs maintenance.",
 		"The bar is open",
 		"Fizz buzz",
