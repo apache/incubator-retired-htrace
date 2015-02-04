@@ -115,6 +115,26 @@ func openFile(cnfName string, paths []string) (io.ReadCloser, error) {
 	return nil, nil
 }
 
+// Try to parse a command-line element as a key=value pair.
+func parseAsConfigFlag(flag string) (string, string) {
+	var confPart string
+	if strings.HasPrefix(flag, "-D") {
+		confPart = flag[2:]
+	} else if strings.HasPrefix(flag, "--D") {
+		confPart = flag[3:]
+	} else {
+		return "", ""
+	}
+	if len(confPart) == 0 {
+		return "", ""
+	}
+	idx := strings.Index(confPart, "=")
+	if idx == -1 {
+		return confPart, "true"
+	}
+	return confPart[0:idx], confPart[idx+1:]
+}
+
 // Build a new configuration object from the provided conf.Builder.
 func (bld *Builder) Build() (*Config, error) {
 	// Load values and defaults
@@ -141,14 +161,11 @@ func (bld *Builder) Build() (*Config, error) {
 	var i int
 	for i < len(bld.Argv) {
 		str := bld.Argv[i]
-		if strings.HasPrefix(str, "-D") {
-			idx := strings.Index(str, "=")
-			if idx == -1 {
-				key := str[2:]
+		key, val := parseAsConfigFlag(str)
+		if key != "" {
+			if val == "" {
 				cnf.settings[key] = "true"
 			} else {
-				key := str[2:idx]
-				val := str[idx+1:]
 				cnf.settings[key] = val
 			}
 			bld.Argv = append(bld.Argv[:i], bld.Argv[i+1:]...)
