@@ -21,8 +21,9 @@
 App.Span = Backbone.Model.extend({
   "defaults": {
     "spanId": null,
-    "parents": null,
+    "traceId": null,
     "processId": null,
+    "parents": null,
     "description": null,
     "beginTime": 0,
     "stopTime": 0
@@ -34,13 +35,15 @@ App.Span = Backbone.Model.extend({
     "e": "stopTime",
     "d": "description",
     "r": "processId",
-    "p": "parents"
+    "p": "parents",
+    "i": "traceId"
   },
 
   parse: function(response, options) {
     var attrs = {};
+    var $this = this;
     $.each(response, function(key, value) {
-      attrs[(key in this.shorthand) ? this.shorthand[key] : key] = value;
+      attrs[(key in $this.shorthand) ? $this.shorthand[key] : key] = value;
     });
     return attrs;
   },
@@ -51,5 +54,32 @@ App.Span = Backbone.Model.extend({
 });
 
 App.Spans = Backbone.Collection.extend({
-  model: App.Span
+  model: App.Span,
+  url: "/query",
+
+  initialize: function(models, options) {
+    this.predicates = [];
+    return Backbone.Collection.prototype.initialize.apply(this, arguments);
+  },
+
+  fetch: function(options) {
+    options = options ? _.clone(options) : {};
+    options.data = {
+      "query": {
+        "lim": 100000
+      }
+    };
+
+    if (this.predicates.length > 0) {
+      options.data.query.pred = this.predicates;
+    }
+
+    options.data.query = JSON.stringify(options.data.query);
+
+    return Backbone.Collection.prototype.fetch.apply(this, [options]);
+  },
+
+  setPredicates: function(predicates) {
+    this.predicates = predicates;
+  }
 });

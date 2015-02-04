@@ -25,7 +25,9 @@ var Router = Backbone.Router.extend({
   },
 
   initialize: function() {
-    this.spansCollection = spans.clone();
+    this.spansCollection = new App.Spans();
+    this.spansCollection.fetch();
+
     this.spanViews = {};
 
     this.listSpansView = new App.ListSpansView({
@@ -49,10 +51,17 @@ var Router = Backbone.Router.extend({
 
     // Cache views to avoid leaks
     if (!(span in this.spanViews)) {
+      var model = this.spansCollection.findWhere({
+        "spanId": span
+      });
+
+      if (!model) {
+        urlconf.navigate("/", true);
+        return;
+      }
+
       this.spanViews[span] = new App.SpanView({
-        "model": this.spansCollection.findWhere({
-          "spanId": parseInt(span)
-        }),
+        "model": model,
         "id": "span-details"
       });
     }

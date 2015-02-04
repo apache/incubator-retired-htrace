@@ -51,9 +51,6 @@ App.ListSpansView = Backbone.View.extend({
   "tagName": "div",
 
   "initialize": function() {
-    _.bindAll(this, "render");
-    this.collection.bind('change', this.render);
-
     this.rendered = false;
 
     this.listSpansView = new Backgrid.Grid({

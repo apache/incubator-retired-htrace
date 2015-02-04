@@ -28,48 +28,58 @@ App.SearchView = Backbone.View.extend({
     var begin, stop;
 
     var description = $(this.el).find("input[type='search']").val();
-    var startdate = $(this.el).find("#begindate").val();// || now.format("D MMMM, YYYY");
-    var starttime = $(this.el).find("#begintime").val() || now.format("H:mm A");
+    var begindate = $(this.el).find("#begindate").val();// || now.format("D MMMM, YYYY");
+    var begintime = $(this.el).find("#begintime").val() || now.format("H:mm A");
     var enddate = $(this.el).find("#stopdate").val();// || now.format("D MMMM, YYYY");
     var endtime = $(this.el).find("#stoptime").val() || now.format("H:mm A");
     var duration = $(this.el).find("#duration").val();
 
     var newSpans = spans.clone();
 
-    if (startdate) {
-      begin = new moment(startdate + " " + starttime).unix();
+    if (begindate) {
+      begin = new moment(begindate + " " + begintime).unix();
     }
 
     if (enddate) {
       stop = new moment(enddate + " " + endtime).unix();
     }
 
+    var predicates = [];
+
     if (begin) {
-      newSpans = newSpans.filter(function(span) {
-        return span.get("beginTime") > parseInt(begin);
+      predicates.push({
+        "op": "ge",
+        "field": "begin",
+        "val": begin.toString()
       });
     }
 
     if (stop) {
-      newSpans = newSpans.filter(function(span) {
-        return span.get("stopTime") < parseInt(stop);
+      predicates.push({
+        "op": "le",
+        "field": "end",
+        "val": stop.toString()
       });
     }
 
     if (duration) {
-      newSpans = newSpans.filter(function(span) {
-        return span.duration() > parseInt(duration);
+      predicates.push({
+        "op": "ge",
+        "field": "duration",
+        "val": duration.toString()
       });
     }
 
-    newSpans = newSpans.filter(function(span) {
-      return span.get("description").toLowerCase().indexOf(description) != -1;
-    });
+    if (description) {
+      predicates.push({
+        "op": "cn",
+        "field": "description",
+        "val": description
+      });
+    }
 
-    // TODO: this.collection.fetch
-    this.collection.reset(newSpans);
-
-    this.collection.trigger('change');
+    this.collection.setPredicates(predicates);
+    this.collection.fetch();
 
     return false;
   }

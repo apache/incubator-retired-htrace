@@ -163,7 +163,7 @@ func doWriteSpanJsonFile(hcl *htrace.Client, spanFile string) int {
 			if err == io.EOF {
 				break
 			}
-			fmt.Println("Failed to decode JSON: %s", err.Error())
+			fmt.Printf("Failed to decode JSON: %s\n", err.Error())
 			return EXIT_FAILURE
 		}
 		if *verbose {
