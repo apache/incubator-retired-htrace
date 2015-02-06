@@ -155,3 +155,35 @@ func (hcl *Client) makeRestRequest(reqType string, reqName string, reqBody io.Re
 	}
 	return body, 0, nil
 }
+
+// Dump all spans from the htraced daemon.
+func (hcl *Client) DumpAll(lim int, out chan *common.Span) error {
+	defer func() {
+		close(out)
+	}()
+	searchId := common.SpanId(0)
+	for {
+		q := common.Query{
+			Lim: lim,
+			Predicates: []common.Predicate{
+				common.Predicate{
+					Op:    "ge",
+					Field: "spanid",
+					Val:   searchId.String(),
+				},
+			},
+		}
+		spans, err := hcl.Query(&q)
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error querying spans with IDs at or after "+
+				"%s: %s", searchId.String(), err.Error()))
+		}
+		if len(spans) == 0 {
+			return nil
+		}
+		for i := range spans {
+			out <- &spans[i]
+		}
+		searchId = spans[len(spans)-1].Id + 1
+	}
+}

@@ -20,11 +20,14 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	htrace "org/apache/htrace/client"
 	"org/apache/htrace/common"
 	"org/apache/htrace/test"
+	"sort"
 	"testing"
+	"time"
 )
 
 func TestClientGetServerInfo(t *testing.T) {
@@ -45,6 +48,17 @@ func TestClientGetServerInfo(t *testing.T) {
 	}
 }
 
+func createRandomTestSpans(amount int) common.SpanSlice {
+	rnd := rand.New(rand.NewSource(2))
+	allSpans := make(common.SpanSlice, amount)
+	allSpans[0] = test.NewRandomSpan(rnd, allSpans[0:0])
+	for i := 1; i < amount; i++ {
+		allSpans[i] = test.NewRandomSpan(rnd, allSpans[1:i])
+	}
+	allSpans[1].SpanData.Parents = []common.SpanId{common.SpanId(allSpans[0].Id)}
+	return allSpans
+}
+
 func TestClientOperations(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestClientOperations", NumDataDirs: 2}
 	ht, err := htraceBld.Build()
@@ -60,13 +74,7 @@ func TestClientOperations(t *testing.T) {
 
 	// Create some random trace spans.
 	NUM_TEST_SPANS := 30
-	rnd := rand.New(rand.NewSource(2))
-	allSpans := make([]*common.Span, NUM_TEST_SPANS)
-	allSpans[0] = test.NewRandomSpan(rnd, allSpans[0:0])
-	for i := 1; i < NUM_TEST_SPANS; i++ {
-		allSpans[i] = test.NewRandomSpan(rnd, allSpans[1:i])
-	}
-	allSpans[1].SpanData.Parents = []common.SpanId{common.SpanId(allSpans[0].Id)}
+	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
 
 	// Write half of the spans to htraced via the client.
 	for i := 0; i < NUM_TEST_SPANS/2; i++ {
@@ -135,5 +143,59 @@ func TestClientOperations(t *testing.T) {
 	if len(spans) != 10 {
 		t.Fatalf("Query({lim: %d}) returned an invalid number of "+
 			"children: expected %d, got %d\n", 10, 10, len(spans))
+	}
+}
+
+func TestDumpAll(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestDumpAll", NumDataDirs: 2}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf())
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+
+	NUM_TEST_SPANS := 100
+	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
+	sort.Sort(allSpans)
+	for i := range allSpans {
+		err = hcl.WriteSpan(allSpans[i])
+		if err != nil {
+			t.Fatalf("failed to write span %d: %s", i, err.Error())
+		}
+	}
+	out := make(chan *common.Span, 50)
+	var dumpErr error
+	go func() {
+		dumpErr = hcl.DumpAll(3, out)
+	}()
+	var numSpans int
+	nextLogTime := time.Now().Add(time.Millisecond * 5)
+	for {
+		span, channelOpen := <-out
+		if !channelOpen {
+			break
+		}
+		common.ExpectSpansEqual(t, allSpans[numSpans], span)
+		numSpans++
+		if testing.Verbose() {
+			now := time.Now()
+			if !now.Before(nextLogTime) {
+				nextLogTime = now
+				nextLogTime = nextLogTime.Add(time.Millisecond * 5)
+				fmt.Printf("read back %d span(s)...\n", numSpans)
+			}
+		}
+	}
+	if numSpans != len(allSpans) {
+		t.Fatalf("expected to read %d spans... but only read %d\n",
+			len(allSpans), numSpans)
+	}
+	if dumpErr != nil {
+		t.Fatalf("got dump error %s\n", dumpErr.Error())
 	}
 }

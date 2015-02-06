@@ -58,6 +58,21 @@ func (op Op) IsDescending() bool {
 	return op == LESS_THAN_OR_EQUALS
 }
 
+func (op Op) IsValid() bool {
+	ops := ValidOps()
+	for i := range(ops) {
+		if ops[i] == op {
+			return true
+		}
+	}
+	return false
+}
+
+func ValidOps() []Op {
+	return []Op{CONTAINS, EQUALS, LESS_THAN_OR_EQUALS, GREATER_THAN_OR_EQUALS,
+		GREATER_THAN}
+}
+
 type Field string
 
 const (
@@ -67,6 +82,20 @@ const (
 	END_TIME    Field = "end"
 	DURATION    Field = "duration"
 )
+
+func (field Field) IsValid() bool {
+	fields := ValidFields()
+	for i := range(fields) {
+		if fields[i] == field {
+			return true
+		}
+	}
+	return false
+}
+
+func ValidFields() []Field {
+	return []Field{SPAN_ID, DESCRIPTION, BEGIN_TIME, END_TIME, DURATION}
+}
 
 type Predicate struct {
 	Op    Op     `json:"op"`

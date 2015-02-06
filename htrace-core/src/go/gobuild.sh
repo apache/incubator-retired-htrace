@@ -108,9 +108,9 @@ install)
     go install -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
     ;;
 bench)
-    go test -v org/apache/htrace/... -test.bench=. "$@"
+    go test org/apache/htrace/... -test.bench=. "$@"
     ;;
 *)
-    go ${ACTION} -v org/apache/htrace/... "$@"
+    go ${ACTION} org/apache/htrace/... "$@"
     ;;
 esac

@@ -36,7 +36,7 @@ import (
 // this JSON data, we have to simply pass it as a string.
 //
 
-type TraceInfoMap map[string][]byte
+type TraceInfoMap map[string]string
 
 type TimelineAnnotation struct {
 	Time int64  `json:"t"`
@@ -55,6 +55,20 @@ func (id SpanId) Val() int64 {
 
 func (id SpanId) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
+}
+
+type SpanSlice []*Span
+
+func (s SpanSlice) Len() int {
+	return len(s)
+}
+
+func (s SpanSlice) Less(i, j int) bool {
+	return s[i].Id < s[j].Id
+}
+
+func (s SpanSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 type SpanIdSlice []SpanId
