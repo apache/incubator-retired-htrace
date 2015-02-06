@@ -23,12 +23,14 @@ import static org.hamcrest.CoreMatchers.containsString;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
+import org.apache.htrace.Tracer;
 import org.apache.htrace.TraceTree.SpansByParent;
 import org.apache.htrace.TraceTree;
 import org.apache.htrace.impl.AlwaysSampler;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.apache.htrace.impl.POJOSpanReceiver;
 import org.apache.htrace.impl.StandardOutSpanReceiver;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,7 +59,6 @@ public class TestBadClient {
     assertTrue("Expected to get exception because of improper " +
         "scope closure.", gotException);
     innerScope.close();
-    Tracer.getInstance().setCurrentSpan(null);
   }
 
   /**
@@ -146,5 +147,10 @@ public class TestBadClient {
     }
     assertTrue("Expected to get exception because of incorrect startSpan.",
         gotException);
+  }
+
+  @After
+  public void resetCurrentSpan() {
+    Tracer.getInstance().setCurrentSpan(null);
   }
 }
