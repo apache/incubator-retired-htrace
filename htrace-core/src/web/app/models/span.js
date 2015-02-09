@@ -53,33 +53,27 @@ App.Span = Backbone.Model.extend({
   }
 });
 
-App.Spans = Backbone.Collection.extend({
+App.Spans = Backbone.PageableCollection.extend({
   model: App.Span,
+  mode: "client",
+  state: {
+    pageSize: 2
+  },
   url: "/query",
 
-  initialize: function(models, options) {
-    this.predicates = [];
-    return Backbone.Collection.prototype.initialize.apply(this, arguments);
-  },
-
-  fetch: function(options) {
-    options = options ? _.clone(options) : {};
-    options.data = {
-      "query": {
-        "lim": 100000
-      }
+  query: function(options, predicates) {
+    var query = {
+      "lim": 100000
     };
 
-    if (this.predicates.length > 0) {
-      options.data.query.pred = this.predicates;
+    if (predicates && predicates.length > 0) {
+      query.pred = predicates;
     }
 
-    options.data.query = JSON.stringify(options.data.query);
+    options = options ? _.clone(options) : {};
+    options.data = options.data ? _.clone(options.data) : {};
+    options.data.query = JSON.stringify(query);
 
-    return Backbone.Collection.prototype.fetch.apply(this, [options]);
-  },
-
-  setPredicates: function(predicates) {
-    this.predicates = predicates;
+    return this.fetch(options);
   }
 });

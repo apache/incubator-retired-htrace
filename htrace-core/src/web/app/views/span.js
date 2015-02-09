@@ -46,7 +46,6 @@ App.SpanView = Backbone.View.extend({
   }
 });
 
-
 App.ListSpansView = Backbone.View.extend({
   "tagName": "div",
 
@@ -75,15 +74,23 @@ App.ListSpansView = Backbone.View.extend({
         }
       })
     });
+
+    this.listSpansPaginator = new Backgrid.Extension.Paginator({
+      collection: this.collection
+    });
   },
 
   "render": function() {
     $(this.listSpansView.$el).detach();
+    $(this.listSpansPaginator.$el).detach();
 
     this.listSpansView.render();
+    this.listSpansPaginator.render();
 
     $(this.$el).append(this.listSpansView.$el);
+    $(this.$el).append(this.listSpansPaginator.$el);
 
     return this;
   }
 });
+

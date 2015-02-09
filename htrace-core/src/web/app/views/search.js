@@ -34,7 +34,7 @@ App.SearchView = Backbone.View.extend({
     var endtime = $(this.el).find("#stoptime").val() || now.format("H:mm A");
     var duration = $(this.el).find("#duration").val();
 
-    var newSpans = spans.clone();
+    var newSpans = spans.fullCollection;
 
     if (begindate) {
       begin = new moment(begindate + " " + begintime).unix();
@@ -78,8 +78,7 @@ App.SearchView = Backbone.View.extend({
       });
     }
 
-    this.collection.setPredicates(predicates);
-    this.collection.fetch();
+    this.collection.query(null, predicates);
 
     return false;
   }

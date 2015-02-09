@@ -26,7 +26,7 @@ var Router = Backbone.Router.extend({
 
   initialize: function() {
     this.spansCollection = new App.Spans();
-    this.spansCollection.fetch();
+    this.spansCollection.query();
 
     this.spanViews = {};
 
