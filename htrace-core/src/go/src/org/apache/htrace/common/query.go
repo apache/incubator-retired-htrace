@@ -51,6 +51,7 @@ const (
 	EQUALS                 Op = "eq"
 	LESS_THAN_OR_EQUALS    Op = "le"
 	GREATER_THAN_OR_EQUALS Op = "ge"
+	GREATER_THAN           Op = "gt"
 )
 
 func (op Op) IsDescending() bool {

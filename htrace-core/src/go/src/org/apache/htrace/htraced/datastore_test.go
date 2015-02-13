@@ -271,6 +271,51 @@ func TestQueries3(t *testing.T) {
 	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[0]})
 }
 
+func TestQueries4(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueries4",
+		WrittenSpans: make(chan *common.Span, 100)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
+		t.Fatal()
+	}
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.BEGIN_TIME,
+				Val:   "125",
+			},
+		},
+		Lim: 5,
+	}, []common.Span{SIMPLE_TEST_SPANS[2]})
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN_OR_EQUALS,
+				Field: common.DESCRIPTION,
+				Val:   "openFd",
+			},
+		},
+		Lim: 2,
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[2]})
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.DESCRIPTION,
+				Val:   "openFd",
+			},
+		},
+		Lim: 2,
+	}, []common.Span{SIMPLE_TEST_SPANS[2]})
+}
+
 func BenchmarkDatastoreWrites(b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "BenchmarkDatastoreWrites",
 		WrittenSpans: make(chan *common.Span, b.N)}

@@ -520,7 +520,8 @@ func loadPredicateData(pred *common.Predicate) (*predicateData, error) {
 
 	// Validate the predicate operation.
 	switch pred.Op {
-	case common.EQUALS, common.LESS_THAN_OR_EQUALS, common.GREATER_THAN_OR_EQUALS:
+	case common.EQUALS, common.LESS_THAN_OR_EQUALS,
+		common.GREATER_THAN_OR_EQUALS, common.GREATER_THAN:
 		break
 	case common.CONTAINS:
 		if p.fieldIsNumeric() {
@@ -618,6 +619,8 @@ func (pred *predicateData) satisfiedBy(span *common.Span) bool {
 			return intVal <= pred.intKey
 		case common.GREATER_THAN_OR_EQUALS:
 			return intVal >= pred.intKey
+		case common.GREATER_THAN:
+			return intVal > pred.intKey
 		default:
 			panic(fmt.Sprintf("unknown Op type %s should have been caught "+
 				"during normalization", pred.Op))
@@ -632,6 +635,8 @@ func (pred *predicateData) satisfiedBy(span *common.Span) bool {
 			return strVal <= pred.strKey
 		case common.GREATER_THAN_OR_EQUALS:
 			return strVal >= pred.strKey
+		case common.GREATER_THAN:
+			return strVal > pred.strKey
 		default:
 			panic(fmt.Sprintf("unknown Op type %s should have been caught "+
 				"during normalization", pred.Op))
@@ -677,6 +682,25 @@ type source struct {
 	nexts     []*common.Span
 	numRead   []int
 	keyPrefix byte
+}
+
+// Return true if this operation may require skipping the first result we get back from leveldb.
+func mayRequireOneSkip(op common.Op) bool {
+	switch op {
+	// When dealing with descending predicates, the first span we read might not satisfy
+	// the predicate, even though subsequent ones will.  This is because the iter.Seek()
+	// function "moves the iterator the position of the key given or, if the key doesn't
+	// exist, the next key that does exist in the database."  So if we're on that "next
+	// key" it will not satisfy the predicate, but the keys previous to it might.
+	case common.LESS_THAN_OR_EQUALS:
+		return true
+	// iter.Seek basically takes us to the key which is "greater than or equal to" some
+	// value.  Since we want greater than (not greater than or equal to) we may have to
+	// skip the first key.
+	case common.GREATER_THAN:
+		return true
+	}
+	return false
 }
 
 // Fill in the entry in the 'next' array for a specific shard.
@@ -737,12 +761,7 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		} else {
 			lg.Debugf("Span %016x from shard %d does not satisfy the predicate.\n",
 				sid, shardIdx)
-			if src.numRead[shardIdx] <= 1 && src.pred.Op.IsDescending() {
-				// When dealing with descending predicates, the first span we read might not satisfy
-				// the predicate, even though subsequent ones will.  This is because the iter.Seek()
-				// function "moves the iterator the position of the key given or, if the key doesn't
-				// exist, the next key that does exist in the database."  So if we're on that "next
-				// key" it will not satisfy the predicate, but the keys previous to it might.
+			if src.numRead[shardIdx] <= 1 && mayRequireOneSkip(src.pred.Op) {
 				continue
 			}
 			// This and subsequent entries don't satisfy predicate
