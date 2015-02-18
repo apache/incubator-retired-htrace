@@ -112,6 +112,7 @@ func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	if !ok {
 		return
 	}
+	hand.lg.Debugf("findSidHandler(sid=%s)\n", common.SpanId(sid))
 	span := hand.store.FindSpan(sid)
 	if span == nil {
 		writeError(hand.lg, w, http.StatusNoContent, fmt.Sprintf("No such span as %s\n",
@@ -139,6 +140,7 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	if !ok {
 		return
 	}
+	hand.lg.Debugf("findChildrenHandler(sid=%s, lim=%d)\n", common.SpanId(sid), lim)
 	children := hand.store.FindChildren(sid, lim)
 	jbytes, err := json.Marshal(children)
 	if err != nil {
@@ -170,6 +172,7 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		}
 		spans = append(spans, &span)
 	}
+	hand.lg.Debugf("writeSpansHandler: received %d span(s).\n", len(spans))
 	for spanIdx := range spans {
 		hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
 		hand.store.WriteSpan(spans[spanIdx])
@@ -238,6 +241,15 @@ func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	w.Write([]byte(rsc))
 }
 
+type logErrorHandler struct {
+	lg *common.Logger
+}
+
+func (hand *logErrorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	hand.lg.Errorf("Got unknown request %s\n", req.RequestURI)
+	writeError(hand.lg, w, http.StatusBadRequest, "Unknown request.")
+}
+
 type RestServer struct {
 	listener net.Listener
 	lg       *common.Logger
@@ -279,6 +291,9 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 
 	// Default Handler. This will serve requests for static requests.
 	r.PathPrefix("/").Handler(&defaultServeHandler{lg: rsv.lg}).Methods("GET")
+
+	// Log an error message for unknown non-GET requests.
+	r.PathPrefix("/").Handler(&logErrorHandler{lg: rsv.lg})
 
 	go http.Serve(rsv.listener, r)
 

@@ -25,6 +25,8 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,6 +36,8 @@ import org.junit.Test;
  * in methods in the below.
  */
 public class TestHTracedProcess {
+  private static final Log LOG =
+      LogFactory.getLog(TestHTracedProcess.class);
   private DataDir testDir = null;
   private final int TIMEOUT = 10000;
 
@@ -51,7 +55,8 @@ public class TestHTracedProcess {
     connection.setReadTimeout(TIMEOUT);
     connection.connect();
     StringBuffer sb = new StringBuffer();
-    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+    BufferedReader reader = new BufferedReader(
+        new InputStreamReader(connection.getInputStream()));
     try {
       String line = null;
       while ((line = reader.readLine()) != null) {
@@ -70,24 +75,26 @@ public class TestHTracedProcess {
    * @throws InterruptedException
    */
   @Test (timeout=10000)
-  public void testStartStopHTraced() throws IOException, InterruptedException {
-    // TODO: Make the test port random so no classes if concurrent test runs. Anything better
-    // I can do here?  Pass a zero and have the daemon tell me where it is successfully listening?
-    String restURL = "http://localhost:9096/";
-    URL restServerURL = new URL(restURL);
+  public void testStartStopHTraced() throws Exception {
     HTracedProcess htraced = null;
     File dataDir = this.testDir.getDataDir();
     File topLevel = DataDir.getTopLevelOfCheckout(dataDir);
     try {
-      htraced = new HTracedProcess(HTracedProcess.getPathToHTraceBinaryFromTopLevel(topLevel),
-        dataDir, restServerURL);
-      String str = doGet(new URL(restServerURL + "server/info"));
+      htraced = new HTracedProcess(HTracedProcess.
+          getPathToHTraceBinaryFromTopLevel(topLevel),
+          dataDir, "localhost");
+      LOG.info("Started HTracedProcess with REST server URL " +
+          htraced.getHttpAddr());
+      String str = doGet(new URL(
+          "http://" + htraced.getHttpAddr() + "/server/info"));
       // Assert we go something back.
       assertTrue(str.contains("ReleaseVersion"));
       // Assert that the datadir is not empty.
     } finally {
-      if (htraced != null) htraced.destroy();
-      System.out.println("ExitValue=" + htraced.exitValue());
+      if (htraced != null) {
+        htraced.destroy();
+        System.out.println("ExitValue=" + htraced.waitFor());
+      }
     }
   }
 }

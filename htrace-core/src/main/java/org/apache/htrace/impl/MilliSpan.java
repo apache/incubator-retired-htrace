@@ -50,6 +50,7 @@ public class MilliSpan implements Span {
 
   private static Random rand = new Random();
   private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
+  private static final long EMPTY_PARENT_ARRAY[] = new long[0];
 
   private long begin;
   private long end;
@@ -74,7 +75,7 @@ public class MilliSpan implements Span {
     private long end;
     private String description;
     private long traceId;
-    private long parents[];
+    private long parents[] = EMPTY_PARENT_ARRAY;
     private long spanId;
     private Map<String, String> traceInfo = null;
     private String processId;

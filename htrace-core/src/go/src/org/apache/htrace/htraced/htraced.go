@@ -20,7 +20,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
@@ -69,12 +71,54 @@ func main() {
 		lg.Errorf("Error creating datastore: %s\n", err.Error())
 		os.Exit(1)
 	}
-	_, err = CreateRestServer(cnf, store)
+	var rsv *RestServer
+	rsv, err = CreateRestServer(cnf, store)
 	if err != nil {
 		lg.Errorf("Error creating REST server: %s\n", err.Error())
 		os.Exit(1)
 	}
+	naddr := cnf.Get(conf.HTRACE_STARTUP_NOTIFICATION_ADDRESS)
+	if naddr != "" {
+		notif := StartupNotification{
+			HttpAddr:  rsv.Addr().String(),
+			ProcessId: os.Getpid(),
+		}
+		err = sendStartupNotification(naddr, &notif)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to send startup notification: "+
+				"%s\n", err.Error())
+			os.Exit(1)
+		}
+	}
 	for {
 		time.Sleep(time.Duration(10) * time.Hour)
 	}
+}
+
+// A startup notification message that we optionally send on startup.
+// Used by unit tests.
+type StartupNotification struct {
+	HttpAddr  string
+	ProcessId int
+}
+
+func sendStartupNotification(naddr string, notif *StartupNotification) error {
+	conn, err := net.Dial("tcp", naddr)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
+	var buf []byte
+	buf, err = json.Marshal(notif)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(buf)
+	conn.Close()
+	conn = nil
+	return nil
 }

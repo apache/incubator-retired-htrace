@@ -18,6 +18,7 @@
 package org.apache.htrace.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -29,6 +30,7 @@ import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.util.DataDir;
 import org.apache.htrace.util.HTracedProcess;
+import org.apache.htrace.util.TestUtil;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
@@ -36,20 +38,20 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestHTracedRESTReceiver {
-  private static final Log LOG = LogFactory.getLog(TestHTracedRESTReceiver.class);
-  private URL restServerUrl;;
+  private static final Log LOG =
+      LogFactory.getLog(TestHTracedRESTReceiver.class);
+  private URL restServerUrl;
   private DataDir dataDir;
   HTracedProcess htraced;
 
   @Before
   public void setUp() throws Exception {
     this.dataDir = new DataDir();
-    // Start on 9097. Would be better to start at port 0 and then ask server what port it managed
-    // to come up on.
-    this.restServerUrl = new URL("http://localhost:9097/");
     File tlDir = DataDir.getTopLevelOfCheckout(this.dataDir.getDataDir());
     File pathToHTracedBinary = HTracedProcess.getPathToHTraceBinaryFromTopLevel(tlDir);
-    this.htraced = new HTracedProcess(pathToHTracedBinary, dataDir.getDataDir(), restServerUrl);
+    this.htraced = new HTracedProcess(pathToHTracedBinary,
+        dataDir.getDataDir(), "localhost");
+    this.restServerUrl = new URL("http://" + htraced.getHttpAddr() + "/");
   }
 
   @After
@@ -75,6 +77,7 @@ public class TestHTracedRESTReceiver {
     @Override
     public String get(String key, String defaultValue) {
       if (key.equals(HTracedRESTReceiver.HTRACED_REST_URL_KEY)) {
+        LOG.info("WATERMELON2: got request for htraced.rest.url.  Returning " + this.restServerUrl.toString());
         return this.restServerUrl.toString();
       }
       return defaultValue;
@@ -90,7 +93,7 @@ public class TestHTracedRESTReceiver {
     HTracedRESTReceiver receiver =
       new HTracedRESTReceiver(new TestHTraceConfiguration(this.restServerUrl));
     try {
-      // Do basic a GET /server/info against localhost:9095 htraced
+      // Do basic a GET /server/info against htraced
       ContentResponse response = receiver.httpClient.GET(restServerUrl + "server/info");
       assertEquals("application/json", response.getMediaType());
       String content = processGET(response);
@@ -111,29 +114,42 @@ public class TestHTracedRESTReceiver {
    * Send 100 spans then confirm they made it in.
    * @throws Exception
    */
-  @Test (timeout = 10000)
+  @Test (timeout = 60000)
   public void testSendingSpans() throws Exception {
-    HTracedRESTReceiver receiver =
+    final HTracedRESTReceiver receiver =
       new HTracedRESTReceiver(new TestHTraceConfiguration(this.restServerUrl));
+    final int NUM_SPANS = 3;
     try {
-      // TODO: Fix MilliSpan. Requires a parentid.  Shouldn't have to have one else be explicit it
-      // is required.
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < NUM_SPANS; i++) {
         Span span = new MilliSpan.Builder().parents(new long [] {1L}).spanId(i).build();
         LOG.info(span.toString());
         receiver.receiveSpan(span);
       }
-      // Wait for the queue to empty before we go to check they made it over.
-      while (receiver.isQueueEmpty()) Thread.sleep(1);
-      // Read them all back.
-      for (int i = 0; i < 100; i++) {
-        // This is what the REST server expends when querying for a span id.
-        String findSpan = String.format("span/%016x", i);
-        ContentResponse response = receiver.httpClient.GET(restServerUrl + findSpan);
-        String content = processGET(response);
-        assertTrue(content != null && content.length() > 0);
-        LOG.info(content);
-      }
+      receiver.startFlushing();
+      TestUtil.waitFor(new TestUtil.Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            for (int i = 0; i < NUM_SPANS; i++) {
+              // This is what the REST server expects when querying for a
+              // span id.
+              String findSpan = String.format("span/%016x", i);
+              ContentResponse response =
+                  receiver.httpClient.GET(restServerUrl + findSpan);
+              String content = processGET(response);
+              if ((content == null) || (content.length() == 0)) {
+                LOG.info("Failed to find span " + i);
+                return false;
+              }
+              LOG.info("Got " + content + " for span " + i);
+            }
+            return true;
+          } catch (Throwable t) {
+            LOG.error("Got exception", t);
+            return false;
+          }
+        }
+      }, 10, 20000);
     } finally {
       receiver.close();
     }

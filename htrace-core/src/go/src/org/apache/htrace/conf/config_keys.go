@@ -62,6 +62,11 @@ const HTRACE_LOG_PATH = "log.path"
 // The log level to use for the logs in htrace.
 const HTRACE_LOG_LEVEL = "log.level"
 
+// A host:port pair to send information to on startup.  This is used in unit
+// tests to determine the (random) port of the htraced process that has been
+// started.
+const HTRACE_STARTUP_NOTIFICATION_ADDRESS = "startup.notification.address"
+
 // Default values for HTrace configuration keys.
 var DEFAULTS = map[string]string{
 	HTRACE_WEB_ADDRESS: fmt.Sprintf("0.0.0.0:%d", HTRACE_WEB_ADDRESS_DEFAULT_PORT),

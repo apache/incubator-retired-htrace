@@ -20,14 +20,13 @@ package org.apache.htrace.impl;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayDeque;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,19 +73,29 @@ public class HTracedRESTReceiver implements SpanReceiver {
   final HttpClient httpClient;
 
   /**
+   * The maximum number of spans to buffer.
+   */
+  private final int capacity;
+
+  /**
    * REST URL to use writing Spans.
    */
-  private final String writeSpansRESTURL;
+  private final String url;
+
+  /**
+   * The maximum number of spans to send in a single PUT.
+   */
+  private final int maxToSendAtATime;
 
   /**
    * Runs background task to do the REST PUT.
    */
-  private final ScheduledExecutorService scheduler;
+  private final PostSpans postSpans;
 
   /**
-   * Keep around reference so can cancel on close any running scheduled task.
+   * Thread for postSpans
    */
-  private final ScheduledFuture<?> scheduledFuture;
+  private final Thread postSpansThread;
 
   /**
    * Timeout in milliseconds.
@@ -111,8 +120,8 @@ public class HTracedRESTReceiver implements SpanReceiver {
   /**
    * Period at which the background thread that does the REST POST to htraced in ms.
    */
-  public static final String CLIENT_REST_PERIOD_MS_KEY = "client.reset.period.ms";
-  private static final int CLIENT_REST_PERIOD_MS_DEFAULT = 1000;
+  public static final String CLIENT_REST_PERIOD_MS_KEY = "client.rest.period.ms";
+  private static final int CLIENT_REST_PERIOD_MS_DEFAULT = 30000;
 
   /**
    * Maximum spans to post to htraced at a time.
@@ -122,15 +131,37 @@ public class HTracedRESTReceiver implements SpanReceiver {
   private static final int CLIENT_REST_MAX_SPANS_AT_A_TIME_DEFAULT = 100;
 
   /**
-   * Simple bounded queue to hold spans between periodic runs of the httpclient.
+   * Lock protecting the PostSpans data.
    */
-  private final Queue<Span> queue;
+  private ReentrantLock lock = new ReentrantLock();
+
+  /**
+   * Condition variable used to wake up the PostSpans thread.
+   */
+  private Condition cond = lock.newCondition();
+
+  /**
+   * True if we should shut down.
+   * Protected by the lock.
+   */
+  private boolean shutdown = false;
+
+  /**
+   * Simple bounded queue to hold spans between periodic runs of the httpclient.
+   * Protected by the lock.
+   */
+  private final ArrayDeque<Span> spans;
 
   /**
    * Keep last time we logged we were at capacity; used to prevent flooding of logs with
    * "at capacity" messages.
    */
-  private volatile long lastAtCapacityWarningLog = 0L;
+  private AtomicLong lastAtCapacityWarningLog = new AtomicLong(0L);
+
+  /**
+   * True if we should flush as soon as possible.  Protected by the lock.
+   */
+  private boolean mustStartFlush;
 
   /**
    * Constructor.
@@ -146,25 +177,25 @@ public class HTracedRESTReceiver implements SpanReceiver {
     int timeout = conf.getInt(CLIENT_REST_TIMEOUT_MS_KEY, CLIENT_REST_TIMEOUT_MS_DEFAULT);
     this.httpClient.setConnectTimeout(timeout);
     this.httpClient.setIdleTimeout(timeout);
-    int capacity = conf.getInt(CLIENT_REST_QUEUE_CAPACITY_KEY, CLIENT_REST_QUEUE_CAPACITY_DEFAULT);
-    this.queue = new ArrayBlockingQueue<Span>(capacity, true);
+    this.capacity = conf.getInt(CLIENT_REST_QUEUE_CAPACITY_KEY, CLIENT_REST_QUEUE_CAPACITY_DEFAULT);
+    this.spans = new ArrayDeque<Span>(capacity);
     // Build up the writeSpans URL.
     URL restServer = new URL(conf.get(HTRACED_REST_URL_KEY, HTRACED_REST_URL_DEFAULT));
-    URL url =
-      new URL(restServer.getProtocol(), restServer.getHost(), restServer.getPort(), "/writeSpans");
-    this.writeSpansRESTURL = url.toString();
-    // Make a scheduler with one thread to run our POST of spans on a period.
-    this.scheduler = Executors.newScheduledThreadPool(1);
+    URL url = new URL(restServer.getProtocol(), restServer.getHost(), restServer.getPort(), "/writeSpans");
+    this.url = url.toString();
     // Period at which we run the background thread that does the REST POST to htraced.
     int periodInMs = conf.getInt(CLIENT_REST_PERIOD_MS_KEY, CLIENT_REST_PERIOD_MS_DEFAULT);
     // Maximum spans to send in one go
-    int maxToSendAtATime =
+    this.maxToSendAtATime =
       conf.getInt(CLIENT_REST_MAX_SPANS_AT_A_TIME_KEY, CLIENT_REST_MAX_SPANS_AT_A_TIME_DEFAULT);
-    this.scheduledFuture =
-      this.scheduler.scheduleAtFixedRate(new PostSpans(this.queue, maxToSendAtATime),
-          periodInMs, periodInMs, TimeUnit.MILLISECONDS);
     // Start up the httpclient.
     this.httpClient.start();
+    // Start the background thread.
+    this.postSpans = new PostSpans(periodInMs);
+    this.postSpansThread = new Thread(postSpans);
+    this.postSpansThread.setDaemon(true);
+    this.postSpansThread.setName("PostSpans");
+    this.postSpansThread.start();
   }
 
   /**
@@ -172,81 +203,188 @@ public class HTracedRESTReceiver implements SpanReceiver {
    * Run on a period. Services the passed in queue taking spans and sending them to traced via http.
    */
   private class PostSpans implements Runnable {
-    private final Queue<Span> q;
-    private final int maxToSendAtATime;
+    private final long periodInNs;
+    private final ArrayDeque<Span> spanBuf;
 
-    private PostSpans(final Queue<Span> q, final int maxToSendAtATime) {
-      this.q = q;
-      this.maxToSendAtATime = maxToSendAtATime;
+    private PostSpans(long periodInMs) {
+      this.periodInNs = TimeUnit.NANOSECONDS.
+          convert(periodInMs, TimeUnit.MILLISECONDS);
+      this.spanBuf = new ArrayDeque<Span>(maxToSendAtATime);
     }
 
+    /**
+     * The span sending thread.
+     *
+     * We send a batch of spans for one of two reasons: there are already
+     * maxToSendAtATime spans in the buffer, or the client.rest.period.ms
+     * has elapsed.  The idea is that we want to strike a balance between
+     * sending a lot of spans at a time, for efficiency purposes, and
+     * making sure that we don't buffer spans locally for too long.
+     *
+     * The longer we buffer spans locally, the longer we will have to wait
+     * to see the results of our client operations in the GUI, and the higher
+     * the risk of losing them if the client crashes.
+     */
     @Override
     public void run() {
-      Span span = null;
-      // Cycle until we drain queue. Send maxToSendAtATime if more than this in queue.
-      while ((span = this.q.poll()) != null) {
-        // We got a span. Send at least this one span.
-        Request request = httpClient.newRequest(writeSpansRESTURL).method(HttpMethod.POST);
-        request.header(HttpHeader.CONTENT_TYPE, "application/json");
-        int count = 1;
-        request.content(new StringContentProvider(span.toJson()));
-        // Drain queue or until we have maxToSendAtATime spans, if more than just one.
-        while ((span = this.q.poll()) != null) {
-          request.content(new StringContentProvider(span.toJson()));
-          count++;
-          // If we've accumulated sufficient to send, go ahead and send what we have. Can do the
-          // rest in out next go around.
-          if (count > this.maxToSendAtATime) break;
-        }
-        try {
-          ContentResponse response = request.send();
-          if (response.getStatus() == HttpStatus.OK_200) {
-            if (LOG.isDebugEnabled()) LOG.debug("POSTED " + count + " spans");
-          } else {
-            LOG.error("Status: " + response.getStatus());
-            LOG.error(response.getHeaders());
-            LOG.error(response.getContentAsString());
+      long waitNs;
+      try {
+        waitNs = periodInNs;
+        while (true) {
+          lock.lock();
+          try {
+            if (shutdown) {
+              LOG.info("Shutting down PostSpans thread...");
+              break;
+            }
+            try {
+              waitNs = cond.awaitNanos(waitNs);
+              if (mustStartFlush) {
+                waitNs = 0;
+                mustStartFlush = false;
+              }
+            } catch (InterruptedException e) {
+              LOG.info("Got InterruptedException");
+              waitNs = 0;
+            }
+            if ((spans.size() > maxToSendAtATime) || (waitNs <= 0)) {
+              loadSpanBuf();
+              waitNs = periodInNs;
+            }
+          } finally {
+            lock.unlock();
           }
-        } catch (InterruptedException e) {
-          LOG.error(e);
-        } catch (TimeoutException e) {
-          LOG.error(e);
-        } catch (ExecutionException e) {
-          LOG.error(e);
+          // Once the lock has been safely released, we can do some network
+          // I/O without blocking the client process.
+          if (!spanBuf.isEmpty()) {
+            sendSpans();
+            spanBuf.clear();
+          }
         }
+      } finally {
+        if (httpClient != null) {
+          try {
+            httpClient.stop();
+          } catch (Exception e) {
+            LOG.error("Error shutting down httpClient", e);
+          }
+        }
+        spans.clear();
+      }
+    }
+
+    private void loadSpanBuf() {
+      for (int loaded = 0; loaded < maxToSendAtATime; loaded++) {
+        Span span = spans.pollFirst();
+        if (span == null) {
+          return;
+        }
+        spanBuf.add(span);
+      }
+    }
+
+    private void sendSpans() {
+      try {
+        Request request = httpClient.newRequest(url).method(HttpMethod.POST);
+        request.header(HttpHeader.CONTENT_TYPE, "application/json");
+        StringBuilder bld = new StringBuilder();
+        for (Span span : spanBuf) {
+          bld.append(span.toJson());
+        }
+        request.content(new StringContentProvider(bld.toString()));
+        ContentResponse response = request.send();
+        if (response.getStatus() == HttpStatus.OK_200) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("POSTED " + spanBuf.size() + " spans");
+          }
+        } else {
+          LOG.error("Status: " + response.getStatus());
+          LOG.error(response.getHeaders());
+          LOG.error(response.getContentAsString());
+        }
+      } catch (InterruptedException e) {
+        LOG.error(e);
+      } catch (TimeoutException e) {
+        LOG.error(e);
+      } catch (ExecutionException e) {
+        LOG.error(e);
       }
     }
   }
 
   @Override
   public void close() throws IOException {
-    if (this.scheduledFuture != null) this.scheduledFuture.cancel(true);
-    if (this.scheduler == null) this.scheduler.shutdown();
-    if (this.httpClient != null) {
-      try {
-        this.httpClient.stop();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
+    LOG.info("Closing HTracedRESTReceiver.");
+    lock.lock();
+    try {
+      this.shutdown = true;
+      cond.signal();
+    } finally {
+      lock.unlock();
+    }
+    try {
+      postSpansThread.join(30000);
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted while joining postSpans", e);
     }
   }
 
-  // @VisibleForTesting
-  boolean isQueueEmpty() {
-    return this.queue.isEmpty();
+  /**
+   * Start flushing the buffered spans.
+   *
+   * Note that even after calling this function, you will still have to wait
+   * for the flush to finish happening.  This function just starts the flush;
+   * it does not block until it has completed.  You also do not get
+   * "read-after-write consistency" with htraced... the spans that are
+   * written may be buffered for a short period of time prior to being
+   * readable.  This is not a problem for production use (since htraced is not
+   * a database), but it means that most unit tests will need a loop in their
+   * "can I read what I wrote" tests.
+   */
+  void startFlushing() {
+    LOG.info("Triggering HTracedRESTReceiver flush.");
+    lock.lock();
+    try {
+      mustStartFlush = true;
+      cond.signal();
+    } finally {
+      lock.unlock();
+    }
   }
 
   private static long WARN_TIMEOUT_MS = 300000;
 
   @Override
   public void receiveSpan(Span span) {
-    if (!this.queue.offer(span)) {
-      // TODO: If failed the offer, run the background thread now. I can't block though?
+    boolean added = false;
+    lock.lock();
+    try {
+      if (spans.size() < capacity) {
+        spans.add(span);
+        added = true;
+        if (spans.size() >= maxToSendAtATime) {
+          cond.signal();
+        }
+      } else {
+        cond.signal();
+      }
+    } finally {
+      lock.unlock();
+    }
+    if (!added) {
       long now = System.nanoTime() / 1000000L;
-      // Only log every 5 minutes. Any more than this for a guest process is obnoxious
-      if (now - lastAtCapacityWarningLog > WARN_TIMEOUT_MS) {
-        LOG.warn("At capacity");
-        this.lastAtCapacityWarningLog = now;
+      long last = lastAtCapacityWarningLog.get();
+      if (now - last > WARN_TIMEOUT_MS) {
+        // Only log every 5 minutes. Any more than this for a guest process
+        // is obnoxious.
+        if (lastAtCapacityWarningLog.compareAndSet(last, now)) {
+          // If the atomic-compare-and-set succeeds, we should log.  Otherwise,
+          // we should assume another thread already logged and bumped up the
+          // value of lastAtCapacityWarning sometime between our get and the
+          // "if" statement.
+          LOG.warn("There are too many HTrace spans to buffer!  We have " +
+              "already buffered " + capacity + " spans.  Dropping spans.");
+        }
       }
     }
   }
