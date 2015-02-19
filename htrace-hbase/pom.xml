@@ -60,12 +60,6 @@ language governing permissions and limitations under the License. -->
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>**/generated/**</exclude>
-            <exclude>**/webapps/static/d3.min.js</exclude>
-          </excludes>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
