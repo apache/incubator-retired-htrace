@@ -111,8 +111,12 @@ public class HTraceToZipkinConverter {
     List<Annotation> annotationList = createZipkinAnnotations(hTraceSpan, ep);
     List<BinaryAnnotation> binaryAnnotationList = createZipkinBinaryAnnotations(hTraceSpan, ep);
     zipkinSpan.setTrace_id(hTraceSpan.getTraceId());
-    if (hTraceSpan.getParentId() != org.apache.htrace.Span.ROOT_SPAN_ID) {
-      zipkinSpan.setParent_id(hTraceSpan.getParentId());
+    if (hTraceSpan.getParents().length > 0) {
+      if (hTraceSpan.getParents().length > 1) {
+        LOG.error("zipkin doesn't support spans with multiple parents.  Omitting " +
+            "other parents for " + hTraceSpan);
+      }
+      zipkinSpan.setParent_id(hTraceSpan.getParents()[0]);
     }
     zipkinSpan.setId(hTraceSpan.getSpanId());
     zipkinSpan.setName(hTraceSpan.getDescription());

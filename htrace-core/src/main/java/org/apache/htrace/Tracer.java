@@ -20,7 +20,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.MilliSpan;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -31,7 +30,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
-  private final static Random random = new SecureRandom();
+  private final static Random random = new Random();
+
+  private static long random64() {
+    long id;
+    do {
+      id = random.nextLong();
+    } while (id == 0);
+    return id;
+  }
+
   private final List<SpanReceiver> receivers = new CopyOnWriteArrayList<SpanReceiver>();
   private static final ThreadLocal<Span> currentSpan = new ThreadLocal<Span>() {
     @Override
@@ -40,6 +48,7 @@ public class Tracer {
     }
   };
   public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
+  private static final long EMPTY_PARENT_ARRAY[] = new long[0];
   protected static String processId = null;
 
   /**
@@ -68,11 +77,15 @@ public class Tracer {
   protected Span createNew(String description) {
     Span parent = currentSpan.get();
     if (parent == null) {
-      return new MilliSpan(description,
-          /* traceId = */ random.nextLong(),
-          /* parentSpanId = */ Span.ROOT_SPAN_ID,
-          /* spanId = */ random.nextLong(),
-          getProcessId());
+      return new MilliSpan.Builder().
+          begin(System.currentTimeMillis()).
+          end(0).
+          description(description).
+          traceId(random64()).
+          parents(EMPTY_PARENT_ARRAY).
+          spanId(random64()).
+          processId(getProcessId()).
+          build();
     } else {
       return parent.child(description);
     }

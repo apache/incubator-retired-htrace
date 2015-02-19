@@ -21,11 +21,14 @@ import org.apache.htrace.impl.MilliSpan;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -35,16 +38,16 @@ import java.util.TreeSet;
 public class TraceTree {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
 
+
   public static class SpansByParent {
+    /**
+     * Compare two spans by span ID.
+     */
     private static Comparator<Span> COMPARATOR =
         new Comparator<Span>() {
           @Override
           public int compare(Span a, Span b) {
-            if (a.getParentId() < b.getParentId()) {
-              return -1;
-            } else if (a.getParentId() > b.getParentId()) {
-              return 1;
-            } else if (a.getSpanId() < b.getSpanId()) {
+            if (a.getSpanId() < b.getSpanId()) {
               return -1;
             } else if (a.getSpanId() > b.getSpanId()) {
               return 1;
@@ -56,27 +59,37 @@ public class TraceTree {
 
     private final TreeSet<Span> treeSet;
 
+    private final HashMap<Long, LinkedList<Span>> parentToSpans;
+
     SpansByParent(Collection<Span> spans) {
       TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
+      parentToSpans = new HashMap<Long, LinkedList<Span>>();
       for (Span span : spans) {
         treeSet.add(span);
+        for (long parent : span.getParents()) {
+          LinkedList<Span> list = parentToSpans.get(Long.valueOf(parent));
+          if (list == null) {
+            list = new LinkedList<Span>();
+            parentToSpans.put(Long.valueOf(parent), list);
+          }
+          list.add(span);
+        }
+        if (span.getParents().length == 0) {
+          LinkedList<Span> list = parentToSpans.get(Long.valueOf(0L));
+          if (list == null) {
+            list = new LinkedList<Span>();
+            parentToSpans.put(Long.valueOf(0L), list);
+          }
+          list.add(span);
+        }
       }
       this.treeSet = treeSet;
     }
 
     public List<Span> find(long parentId) {
-      List<Span> spans = new ArrayList<Span>();
-      Span span = new MilliSpan("", Long.MIN_VALUE,
-          parentId, Long.MIN_VALUE, "");
-      while (true) {
-        span = treeSet.higher(span);
-        if (span == null) {
-          break;
-        }
-        if (span.getParentId() != parentId) {
-          break;
-        }
-        spans.add(span);
+      LinkedList<Span> spans = parentToSpans.get(parentId);
+      if (spans == null) {
+        return new LinkedList<Span>();
       }
       return spans;
     }
@@ -87,6 +100,9 @@ public class TraceTree {
   }
 
   public static class SpansByProcessId {
+    /**
+     * Compare two spans by process ID, and then by span ID.
+     */
     private static Comparator<Span> COMPARATOR =
         new Comparator<Span>() {
           @Override
@@ -116,8 +132,11 @@ public class TraceTree {
 
     public List<Span> find(String processId) {
       List<Span> spans = new ArrayList<Span>();
-      Span span = new MilliSpan("", Long.MIN_VALUE,
-          Long.MIN_VALUE, Long.MIN_VALUE, processId);
+      Span span = new MilliSpan.Builder().
+                    traceId(Long.MIN_VALUE).
+                    spanId(Long.MIN_VALUE).
+                    processId(processId).
+                    build();
       while (true) {
         span = treeSet.higher(span);
         if (span == null) {
@@ -143,8 +162,7 @@ public class TraceTree {
    * Create a new TraceTree
    *
    * @param spans The collection of spans to use to create this TraceTree. Should
-   *              have at least one root span (span with parentId =
-   *              Span.ROOT_SPAN_ID
+   *              have at least one root span.
    */
   public TraceTree(Collection<Span> spans) {
     this.spansByParent = new SpansByParent(spans);

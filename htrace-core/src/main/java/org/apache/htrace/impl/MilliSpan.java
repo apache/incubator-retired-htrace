@@ -47,8 +47,6 @@ import java.util.Random;
  */
 @JsonDeserialize(using = MilliSpan.MilliSpanDeserializer.class)
 public class MilliSpan implements Span {
-
-  private static Random rand = new Random();
   private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
   private static final long EMPTY_PARENT_ARRAY[] = new long[0];
 
@@ -61,10 +59,27 @@ public class MilliSpan implements Span {
   private Map<String, String> traceInfo = null;
   private final String processId;
   private List<TimelineAnnotation> timeline = null;
+  private final static Random random = new Random();
+
+  private static long random64() {
+    long id;
+    do {
+      id = random.nextLong();
+    } while (id == 0);
+    return id;
+  }
 
   @Override
-  public Span child(String description) {
-    return new MilliSpan(description, traceId, spanId, rand.nextLong(), processId);
+  public Span child(String childDescription) {
+    return new MilliSpan.Builder().
+      begin(System.currentTimeMillis()).
+      end(0).
+      description(childDescription).
+      traceId(traceId).
+      parents(new long[] {spanId}).
+      spanId(random64()).
+      processId(processId).
+      build();
   }
 
   /**
@@ -155,20 +170,6 @@ public class MilliSpan implements Span {
     this.timeline = builder.timeline;
   }
 
-  public MilliSpan(String description, long traceId, long parentSpanId, long spanId, String processId) {
-    this.description = description;
-    this.traceId = traceId;
-    if (parentSpanId == Span.ROOT_SPAN_ID) {
-      this.parents = new long[0];
-    } else {
-      this.parents = new long[] { parentSpanId };
-    } 
-    this.spanId = spanId;
-    this.begin = System.currentTimeMillis();
-    this.end = 0;
-    this.processId = processId;
-  }
-
   @Override
   public synchronized void stop() {
     if (end == 0) {
@@ -213,14 +214,9 @@ public class MilliSpan implements Span {
     return spanId;
   }
 
-  // TODO: Fix API callers to deal with multiple parents, and get rid of
-  // Span.ROOT_SPAN_ID.
   @Override
-  public long getParentId() {
-    if (parents.length == 0) {
-      return Span.ROOT_SPAN_ID;
-    }
-    return parents[0];
+  public long[] getParents() {
+    return parents;
   }
 
   @Override

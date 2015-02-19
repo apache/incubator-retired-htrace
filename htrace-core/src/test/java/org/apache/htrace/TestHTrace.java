@@ -77,7 +77,7 @@ public class TestHTrace {
 
     Collection<Span> spans = psr.getSpans();
     TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+    Collection<Span> roots = traceTree.getSpansByParent().find(0);
     Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
     Assert.assertEquals(numTraces, roots.size());
 

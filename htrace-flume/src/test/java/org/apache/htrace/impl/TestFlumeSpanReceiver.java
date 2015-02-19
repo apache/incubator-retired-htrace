@@ -72,7 +72,13 @@ public class TestFlumeSpanReceiver {
       startReceiver(null, avroHandler);
       
       spans = new ArrayList<Span>();
-      Span rootSpan = new MilliSpan(ROOT_SPAN_DESC, 1, Span.ROOT_SPAN_ID, 100, "test");
+      Span rootSpan = new MilliSpan.Builder().
+                  description(ROOT_SPAN_DESC).
+                  traceId(1).
+                  spanId(100).
+                  processId("test").
+                  begin(System.currentTimeMillis()).
+                  build();
       Span innerOne = rootSpan.child("Some good work");
       Span innerTwo = innerOne.child("Some more good work");
       innerTwo.stop();

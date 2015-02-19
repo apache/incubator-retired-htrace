@@ -19,12 +19,14 @@ package org.apache.htrace.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
 import org.junit.Test;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -40,7 +42,7 @@ public class TestMilliSpan {
     assertEquals(expected.getTraceId(), got.getTraceId());
     assertEquals(expected.getSpanId(), got.getSpanId());
     assertEquals(expected.getProcessId(), got.getProcessId());
-    assertEquals(expected.getParentId(), got.getParentId());
+    assertTrue(Arrays.equals(expected.getParents(), got.getParents()));
     Map<String, String> expectedT = expected.getKVAnnotations();
     Map<String, String> gotT = got.getKVAnnotations();
     if (expectedT == null) {

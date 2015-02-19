@@ -45,7 +45,14 @@ public class TestHTraceSpanToZipkinSpan {
     POJOSpanReceiver psr = new POJOSpanReceiver(HTraceConfiguration.EMPTY);
     Trace.addReceiver(psr);
 
-    Span rootSpan = new MilliSpan(ROOT_SPAN_DESC, 1, Span.ROOT_SPAN_ID, 100, "test");
+    Span rootSpan = new MilliSpan.Builder().
+            description(ROOT_SPAN_DESC).
+            traceId(1).
+            parents(new long[] { } ).
+            spanId(100).
+            processId("test").
+            begin(System.currentTimeMillis()).
+            build();
     Span innerOne = rootSpan.child("Some good work");
     Span innerTwo = innerOne.child("Some more good work");
     innerTwo.stop();
@@ -66,7 +73,10 @@ public class TestHTraceSpanToZipkinSpan {
 
     String traceName = "testHTraceAnnotationTimestamp";
     long startTime = System.currentTimeMillis() * 1000;
-    Span ms = new MilliSpan(traceName, 1, Span.ROOT_SPAN_ID, 2, traceName);
+    Span ms = new MilliSpan.Builder().
+        description(traceName).traceId(1).parents(new long[] { }).
+        spanId(2).processId(traceName).begin(System.currentTimeMillis()).
+        build();
 
     Thread.sleep(500);
     long annoStartTime = System.currentTimeMillis() * 1000;
@@ -105,13 +115,20 @@ public class TestHTraceSpanToZipkinSpan {
 
   @Test
   public void testHTraceDefaultPort() throws IOException {
-    MilliSpan ms = new MilliSpan("test", 1, 2, 3, "hmaster");
+    MilliSpan ms = new MilliSpan.Builder().description("test").
+                      traceId(1).parents(new long[] { 2 }).
+                      spanId(3).processId("hmaster").
+                      begin(System.currentTimeMillis()).build();
     com.twitter.zipkin.gen.Span zs = new HTraceToZipkinConverter(12345, (short) -1).convert(ms);
     for (com.twitter.zipkin.gen.Annotation annotation:zs.getAnnotations()) {
       assertEquals((short)60000, annotation.getHost().getPort());
     }
 
-    ms = new MilliSpan("test", 1, 2, 3, "HregIonServer");   // make sure it's all lower cased
+    // make sure it's all lower cased
+    ms = new MilliSpan.Builder().description("test").traceId(1).
+                      parents(new long[] {2}).spanId(3).
+                      processId("HregIonServer").
+                      begin(System.currentTimeMillis()).build();
     zs = new HTraceToZipkinConverter(12345, (short) -1).convert(ms);
     for (com.twitter.zipkin.gen.Annotation annotation:zs.getAnnotations()) {
       assertEquals((short)60020, annotation.getHost().getPort());
@@ -120,8 +137,10 @@ public class TestHTraceSpanToZipkinSpan {
 
   private void assertSpansAreEquivalent(Span s, com.twitter.zipkin.gen.Span zs) {
     assertEquals(s.getTraceId(), zs.getTrace_id());
-    if (s.getParentId() != Span.ROOT_SPAN_ID) {
-      assertEquals(s.getParentId(), zs.getParent_id());
+    assertTrue("zipkin doesn't support multiple parents to a single span.",
+          s.getParents().length <= 1);
+    if (s.getParents().length == 1) {
+      assertEquals(s.getParents()[0], zs.getParent_id());
     }
     assertEquals(s.getSpanId(), zs.getId());
     Assert.assertNotNull(zs.getAnnotations());

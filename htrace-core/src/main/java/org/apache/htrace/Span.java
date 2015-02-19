@@ -35,8 +35,6 @@ import java.util.Map;
  */
 @JsonSerialize(using = Span.SpanSerializer.class)
 public interface Span {
-  public static final long ROOT_SPAN_ID = 0x74ace;
-
   /**
    * The block has completed, stop the clock
    */
@@ -88,10 +86,10 @@ public interface Span {
   String toString();
 
   /**
-   * Return the pseudo-unique (random) number of the first parent span, returns
-   * ROOT_SPAN_ID if there are no parents.
+   * Returns the parents of the span.
+   * The array will be empty if there are no parents.
    */
-  long getParentId();
+  long[] getParents();
 
   /**
    * Add a data annotation associated with this span
@@ -142,8 +140,8 @@ public interface Span {
       jgen.writeStringField("d", span.getDescription());
       jgen.writeStringField("r", span.getProcessId());
       jgen.writeArrayFieldStart("p");
-      if (span.getParentId() != ROOT_SPAN_ID) {
-        jgen.writeString(String.format("%016x", span.getParentId()));
+      for (long parent : span.getParents()) {
+        jgen.writeString(String.format("%016x", parent));
       }
       jgen.writeEndArray();
       Map<String, String> traceInfoMap = span.getKVAnnotations();

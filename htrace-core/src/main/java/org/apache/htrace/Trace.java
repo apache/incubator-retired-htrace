@@ -23,8 +23,6 @@ import org.apache.htrace.impl.TrueIfTracingSampler;
 import org.apache.htrace.wrappers.TraceCallable;
 import org.apache.htrace.wrappers.TraceRunnable;
 
-import java.security.SecureRandom;
-import java.util.Random;
 import java.util.concurrent.Callable;
 
 /**
@@ -62,7 +60,6 @@ import java.util.concurrent.Callable;
  */
 public class Trace {
   private static final Log LOG = LogFactory.getLog(Trace.class);
-  private final static Random random = new SecureRandom();
 
   /**
    * Creates a new trace scope.
@@ -76,6 +73,19 @@ public class Trace {
    */
   public static TraceScope startSpan(String description) {
     return startSpan(description, TrueIfTracingSampler.INSTANCE);
+  }
+
+  public static TraceScope startSpan(String description, TraceInfo tinfo) {
+    if (tinfo == null) return continueSpan(null);
+    Span newSpan = new MilliSpan.Builder().
+        begin(System.currentTimeMillis()).
+        end(0).
+        description(description).
+        traceId(tinfo.traceId).
+        parents(new long[] { tinfo.spanId }).
+        processId(Tracer.getProcessId()).
+        build();
+    return continueSpan(newSpan);
   }
 
   /**

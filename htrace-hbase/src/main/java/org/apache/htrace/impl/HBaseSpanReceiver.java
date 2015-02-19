@@ -207,12 +207,22 @@ public class HBaseSpanReceiver implements SpanReceiver {
           for (Span span : dequeuedSpans) {
             sbuilder.clear()
                     .setTraceId(span.getTraceId())
-                    .setParentId(span.getParentId())
                     .setStart(span.getStartTimeMillis())
                     .setStop(span.getStopTimeMillis())
                     .setSpanId(span.getSpanId())
                     .setProcessId(span.getProcessId())
                     .setDescription(span.getDescription());
+
+            if (span.getParents().length == 0) {
+              sbuilder.setParentId(0);
+            } else if (span.getParents().length > 0) {
+              sbuilder.setParentId(span.getParents()[0]);
+              if (span.getParents().length > 1) {
+                LOG.error("error: HBaseSpanReceiver does not support spans " +
+                    "with multiple parents.  Ignoring multiple parents for " +
+                    span);
+              }
+            }
             for (TimelineAnnotation ta : span.getTimelineAnnotations()) {
               sbuilder.addTimeline(tlbuilder.clear()
                                             .setTime(ta.getTime())
@@ -223,7 +233,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
             put.add(HBaseSpanReceiver.this.cf,
                     sbuilder.build().toByteArray(),
                     null);
-            if (span.getParentId() == Span.ROOT_SPAN_ID) {
+            if (span.getParents().length == 0) {
               put.add(HBaseSpanReceiver.this.icf,
                       INDEX_TIME_QUAL,
                       Bytes.toBytes(span.getStartTimeMillis()));

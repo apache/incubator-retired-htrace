@@ -94,7 +94,7 @@ public class TestHBaseSpanReceiver {
 
     TraceTree traceTree = new TraceTree(spans);
     Collection<Span> roots =
-        traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+        traceTree.getSpansByParent().find(0);
     Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
     Assert.assertEquals(3, roots.size());
 
@@ -127,8 +127,7 @@ public class TestHBaseSpanReceiver {
           InputStream in = new ByteArrayInputStream(cell.getValueArray(),
                                                     cell.getValueOffset(),
                                                     cell.getValueLength());
-          Assert.assertEquals(SpanProtos.Span.parseFrom(in).getParentId(),
-                              Span.ROOT_SPAN_ID);
+          Assert.assertEquals(SpanProtos.Span.parseFrom(in).getParentId(), 0);
         }
       }
     } catch (IOException e) {
@@ -149,8 +148,10 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public long getParentId() {
-      return span.getParentId();
+    public long[] getParents() {
+      return (span.getParentId() == 0L) ?
+        (new long[] {}) :
+        (new long[] { span.getParentId() });
     }
 
     @Override
@@ -181,7 +182,7 @@ public class TestHBaseSpanReceiver {
     @Override
     public String toString() {
       return String.format("Span{Id:0x%16x,parentId:0x%16x,pid:%s,desc:%s}",
-                           getSpanId(), getParentId(),
+                           getSpanId(), span.getParentId(),
                            getProcessId(), getDescription());
     }
 
