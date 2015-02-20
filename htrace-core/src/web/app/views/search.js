@@ -76,7 +76,13 @@ App.SearchView = Backbone.View.extend({
       });
     }
 
-    this.collection.query(null, predicates);
+    this.collection.switchMode("infinite", {
+      fetch: false,
+      resetState: true
+    });
+    this.collection.fullCollection.reset();
+    this.collection.setPredicates(predicates);
+    this.collection.fetch();
 
     return false;
   }

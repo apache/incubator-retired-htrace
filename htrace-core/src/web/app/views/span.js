@@ -76,7 +76,7 @@ App.ListSpansView = Backbone.View.extend({
     });
 
     this.listSpansPaginator = new Backgrid.Extension.Paginator({
-      collection: this.collection
+      collection: this.collection,
     });
   },
 

@@ -55,25 +55,81 @@ App.Span = Backbone.Model.extend({
 
 App.Spans = Backbone.PageableCollection.extend({
   model: App.Span,
-  mode: "client",
-  state: {
-    pageSize: 2
-  },
+  mode: "infinite",
   url: "/query",
+  state: {
+    pageSize: 10,
+    lastSpanId: null,
+    predicates: []
+  },
+  queryParams: {
+    totalPages: null,
+    totalRecords: null,
+    firstPage: null,
+    lastPage: null,
+    currentPage: null,
+    pageSize: null,
+    sortKey: null,
+    order: null,
+    directions: null,
 
-  query: function(options, predicates) {
-    var query = {
-      "lim": 100000
-    };
+    /**
+     * Query parameter for htraced.
+     */
+    query: function() {
+      var predicates = this.state.predicates.slice(0);
+      var lastSpanId = this.state.lastSpanId;
 
-    if (predicates && predicates.length > 0) {
-      query.pred = predicates;
+      /**
+       * Use last pulled span ID to paginate.
+       * The htraced API works such that order is defined by the first predicate.
+       * Adding a predicate to the end of the predicates list won't change the order.
+       * Providing the predicate on spanid will filter all previous spanids.
+       */
+      if (lastSpanId) {
+        predicates.push({
+          "op": "gt",
+          "field": "spanid",
+          "val": lastSpanId
+        });
+      }
+
+      return JSON.stringify({
+        lim: this.state.pageSize,
+        pred: predicates
+      });
+    }
+  },
+
+  initialize: function() {
+    this.on("sync", function(collection, response, options) {
+      if (response.length == 0) {
+        delete this.links[this.state.currentPage];
+        this.getPreviousPage();
+      }
+    }, this);
+  },
+
+  parseLinks: function(resp, xhr) {
+    if (resp.length >= this.state.pageSize) {
+      this.state.lastSpanId = resp[resp.length - 1].s;
+
+      return {
+        "next": "/query?query=" + this.queryParams.query.call(this)
+      };
+    } else {
+      this.state.lastSpanId = null;
+
+      return {};
+    }
+  },
+
+  setPredicates: function(predicates) {
+    if (!$.isArray(predicates)) {
+      console.error("predicates should be an array");
+      return;
     }
 
-    options = options ? _.clone(options) : {};
-    options.data = options.data ? _.clone(options.data) : {};
-    options.data.query = JSON.stringify(query);
-
-    return this.fetch(options);
+    this.state.predicates = predicates;
   }
 });
