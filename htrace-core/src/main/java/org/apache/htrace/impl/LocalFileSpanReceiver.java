@@ -101,13 +101,15 @@ public class LocalFileSpanReceiver implements SpanReceiver {
    */
   private final int WRITEV_SIZE = 20;
 
+  private final static ByteBuffer newlineBuf = 
+      ByteBuffer.wrap(new byte[] { (byte)0xa });
+
   /**
    * Flushes a bufferedSpans array.
    */
   private void doFlush(byte[][] toFlush, int len) throws IOException {
     int bidx = 0, widx = 0;
     ByteBuffer writevBufs[] = new ByteBuffer[2 * WRITEV_SIZE];
-    ByteBuffer newlineBuf = ByteBuffer.wrap(new byte[] { (byte)0xa });
 
     while (true) {
       if (widx == writevBufs.length) {
