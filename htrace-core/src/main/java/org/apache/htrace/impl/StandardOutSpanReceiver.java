@@ -16,6 +16,8 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
@@ -26,7 +28,10 @@ import java.io.IOException;
  * Used for testing. Simply prints to standard out any spans it receives.
  */
 public class StandardOutSpanReceiver implements SpanReceiver {
+  private static final Log LOG = LogFactory.getLog(StandardOutSpanReceiver.class);
+
   public StandardOutSpanReceiver(HTraceConfiguration conf) {
+    LOG.trace("Created new StandardOutSpanReceiver.");
   }
 
   @Override

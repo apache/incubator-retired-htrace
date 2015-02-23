@@ -86,6 +86,16 @@ public class SpanReceiverBuilder {
   }
 
   public SpanReceiver build() {
+    SpanReceiver spanReceiver = newSpanReceiver();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created new span receiver of type " +
+             ((spanReceiver == null) ? "(none)" :
+               spanReceiver.getClass().getName()));
+    }
+    return spanReceiver;
+  }
+
+  private SpanReceiver newSpanReceiver() {
     if ((this.spanReceiverClass == null) ||
         this.spanReceiverClass.isEmpty()) {
       LOG.debug("No span receiver class specified.");

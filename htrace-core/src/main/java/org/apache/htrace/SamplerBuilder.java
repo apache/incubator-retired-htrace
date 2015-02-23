@@ -44,6 +44,15 @@ public class SamplerBuilder {
   }
 
   public Sampler build() {
+    Sampler sampler = newSampler();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created new sampler of type " +
+          sampler.getClass().getName(), new Exception());
+    }
+    return sampler;
+  }
+
+  private Sampler newSampler() {
     String str = conf.get(SAMPLER_CONF_KEY);
     if (str == null || str.isEmpty()) {
       return NeverSampler.INSTANCE;

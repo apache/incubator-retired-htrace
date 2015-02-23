@@ -196,6 +196,11 @@ public class HTracedRESTReceiver implements SpanReceiver {
     this.postSpansThread.setDaemon(true);
     this.postSpansThread.setName("PostSpans");
     this.postSpansThread.start();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created new HTracedRESTReceiver with timeout=" + timeout +
+            ", capacity=" + capacity + ", url=" + url +  ", periodInMs=" +
+            periodInMs + ", maxToSendAtATime=" + maxToSendAtATime);
+    }
   }
 
   /**
@@ -314,7 +319,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
 
   @Override
   public void close() throws IOException {
-    LOG.info("Closing HTracedRESTReceiver.");
+    LOG.info("Closing HTracedRESTReceiver(" + url + ").");
     lock.lock();
     try {
       this.shutdown = true;

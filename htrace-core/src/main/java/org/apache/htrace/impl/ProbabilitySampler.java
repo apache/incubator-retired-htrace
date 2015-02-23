@@ -16,6 +16,8 @@
  */
 package org.apache.htrace.impl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
@@ -26,12 +28,17 @@ import java.util.Random;
  * configuring a {@code double} value for {@link #SAMPLER_FRACTION_CONF_KEY}.
  */
 public class ProbabilitySampler implements Sampler<Object> {
+  private static final Log LOG = LogFactory.getLog(ProbabilitySampler.class);
   public final double threshold;
   private Random random = new Random();
   public final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
 
   public ProbabilitySampler(HTraceConfiguration conf) {
     this.threshold = Double.parseDouble(conf.get(SAMPLER_FRACTION_CONF_KEY));
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created new ProbabilitySampler with threshold = " +
+                threshold + ".");
+    }
   }
 
   @Override

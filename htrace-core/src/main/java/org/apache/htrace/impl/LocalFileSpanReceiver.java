@@ -45,7 +45,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Writes the spans it receives to a local file.
  */
 public class LocalFileSpanReceiver implements SpanReceiver {
-  public static final Log LOG = LogFactory.getLog(LocalFileSpanReceiver.class);
+  private static final Log LOG = LogFactory.getLog(LocalFileSpanReceiver.class);
   public static final String PATH_KEY = "local-file-span-receiver.path";
   public static final String CAPACITY_KEY = "local-file-span-receiver.capacity";
   public static final int CAPACITY_DEFAULT = 5000;
@@ -89,6 +89,10 @@ public class LocalFileSpanReceiver implements SpanReceiver {
     }
     this.bufferedSpans = new byte[capacity][];
     this.bufferedSpansIndex = 0;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created new LocalFileSpanReceiver with path = " + path +
+                ", capacity = " + capacity);
+    }
   }
 
   /**

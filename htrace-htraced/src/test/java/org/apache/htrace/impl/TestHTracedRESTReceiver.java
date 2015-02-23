@@ -77,7 +77,6 @@ public class TestHTracedRESTReceiver {
     @Override
     public String get(String key, String defaultValue) {
       if (key.equals(HTracedRESTReceiver.HTRACED_REST_URL_KEY)) {
-        LOG.info("WATERMELON2: got request for htraced.rest.url.  Returning " + this.restServerUrl.toString());
         return this.restServerUrl.toString();
       }
       return defaultValue;
