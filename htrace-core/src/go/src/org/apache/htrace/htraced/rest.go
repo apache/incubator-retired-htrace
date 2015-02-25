@@ -64,6 +64,7 @@ func (hand *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 			fmt.Sprintf("error marshalling ServerInfo: %s\n", err.Error()))
 		return
 	}
+	hand.lg.Debugf("Returned serverInfo %s\n", string(buf))
 	w.Write(buf)
 }
 
@@ -72,15 +73,16 @@ type dataStoreHandler struct {
 	store *dataStore
 }
 
-func (hand *dataStoreHandler) parse64(w http.ResponseWriter, str string) (int64, bool) {
+func (hand *dataStoreHandler) parseSid(w http.ResponseWriter,
+	str string) (common.SpanId, bool) {
 	val, err := strconv.ParseUint(str, 16, 64)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusBadRequest,
 			fmt.Sprintf("Failed to parse span ID %s: %s", str, err.Error()))
 		w.Write([]byte("Error parsing : " + err.Error()))
-		return -1, false
+		return 0, false
 	}
-	return int64(val), true
+	return common.SpanId(val), true
 }
 
 func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWriter,
@@ -108,15 +110,15 @@ func (hand *findSidHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	req.ParseForm()
 	vars := mux.Vars(req)
 	stringSid := vars["id"]
-	sid, ok := hand.parse64(w, stringSid)
+	sid, ok := hand.parseSid(w, stringSid)
 	if !ok {
 		return
 	}
-	hand.lg.Debugf("findSidHandler(sid=%s)\n", common.SpanId(sid))
+	hand.lg.Debugf("findSidHandler(sid=%s)\n", sid.String())
 	span := hand.store.FindSpan(sid)
 	if span == nil {
-		writeError(hand.lg, w, http.StatusNoContent, fmt.Sprintf("No such span as %s\n",
-			common.SpanId(sid)))
+		writeError(hand.lg, w, http.StatusNoContent,
+			fmt.Sprintf("No such span as %s\n", sid.String()))
 		return
 	}
 	w.Write(span.ToJson())
@@ -131,7 +133,7 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	req.ParseForm()
 	vars := mux.Vars(req)
 	stringSid := vars["id"]
-	sid, ok := hand.parse64(w, stringSid)
+	sid, ok := hand.parseSid(w, stringSid)
 	if !ok {
 		return
 	}
@@ -140,7 +142,7 @@ func (hand *findChildrenHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	if !ok {
 		return
 	}
-	hand.lg.Debugf("findChildrenHandler(sid=%s, lim=%d)\n", common.SpanId(sid), lim)
+	hand.lg.Debugf("findChildrenHandler(sid=%s, lim=%d)\n", sid.String(), lim)
 	children := hand.store.FindChildren(sid, lim)
 	jbytes, err := json.Marshal(children)
 	if err != nil {

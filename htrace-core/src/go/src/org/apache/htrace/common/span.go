@@ -43,14 +43,14 @@ type TimelineAnnotation struct {
 	Msg  string `json:"m"`
 }
 
-type SpanId int64
+type SpanId uint64
 
 func (id SpanId) String() string {
 	return fmt.Sprintf("%016x", uint64(id))
 }
 
-func (id SpanId) Val() int64 {
-	return int64(id)
+func (id SpanId) Val() uint64 {
+	return uint64(id)
 }
 
 func (id SpanId) MarshalJSON() ([]byte, error) {

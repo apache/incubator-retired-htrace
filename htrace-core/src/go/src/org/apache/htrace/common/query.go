@@ -60,7 +60,7 @@ func (op Op) IsDescending() bool {
 
 func (op Op) IsValid() bool {
 	ops := ValidOps()
-	for i := range(ops) {
+	for i := range ops {
 		if ops[i] == op {
 			return true
 		}
@@ -85,7 +85,7 @@ const (
 
 func (field Field) IsValid() bool {
 	fields := ValidFields()
-	for i := range(fields) {
+	for i := range fields {
 		if fields[i] == field {
 			return true
 		}
