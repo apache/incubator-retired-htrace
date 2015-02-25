@@ -31,7 +31,8 @@ import (
 )
 
 func TestClientGetServerInfo(t *testing.T) {
-	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerInfo", NumDataDirs: 1}
+	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerInfo",
+		DataDirs: make([]string, 2)}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())
@@ -60,7 +61,8 @@ func createRandomTestSpans(amount int) common.SpanSlice {
 }
 
 func TestClientOperations(t *testing.T) {
-	htraceBld := &MiniHTracedBuilder{Name: "TestClientOperations", NumDataDirs: 2}
+	htraceBld := &MiniHTracedBuilder{Name: "TestClientOperations",
+		DataDirs: make([]string, 2)}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())
@@ -147,7 +149,8 @@ func TestClientOperations(t *testing.T) {
 }
 
 func TestDumpAll(t *testing.T) {
-	htraceBld := &MiniHTracedBuilder{Name: "TestDumpAll", NumDataDirs: 2}
+	htraceBld := &MiniHTracedBuilder{Name: "TestDumpAll",
+		DataDirs: make([]string, 2)}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())

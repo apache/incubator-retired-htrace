@@ -46,20 +46,24 @@ type MiniHTracedBuilder struct {
 	// If ths is nil, we use the default configuration for everything.
 	Cnf map[string]string
 
-	// The number of managed data directories to create.
-	// If this is 0, it defaults to DEFAULT_NUM_DATA_DIRS.
-	NumDataDirs int
+	// The DataDirs to use.  Empty entries will turn into random names.
+	DataDirs []string
+
+	// If true, we will keep the data dirs around after MiniHTraced#Close
+	KeepDataDirsOnClose bool
 
 	// If non-null, the WrittenSpans channel to use when creating the DataStore.
 	WrittenSpans chan *common.Span
 }
 
 type MiniHTraced struct {
-	Name     string
-	Cnf      *conf.Config
-	DataDirs []string
-	Store    *dataStore
-	Rsv      *RestServer
+	Name                string
+	Cnf                 *conf.Config
+	DataDirs            []string
+	Store               *dataStore
+	Rsv                 *RestServer
+	Lg                  *common.Logger
+	KeepDataDirsOnClose bool
 }
 
 func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
@@ -72,39 +76,45 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	if bld.Cnf == nil {
 		bld.Cnf = make(map[string]string)
 	}
-	if bld.NumDataDirs == 0 {
-		bld.NumDataDirs = DEFAULT_NUM_DATA_DIRS
+	if bld.DataDirs == nil {
+		bld.DataDirs = make([]string, 2)
 	}
-	dataDirs := make([]string, bld.NumDataDirs)
-	defer func() {
-		if err != nil {
-			if store != nil {
-				store.Close()
-			}
-			for idx := range dataDirs {
-				if dataDirs[idx] != "" {
-					os.RemoveAll(dataDirs[idx])
-				}
-			}
-			if rsv != nil {
-				rsv.Close()
+	for idx := range bld.DataDirs {
+		if bld.DataDirs[idx] == "" {
+			bld.DataDirs[idx], err = ioutil.TempDir(os.TempDir(),
+				fmt.Sprintf("%s%d", bld.Name, idx+1))
+			if err != nil {
+				return nil, err
 			}
 		}
-	}()
-	for idx := range dataDirs {
-		dataDirs[idx], err = ioutil.TempDir(os.TempDir(),
-			fmt.Sprintf("%s%d", bld.Name, idx+1))
-		if err != nil {
-			return nil, err
-		}
 	}
-	bld.Cnf[conf.HTRACE_DATA_STORE_DIRECTORIES] = strings.Join(dataDirs, conf.PATH_LIST_SEP)
+	bld.Cnf[conf.HTRACE_DATA_STORE_DIRECTORIES] =
+		strings.Join(bld.DataDirs, conf.PATH_LIST_SEP)
 	bld.Cnf[conf.HTRACE_WEB_ADDRESS] = ":0" // use a random port for the REST server
+	bld.Cnf[conf.HTRACE_LOG_LEVEL] = "TRACE"
 	cnfBld := conf.Builder{Values: bld.Cnf, Defaults: conf.DEFAULTS}
 	cnf, err := cnfBld.Build()
 	if err != nil {
 		return nil, err
 	}
+	lg := common.NewLogger("mini.htraced", cnf)
+	defer func() {
+		if err != nil {
+			if store != nil {
+				store.Close()
+			}
+			for idx := range bld.DataDirs {
+				if bld.DataDirs[idx] != "" {
+					os.RemoveAll(bld.DataDirs[idx])
+				}
+			}
+			if rsv != nil {
+				rsv.Close()
+			}
+			lg.Infof("Failed to create MiniHTraced %s: %s\n", bld.Name, err.Error())
+			lg.Close()
+		}
+	}()
 	store, err = CreateDataStore(cnf, bld.WrittenSpans)
 	if err != nil {
 		return nil, err
@@ -113,11 +123,15 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	if err != nil {
 		return nil, err
 	}
+	lg.Infof("Created MiniHTraced %s\n", bld.Name)
 	return &MiniHTraced{
-		Cnf:      cnf,
-		DataDirs: dataDirs,
-		Store:    store,
-		Rsv:      rsv,
+		Name:                bld.Name,
+		Cnf:                 cnf,
+		DataDirs:            bld.DataDirs,
+		Store:               store,
+		Rsv:                 rsv,
+		Lg:                  lg,
+		KeepDataDirsOnClose: bld.KeepDataDirsOnClose,
 	}, nil
 }
 
@@ -127,9 +141,15 @@ func (ht *MiniHTraced) ClientConf() *conf.Config {
 }
 
 func (ht *MiniHTraced) Close() {
+	ht.Lg.Infof("Closing MiniHTraced %s\n", ht.Name)
 	ht.Rsv.Close()
 	ht.Store.Close()
-	for idx := range ht.DataDirs {
-		os.RemoveAll(ht.DataDirs[idx])
+	if !ht.KeepDataDirsOnClose {
+		for idx := range ht.DataDirs {
+			ht.Lg.Infof("Removing %s...\n", ht.DataDirs[idx])
+			os.RemoveAll(ht.DataDirs[idx])
+		}
 	}
+	ht.Lg.Infof("Finished closing MiniHTraced %s\n", ht.Name)
+	ht.Lg.Close()
 }

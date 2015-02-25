@@ -23,15 +23,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"math/rand"
+	htrace "org/apache/htrace/client"
 	"org/apache/htrace/common"
+	"org/apache/htrace/conf"
 	"org/apache/htrace/test"
+	"os"
 	"sort"
+	"strings"
 	"testing"
 )
 
 // Test creating and tearing down a datastore.
 func TestCreateDatastore(t *testing.T) {
-	htraceBld := &MiniHTracedBuilder{Name: "TestCreateDatastore", NumDataDirs: 3}
+	htraceBld := &MiniHTracedBuilder{Name: "TestCreateDatastore",
+		DataDirs: make([]string, 3)}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())
@@ -340,5 +345,100 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	if spansWritten < uint64(b.N) {
 		b.Fatal("incorrect statistics: expected %d spans to be written, but only got %d",
 			b.N, spansWritten)
+	}
+}
+
+func TestReloadDataStore(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestReloadDataStore",
+		DataDirs: make([]string, 2), KeepDataDirsOnClose: true}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	dataDirs := make([]string, len(ht.DataDirs))
+	copy(dataDirs, ht.DataDirs)
+	defer func() {
+		if ht != nil {
+			ht.Close()
+		}
+		for i := range dataDirs {
+			os.RemoveAll(dataDirs[i])
+		}
+	}()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf())
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+
+	// Create some random trace spans.
+	NUM_TEST_SPANS := 5
+	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
+	for i := 0; i < NUM_TEST_SPANS; i++ {
+		if err := hcl.WriteSpan(allSpans[i]); err != nil {
+			t.Fatalf("WriteSpan(%d) failed: %s\n", i, err.Error())
+		}
+	}
+
+	// Look up the spans we wrote.
+	var span *common.Span
+	for i := 0; i < NUM_TEST_SPANS; i++ {
+		span, err = hcl.FindSpan(allSpans[i].Id)
+		if err != nil {
+			t.Fatalf("FindSpan(%d) failed: %s\n", i, err.Error())
+		}
+		common.ExpectSpansEqual(t, allSpans[i], span)
+	}
+
+	ht.Close()
+	ht = nil
+
+	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore2",
+		DataDirs: dataDirs, KeepDataDirsOnClose: true}
+	ht, err = htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to re-create datastore: %s", err.Error())
+	}
+	hcl, err = htrace.NewClient(ht.ClientConf())
+	if err != nil {
+		t.Fatalf("failed to re-create client: %s", err.Error())
+	}
+
+	// Look up the spans we wrote earlier.
+	for i := 0; i < NUM_TEST_SPANS; i++ {
+		span, err = hcl.FindSpan(allSpans[i].Id)
+		if err != nil {
+			t.Fatalf("FindSpan(%d) failed: %s\n", i, err.Error())
+		}
+		common.ExpectSpansEqual(t, allSpans[i], span)
+	}
+
+	// Set an old datastore version number.
+	for i := range ht.Store.shards {
+		shard := ht.Store.shards[i]
+		writeDataStoreVersion(ht.Store, shard.ldb, CURRENT_LAYOUT_VERSION-1)
+	}
+	ht.Close()
+	ht = nil
+
+	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore3",
+		DataDirs: dataDirs, KeepDataDirsOnClose: true}
+	ht, err = htraceBld.Build()
+	if err == nil {
+		t.Fatalf("expected the datastore to fail to load after setting an " +
+			"incorrect version.\n")
+	}
+	if !strings.Contains(err.Error(), "Invalid layout version") {
+		t.Fatal(`expected the loading error to contain "invalid layout version"` + "\n")
+	}
+
+	// It should work with data.store.clear set.
+	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore4",
+		DataDirs: dataDirs, KeepDataDirsOnClose: true,
+		Cnf: map[string]string{conf.HTRACE_DATA_STORE_CLEAR: "true"}}
+	ht, err = htraceBld.Build()
+	if err != nil {
+		t.Fatalf("expected the datastore loading to succeed after setting an "+
+			"incorrect version.  But it failed with error %s\n", err.Error())
 	}
 }

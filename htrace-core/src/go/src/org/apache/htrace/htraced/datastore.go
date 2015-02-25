@@ -31,7 +31,6 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"syscall"
 )
 
 //
@@ -47,7 +46,7 @@ import (
 // for serialization.  We assume that there will be many more writes than reads.
 //
 // Schema
-// m -> dataStoreMetadata
+// m -> dataStoreVersion
 // s[8-byte-big-endian-sid] -> SpanData
 // b[8-byte-big-endian-begin-time][8-byte-big-endian-child-sid] -> {}
 // e[8-byte-big-endian-end-time][8-byte-big-endian-child-sid] -> {}
@@ -63,10 +62,12 @@ import (
 // the signed fields.
 //
 
-const DATA_STORE_VERSION = 1
+const UNKNOWN_LAYOUT_VERSION = 0
+const CURRENT_LAYOUT_VERSION = 2
 
 var EMPTY_BYTE_BUF []byte = []byte{}
 
+const VERSION_KEY = 'v'
 const SPAN_ID_INDEX_PREFIX = 's'
 const BEGIN_TIME_INDEX_PREFIX = 'b'
 const END_TIME_INDEX_PREFIX = 'e'
@@ -156,23 +157,6 @@ type shard struct {
 
 	// The channel we will send a bool to when we exit.
 	exited chan bool
-}
-
-// Metadata about the DataStore.
-type dataStoreMetadata struct {
-	// The DataStore version.
-	Version int32
-}
-
-// Write the metadata key to a shard.
-func (shd *shard) WriteMetadata(meta *dataStoreMetadata) error {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(meta)
-	if err != nil {
-		return err
-	}
-	return shd.ldb.Put(shd.store.writeOpts, []byte("m"), w.Bytes())
 }
 
 // Process incoming spans for a shard.
@@ -305,10 +289,11 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 	dirsStr := cnf.Get(conf.HTRACE_DATA_STORE_DIRECTORIES)
 	dirs := strings.Split(dirsStr, conf.PATH_LIST_SEP)
 
-	// If we return an error, close the store.
 	var err error
 	lg := common.NewLogger("datastore", cnf)
 	store := &dataStore{lg: lg, shards: []*shard{}, WrittenSpans: writtenSpans}
+
+	// If we return an error, close the store.
 	defer func() {
 		if err != nil {
 			store.Close()
@@ -324,70 +309,132 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 	// Open all shards
 	for idx := range dirs {
 		path := dirs[idx] + conf.PATH_SEP + "db"
-		err := os.MkdirAll(path, 0777)
-		if err != nil {
-			e, ok := err.(*os.PathError)
-			if !ok || e.Err != syscall.EEXIST {
-				return nil, err
-			}
-			if !clearStored {
-				// TODO: implement re-opening saved data
-				lg.Error("Error: path " + path + "already exists.")
-				return nil, err
-			} else {
-				err = os.RemoveAll(path)
-				if err != nil {
-					lg.Error("Failed to create " + path + ": " + err.Error())
-					return nil, err
-				}
-				lg.Info("Cleared " + path)
-			}
-		}
 		var shd *shard
-		shd, err = CreateShard(store, cnf, path)
+		shd, err = CreateShard(store, cnf, path, clearStored)
 		if err != nil {
-			lg.Errorf("Error creating shard %s: %s", path, err.Error())
+			lg.Errorf("Error creating shard %s: %s\n", path, err.Error())
 			return nil, err
 		}
 		store.shards = append(store.shards, shd)
 	}
-	meta := &dataStoreMetadata{Version: DATA_STORE_VERSION}
 	for idx := range store.shards {
 		shd := store.shards[idx]
-		err := shd.WriteMetadata(meta)
-		if err != nil {
-			lg.Error("Failed to write metadata to " + store.shards[idx].path + ": " + err.Error())
-			return nil, err
-		}
 		shd.exited = make(chan bool, 1)
 		go shd.processIncoming()
 	}
 	return store, nil
 }
 
-func CreateShard(store *dataStore, cnf *conf.Config, path string) (*shard, error) {
+func CreateShard(store *dataStore, cnf *conf.Config, path string,
+	clearStored bool) (*shard, error) {
+	lg := store.lg
+	if clearStored {
+		fi, err := os.Stat(path)
+		if err != nil && !os.IsNotExist(err) {
+			lg.Errorf("Failed to stat %s: %s\n", path, err.Error())
+			return nil, err
+		}
+		if fi != nil {
+			err = os.RemoveAll(path)
+			if err != nil {
+				lg.Errorf("Failed to clear existing datastore directory %s: %s\n",
+					path, err.Error())
+				return nil, err
+			}
+			lg.Infof("Cleared existing datastore directory %s\n", path)
+		}
+	}
+	err := os.MkdirAll(path, 0777)
+	if err != nil {
+		lg.Errorf("Failed to MkdirAll(%s): %s\n", path, err.Error())
+		return nil, err
+	}
 	var shd *shard
-	//filter := levigo.NewBloomFilter(10)
-	//defer filter.Close()
 	openOpts := levigo.NewOptions()
 	defer openOpts.Close()
-	openOpts.SetCreateIfMissing(true)
-	//openOpts.SetFilterPolicy(filter)
+	newlyCreated := false
 	ldb, err := levigo.Open(path, openOpts)
-	if err != nil {
-		store.lg.Errorf("LevelDB failed to open %s: %s\n", path, err.Error())
-		return nil, err
+	if err == nil {
+		store.lg.Infof("LevelDB opened %s\n", path)
+	} else {
+		store.lg.Debugf("LevelDB failed to open %s: %s\n", path, err.Error())
+		openOpts.SetCreateIfMissing(true)
+		ldb, err = levigo.Open(path, openOpts)
+		if err != nil {
+			store.lg.Errorf("LevelDB failed to create %s: %s\n", path, err.Error())
+			return nil, err
+		}
+		store.lg.Infof("Created new LevelDB instance in %s\n", path)
+		newlyCreated = true
 	}
 	defer func() {
 		if shd == nil {
 			ldb.Close()
 		}
 	}()
+	lv, err := readLayoutVersion(store, ldb)
+	if err != nil {
+		store.lg.Errorf("Got error while reading datastore version for %s: %s\n",
+			path, err.Error())
+		return nil, err
+	}
+	if newlyCreated && (lv == UNKNOWN_LAYOUT_VERSION) {
+		err = writeDataStoreVersion(store, ldb, CURRENT_LAYOUT_VERSION)
+		if err != nil {
+			store.lg.Errorf("Got error while writing datastore version for %s: %s\n",
+				path, err.Error())
+			return nil, err
+		}
+		store.lg.Tracef("Wrote layout version %d to shard at %s.\n",
+			CURRENT_LAYOUT_VERSION, path)
+	} else if lv != CURRENT_LAYOUT_VERSION {
+		versionName := "unknown"
+		if lv != UNKNOWN_LAYOUT_VERSION {
+			versionName = fmt.Sprintf("%d", lv)
+		}
+		store.lg.Errorf("Can't read old datastore.  Its layout version is %s, but this "+
+			"software is at layout version %d.  Please set %s to clear the datastore "+
+			"on startup, or clear it manually.\n", versionName,
+			CURRENT_LAYOUT_VERSION, conf.HTRACE_DATA_STORE_CLEAR)
+		return nil, errors.New(fmt.Sprintf("Invalid layout version: got %s, expected %d.",
+			versionName, CURRENT_LAYOUT_VERSION))
+	} else {
+		store.lg.Tracef("Found layout version %d in %s.\n", lv, path)
+	}
 	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
 	shd = &shard{store: store, ldb: ldb, path: path,
 		incoming: make(chan *common.Span, spanBufferSize)}
-	store.lg.Infof("LevelDB opened %s\n", path)
 	return shd, nil
+}
+
+// Read the datastore version of a leveldb instance.
+func readLayoutVersion(store *dataStore, ldb *levigo.DB) (uint32, error) {
+	buf, err := ldb.Get(store.readOpts, []byte{VERSION_KEY})
+	if err != nil {
+		return 0, err
+	}
+	if len(buf) == 0 {
+		return 0, nil
+	}
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+	var v uint32
+	err = decoder.Decode(&v)
+	if err != nil {
+		return 0, err
+	}
+	return v, nil
+}
+
+// Write the datastore version to a shard.
+func writeDataStoreVersion(store *dataStore, ldb *levigo.DB, v uint32) error {
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err := encoder.Encode(&v)
+	if err != nil {
+		return err
+	}
+	return ldb.Put(store.writeOpts, []byte{VERSION_KEY}, w.Bytes())
 }
 
 func (store *dataStore) GetStatistics() *Statistics {
@@ -737,7 +784,7 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		src.numRead[shardIdx]++
 		key := iter.Key()
 		if !bytes.HasPrefix(key, []byte{src.keyPrefix}) {
-			lg.Debugf("Can't populate: Iterator for shard %d does not have prefix %s",
+			lg.Debugf("Can't populate: Iterator for shard %d does not have prefix %s\n",
 				shardIdx, string(src.keyPrefix))
 			break // Can't read past end of indexed section
 		}
