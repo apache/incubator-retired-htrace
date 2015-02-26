@@ -71,7 +71,7 @@ func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 			idMap[span.Id] = span
 		}
 	}
-	childMap := make(map[common.SpanId][]*common.Span)
+	childMap := make(map[common.SpanId]common.SpanSlice)
 	for i := range spans {
 		child := spans[i]
 		for j := range child.Parents {
@@ -82,7 +82,7 @@ func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 			} else {
 				children := childMap[parent.Id]
 				if children == nil {
-					children = make([]*common.Span, 0)
+					children = make(common.SpanSlice, 0)
 				}
 				children = append(children, child)
 				childMap[parent.Id] = children
@@ -99,6 +99,7 @@ func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 	// Write out the edges between nodes... the parent/children relationships
 	for i := range spans {
 		children := childMap[spans[i].Id]
+		sort.Sort(children)
 		if children != nil {
 			for c := range children {
 				w.Printf(fmt.Sprintf(`  "%s" -> "%s";`+"\n",

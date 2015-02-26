@@ -71,9 +71,9 @@ func TestSpansToDot(t *testing.T) {
 		t.Fatalf("spansToDot failed: error %s\n", err.Error())
 	}
 	EXPECTED_STR := `digraph spans {
-  "e2c7273efb280a8c" [label="ClientNamenodeProtocol#getBlockLocations"];
   "6af3cc058e5d829d" [label="newDFSInputStream"];
   "75d16cc5b2c07d8a" [label="getBlockLocations"];
+  "e2c7273efb280a8c" [label="ClientNamenodeProtocol#getBlockLocations"];
   "6af3cc058e5d829d" -> "75d16cc5b2c07d8a";
   "75d16cc5b2c07d8a" -> "e2c7273efb280a8c";
 }`
