@@ -95,9 +95,6 @@ install)
     # Download dependencies into the build directory.
     echo "godep restore..."
     godep restore || die "failed to set up dependencies"
-    go run "$SCRIPT_DIR/src/org/apache/htrace/bundler/bundler.go" \
-        --src="$SCRIPT_DIR/../web/" --dst="$SCRIPT_DIR/src/org/apache/htrace/resource/" \
-            || die "bundler failed"
 
     # Discover the git version
     GIT_VERSION=$(git rev-parse HEAD)

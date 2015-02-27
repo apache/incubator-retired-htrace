@@ -31,6 +31,7 @@ import (
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"org/apache/htrace/resource"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -292,7 +293,17 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	span.Handle("/{id}/children", findChildrenH).Methods("GET")
 
 	// Default Handler. This will serve requests for static requests.
-	r.PathPrefix("/").Handler(&defaultServeHandler{lg: rsv.lg}).Methods("GET")
+	webdir := os.Getenv("HTRACED_WEB_DIR")
+	if webdir == "" {
+		webdir, err = filepath.Abs(filepath.Join(filepath.Dir(os.Args[0]), "..", "..", "web"))
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	rsv.lg.Infof("Serving static files from %s\n.", webdir)
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webdir))).Methods("GET")
 
 	// Log an error message for unknown non-GET requests.
 	r.PathPrefix("/").Handler(&logErrorHandler{lg: rsv.lg})
