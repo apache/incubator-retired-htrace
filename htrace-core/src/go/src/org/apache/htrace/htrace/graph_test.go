@@ -76,7 +76,8 @@ func TestSpansToDot(t *testing.T) {
   "e2c7273efb280a8c" [label="ClientNamenodeProtocol#getBlockLocations"];
   "6af3cc058e5d829d" -> "75d16cc5b2c07d8a";
   "75d16cc5b2c07d8a" -> "e2c7273efb280a8c";
-}`
+}
+`
 	if w.String() != EXPECTED_STR {
 		t.Fatalf("Expected to get:\n%s\nGot:\n%s\n", EXPECTED_STR, w.String())
 	}

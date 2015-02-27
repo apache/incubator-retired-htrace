@@ -52,6 +52,10 @@ func jsonSpanFileToDotFile(jsonFile string, dotFile string) error {
 	if err != nil {
 		return err
 	}
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
 	err = file.Close()
 	file = nil
 	return err
@@ -107,6 +111,6 @@ func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 			}
 		}
 	}
-	w.Printf("}")
+	w.Printf("}\n")
 	return w.Error()
 }

@@ -70,14 +70,14 @@ func main() {
 	loadFile := app.Command("loadFile", "Write whitespace-separated JSON spans from a file to the server.")
 	loadFilePath := loadFile.Arg("path",
 		"A file containing whitespace-separated span JSON.").Required().String()
-	dumpAll := app.Command("dumpAll", "Dump all spans from the htraced daemon.")
-	dumpAllOutPath := dumpAll.Flag("path", "The path to dump the trace spans to.").Default("-").String()
-	dumpAllLim := dumpAll.Flag("lim", "The number of spans to transfer from the server at once.").
-		Default("100").Int()
 	loadJson := app.Command("load", "Write JSON spans from the command-line to the server.")
 	loadJsonArg := loadJson.Arg("json", "A JSON span to write to the server.").Required().String()
+	dumpAll := app.Command("dumpAll", "Dump all spans from the htraced daemon.")
+	dumpAllOutPath := dumpAll.Arg("path", "The path to dump the trace spans to.").Default("-").String()
+	dumpAllLim := dumpAll.Flag("lim", "The number of spans to transfer from the server at once.").
+		Default("100").Int()
 	graph := app.Command("graph", "Visualize span JSON as a graph.")
-	graphJsonFile := graph.Flag("input", "The JSON file to load").Required().String()
+	graphJsonFile := graph.Arg("input", "The JSON file to load").Required().String()
 	graphDotFile := graph.Flag("output",
 		"The path to write a GraphViz dotfile to.  This file can be used as input to "+
 			"GraphViz, in order to generate a pretty picture.  See graphviz.org for more "+
