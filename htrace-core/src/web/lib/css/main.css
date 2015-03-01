@@ -26,3 +26,15 @@ li.span {
   margin: 0px;
   list-style: none;
 }
+
+/* Graph */
+svg .node circle {
+  stroke: #006600;
+  stroke-width: 3;
+  fill: #00CC00;
+}
+
+svg .link {
+  stroke: black;
+  stroke-width: 3;
+}

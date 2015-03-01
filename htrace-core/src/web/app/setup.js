@@ -77,12 +77,25 @@ var Router = Backbone.Marionette.AppRouter.extend({
   },
 
   "span": function(id) {
+    var span = this.spansCollection.findWhere({
+      "spanId": id
+    });
+
+    if (!span) {
+      Backbone.history.navigate("!/search", {"trigger": true});
+      return;
+    }
+
     var top = new app.DetailsView();
     app.root.app.show(top);
     top.span.show(new app.SpanDetailsView({
-      "model": this.spansCollection.findWhere({
-        "spanId": id
-      })
+      "model": span
+    }));
+    top.content.show(new app.GraphView({
+      "collection": this.spansCollection,
+      "spanId": id,
+      "el": top.content.$el[0],
+      "id": "span-" + id
     }));
   }
 });

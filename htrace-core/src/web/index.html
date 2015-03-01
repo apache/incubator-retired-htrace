@@ -131,6 +131,8 @@
         <div class="col-md-12" role="main"></div>
       </div>
 
+      <hr>
+
       <div class="row">
         <div class="col-md-12" role="complementary"></div>
       </div>
@@ -138,44 +140,32 @@
     </script>
 
     <script id="span-details-template" type="text/html">
-      <div class="page-header">
-        <h1><%- span.description %></h1>
-      </div>
-      <div class="page-contents">
-        <div class="row">
-          <div class="col-md-2">
-            <h4>Span id</h4>
-          </div>
-          <div class="col-md-10"><%- span.spanId %></div>
-        </div>
-        <div class="row">
-          <div class="col-md-2">
-            <h4>Process id</h4>
-          </div>
-          <div class="col-md-10"><%- span.processId %></div>
-        </div>
-        <div class="row">
-          <div class="col-md-2">
-            <h4>Begin time</h4>
-          </div>
-          <div class="col-md-10"><%- span.beginTime %></div>
-        </div>
-        <div class="row">
-          <div class="col-md-2">
-            <h4>End time</h4>
-          </div>
-          <div class="col-md-10"><%- span.stopTime %></div>
-        </div>
-        <div class="row">
-          <div class="col-md-2">
-            <h4>Duration</h4>
-          </div>
-          <div class="col-md-10"><%- span.duration %></div>
-        </div>
-      </div>
+    <table class="table table-condensed">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Span ID</th>
+          <th>Process ID</th>
+          <th>Start time</th>
+          <th>End time</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><%- span.description %></td>
+          <td><%- span.spanId %></td>
+          <td><%- span.processId %></td>
+          <td><%- span.beginTime %></td>
+          <td><%- span.stopTime %></td>
+          <td><%- span.duration %></td>
+        </tr>
+      </tbody>
+    </table>
     </script>
 
     <script src="lib/js/jquery-2.1.3.min.js" type="text/javascript"></script>
+    <script src="lib/js/d3-3.5.5.js" type="text/javascript"></script>
     <script src="lib/bootstrap-3.3.1/js/bootstrap.min.js" type="text/javascript"></script>
     <script src="lib/js/underscore-1.7.0.js" type="text/javascript"></script>
     <script src="lib/js/backbone-1.1.2.js" type="text/javascript"></script>
@@ -188,7 +178,7 @@
 
     <script src="app/app.js" type="text/javascript"></script>
     <script src="app/models/span.js" type="text/javascript"></script>
-
+    <script src="app/views/graph/graph.js" type="text/javascript"></script>
     <script src="app/views/search/field.js" type="text/javascript"></script>
     <script src="app/views/search/search.js" type="text/javascript"></script>
     <script src="app/views/details/details.js" type="text/javascript"></script>
