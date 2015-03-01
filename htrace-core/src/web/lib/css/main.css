@@ -29,9 +29,14 @@ li.span {
 
 /* Graph */
 svg .node circle {
-  stroke: #006600;
+  stroke: #000000;
   stroke-width: 3;
-  fill: #00CC00;
+  fill: #D8BFD8;
+}
+
+svg .selected circle {
+  stroke-width: 3;
+  fill: #DA70D6;
 }
 
 svg .link {

@@ -45,76 +45,77 @@ var Router = Backbone.Marionette.AppRouter.extend({
   },
 
   "search": function(query) {
-    var top = new app.SearchView();
-    app.root.app.show(top);
-
-    top.controls.show(new app.SearchControlsView({
-      "collection": this.spansCollection
-    }));
-    top.main.show(new Backgrid.Grid({
-      "collection": this.spansCollection,
-      "columns": [{
-        "label": "Begin",
-        "cell": Backgrid.Cell.extend({
-          className: "begin-cell",
-          formatter: {
-            fromRaw: function(rawData, model) {
-              var beginMs = model.get("beginTime")
-              return moment(beginMs).format('YYYY/MM/DD HH:mm:ss,SSS');
-            },
-            toRaw: function(formattedData, model) {
-              return formattedData // data entry not supported for this cell
+    app.root.app.show(new app.SearchView());
+    app.root.app.currentView.controls.show(
+      new app.SearchControlsView({
+        "collection": this.spansCollection
+      }));
+    app.root.app.currentView.main.show(
+      new Backgrid.Grid({
+        "collection": this.spansCollection,
+        "columns": [{
+          "label": "Begin",
+          "cell": Backgrid.Cell.extend({
+            className: "begin-cell",
+            formatter: {
+              fromRaw: function(rawData, model) {
+                var beginMs = model.get("beginTime")
+                return moment(beginMs).format('YYYY/MM/DD HH:mm:ss,SSS');
+              },
+              toRaw: function(formattedData, model) {
+                return formattedData // data entry not supported for this cell
+              }
             }
-          }
-        }),
-        "editable": false,
-        "sortable": false
-      }, {
-        "name": "spanId",
-        "label": "ID",
-        "cell": "string",
-        "editable": false,
-        "sortable": false
-      }, {
-        "name": "processId",
-        "label": "processId",
-        "cell": "string",
-        "editable": false,
-        "sortable": false
-      }, {
-        "label": "Duration",
-        "cell": Backgrid.Cell.extend({
-          className: "duration-cell",
-          formatter: {
-            fromRaw: function(rawData, model) {
-              return model.duration() + " ms"
-            },
-            toRaw: function(formattedData, model) {
-              return formattedData // data entry not supported for this cell
+          }),
+          "editable": false,
+          "sortable": false
+        }, {
+          "name": "spanId",
+          "label": "ID",
+          "cell": "string",
+          "editable": false,
+          "sortable": false
+        }, {
+          "name": "processId",
+          "label": "processId",
+          "cell": "string",
+          "editable": false,
+          "sortable": false
+        }, {
+          "label": "Duration",
+          "cell": Backgrid.Cell.extend({
+            className: "duration-cell",
+            formatter: {
+              fromRaw: function(rawData, model) {
+                return model.duration() + " ms"
+              },
+              toRaw: function(formattedData, model) {
+                return formattedData // data entry not supported for this cell
+              }
             }
+          }),
+          "editable": false,
+          "sortable": false
+        }, {
+          "name": "description",
+          "label": "Description",
+          "cell": "string",
+          "editable": false,
+          "sortable": false
+        }],
+        "row": Backgrid.Row.extend({
+          "events": {
+            "click": "details"
+          },
+          "details": function() {
+            Backbone.history.navigate("!/spans/" + this.model.get("spanId"), {"trigger": true});
           }
-        }),
-        "editable": false,
-        "sortable": false
-      }, {
-        "name": "description",
-        "label": "Description",
-        "cell": "string",
-        "editable": false,
-        "sortable": false
-      }],
-      "row": Backgrid.Row.extend({
-        "events": {
-          "click": "details"
-        },
-        "details": function() {
-          Backbone.history.navigate("!/spans/" + this.model.get("spanId"), {"trigger": true});
-        }
-      })
-    }));
-    top.pagination.show(new Backgrid.Extension.Paginator({
-      collection: this.spansCollection,
-    }));
+        })
+      }));
+    app.root.app.currentView.pagination.show(
+      new Backgrid.Extension.Paginator({
+        collection: this.spansCollection,
+      }));
   },
 
   "span": function(id) {
@@ -127,17 +128,21 @@ var Router = Backbone.Marionette.AppRouter.extend({
       return;
     }
 
-    var top = new app.DetailsView();
-    app.root.app.show(top);
-    top.span.show(new app.SpanDetailsView({
-      "model": span
-    }));
-    top.content.show(new app.GraphView({
+    var graphView = new app.GraphView({
       "collection": this.spansCollection,
-      "spanId": id,
-      "el": top.content.$el[0],
-      "id": "span-" + id
-    }));
+      "id": "span-graph"
+    });
+
+    graphView.on("update:span", function(d) {
+      app.root.app.currentView.span.show(
+        new app.SpanDetailsView({
+          "model": d.span
+        }));
+    });
+
+    app.root.app.show(new app.DetailsView());
+    app.root.app.currentView.content.show(graphView);
+    app.root.app.currentView.content.currentView.setSpanId(id);
   },
 
   "swimlane": function(id, lim) {
