@@ -261,6 +261,6 @@ It is (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
 and shared under the MIT license:
 https://github.com/moment/moment/blob/develop/LICENSE
 
-pickadate.js is an open source date and time widget.
-It is (c) 2014 Amsul, http://amsul.ca and MIT licensed:
-https://github.com/amsul/pickadate.js/blob/master/LICENSE.md
+rome.js is a customizable date (and time) picker.
+It is Copyright © 2014 Nicolas Bevacqua
+https://github.com/bevacqua/rome

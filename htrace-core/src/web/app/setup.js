@@ -38,7 +38,7 @@ var Router = Backbone.Router.extend({
     this.searchView = new App.SearchView({
       "collection": this.spansCollection,
       "el": $("#list").find("[role='form']")
-    });
+    }).render();
   },
 
   search: function() {
@@ -82,7 +82,4 @@ window.urlconf = new Router();
 
 $(function() {
   Backbone.history.start();
-
-  $(".datepicker").pickadate();
-  $(".timepicker").pickatime();
 });

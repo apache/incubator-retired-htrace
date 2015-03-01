@@ -19,17 +19,15 @@
   <head>
     <meta charset="utf-8">
     <title>HTrace</title>
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <!-- TODO: Add Favicon -->
     <link rel="icon" href="//favicon.ico" type="image/x-icon" sizes="16x16">
     <link href="lib/bootstrap-3.3.1/css/bootstrap.css" rel="stylesheet">
     <link href="lib/css/backgrid-0.3.5.min.css" rel="stylesheet">
     <link href="lib/css/backgrid-paginator-0.3.5.min.css" rel="stylesheet">
-    <link href="lib/pickadate-3.5.2/themes/classic.css" rel="stylesheet">
-    <link href="lib/pickadate-3.5.2/themes/classic.date.css" rel="stylesheet">
-    <link href="lib/pickadate-3.5.2/themes/classic.time.css" rel="stylesheet">
+    <link href="lib/rome-2.1.0/rome.min.css" rel="stylesheet">
     <link href="lib/css/main.css" rel="stylesheet">
 
     <!-- TODO: Remove shiv -->
@@ -54,43 +52,35 @@
 
     <div class="container-fluid" id="list" role="application">
       <div class="row">
-        <div class="col-md-3" role="form">
+        <div class="col-md-4" role="form">
           <div class="panel panel-default">
             <div class="panel-heading">
               <h3 class="panel-title">Controls</h3>
             </div>
             <div class="panel-body">
               <form class="form-horizontal">
+                <div class="search-fields">
+                </div>
                 <div class="form-group">
+                  <!-- Split button -->
                   <div class="col-sm-12">
-                    <input type="search" class="form-control" id="search" placeholder="Search description">
-                  </div>
-                </div>
-                <hr />
-                <div class="form-group">
-                  <div class="col-sm-8">
-                    <input type="datetime" class="form-control datepicker" id="begindate" placeholder="Start date">
-                  </div>
-                  <div class="col-sm-4">
-                    <input type="datetime" class="form-control timepicker" id="begintime" placeholder="Start time">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <div class="col-sm-8">
-                    <input type="datetime" class="form-control datepicker" id="stopdate" placeholder="End date">
-                  </div>
-                  <div class="col-sm-4">
-                    <input type="datetime" class="form-control timepicker" id="stoptime" placeholder="End time">
+                    <div class="btn-group">
+                      <button type="button" class="btn btn-default field">Add Field</button>
+                      <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" class="add-field" data-field="begin">Start Date/Time</a></li>
+                        <li><a href="#" class="add-field" data-field="end">End Date/Time</a></li>
+                        <li><a href="#" class="add-field" data-field="duration">Duration</a></li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
                 <div class="form-group">
                   <div class="col-sm-12">
-                    <input type="datetime" class="form-control" id="duration" placeholder="Duration">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <div class="col-sm-12">
-                    <button type="button" class="btn btn-default">Search</button>
+                    <button type="button" class="search btn btn-default">Search</button>
                   </div>
                 </div>
               </form>
@@ -98,11 +88,41 @@
           </div>
         </div>
 
-        <div class="col-md-9" role="main"></div>
+        <div class="col-md-8" role="main"></div>
       </div>
     </div>
 
     <footer></footer>
+
+    <script id='search-field-template' type='text/html'>
+      <div class='form-group search-field start-end-date-time'>
+        <label for="start-end-date-time" class="start-end-date-time control-label col-sm-3">Date</label>
+        <div class="col-sm-3">
+          <select class='op form-control'>
+            <option selected value='ge'>After</option>
+            <option value='le'>Before</option>
+          </select>
+        </div>
+        <div class='col-sm-5'>
+          <input placeholder="Date/Time" id="start-end-date-time" class="start-end-date-time date form-control value" />
+        </div>
+        <button class="btn btn-link remove-field" type="button">x</button>
+      </div>
+      <div class='form-group search-field duration'>
+        <label for="duration" class="duration control-label col-sm-3">Duration</label>
+        <div class='col-sm-8'>
+          <input type="text" class="duration form-control value" placeholder="Duration" />
+        </div>
+        <button class="btn btn-link remove-field" type="button">x</button>
+      </div>
+      <div class='form-group search-field description'>
+        <label for="description" class="description control-label col-sm-3">Description</label>
+        <div class='col-sm-8'>
+        <input type="search" id="description" class="description value form-control" placeholder="Search description" />
+        </div>
+      </div>
+    </script>
+
 
     <script id="span-details-template" type="text/html">
       <div class="page-header">
@@ -167,14 +187,14 @@
     <script src="lib/js/backgrid-0.3.5.js" type="text/javascript"></script>
     <script src="lib/js/backgrid-paginator-0.3.5.js" type="text/javascript"></script>
     <script src="lib/js/moment-2.9.0.min.js" type="text/javascript"></script>
-    <script src="lib/pickadate-3.5.2/picker.js" type="text/javascript"></script>
-    <script src="lib/pickadate-3.5.2/picker.date.js" type="text/javascript"></script>
-    <script src="lib/pickadate-3.5.2/picker.time.js" type="text/javascript"></script>
+    <script src="lib/rome-2.1.0/rome.standalone.min.js" type="text/javascript"></script>
 
     <script src="app/app.js" type="text/javascript"></script>
     <script src="app/models/span.js" type="text/javascript"></script>
+
     <script src="app/views/span.js" type="text/javascript"></script>
-    <script src="app/views/search.js" type="text/javascript"></script>
+    <script src="app/views/search/field.js" type="text/javascript"></script>
+    <script src="app/views/search/search.js" type="text/javascript"></script>
     <script src="app/setup.js" type="text/javascript"></script>
   </body>
 </html>
