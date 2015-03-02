@@ -30,8 +30,9 @@ import java.util.Map;
  * Base interface for gathering and reporting statistics about a block of
  * execution.
  * <p/>
- * Spans form a tree structure with the parent relationship. The first span in a
- * trace has no parent span.
+ * Spans should form a directed acyclic graph structure.  It should be possible
+ * to keep following the parents of a span until you arrive at a span with no
+ * parents.<p/>
  */
 @JsonSerialize(using = Span.SpanSerializer.class)
 public interface Span {
@@ -67,7 +68,10 @@ public interface Span {
   String getDescription();
 
   /**
-   * A pseudo-unique (random) number assigned to this span instance
+   * A pseudo-unique (random) number assigned to this span instance.<p/>
+   *
+   * The spanId is immutable and cannot be changed.  It is safe to access this
+   * from multiple threads.
    */
   long getSpanId();
 
@@ -86,10 +90,18 @@ public interface Span {
   String toString();
 
   /**
-   * Returns the parents of the span.
+   * Returns the parent IDs of the span.<p/>
+   *
    * The array will be empty if there are no parents.
    */
   long[] getParents();
+
+  /**
+   * Set the parents of this span.<p/>
+   *
+   * Any existing parents will be cleared by this call.
+   */
+  void setParents(long[] parents);
 
   /**
    * Add a data annotation associated with this span

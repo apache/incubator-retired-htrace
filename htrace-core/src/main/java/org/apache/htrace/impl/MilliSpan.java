@@ -54,7 +54,7 @@ public class MilliSpan implements Span {
   private long end;
   private final String description;
   private final long traceId;
-  private final long parents[];
+  private long parents[];
   private final long spanId;
   private Map<String, String> traceInfo = null;
   private final String processId;
@@ -217,6 +217,11 @@ public class MilliSpan implements Span {
   @Override
   public long[] getParents() {
     return parents;
+  }
+
+  @Override
+  public void setParents(long[] parents) {
+    this.parents = parents;
   }
 
   @Override

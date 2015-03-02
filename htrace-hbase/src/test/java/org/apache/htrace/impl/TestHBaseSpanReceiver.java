@@ -20,6 +20,7 @@ package org.apache.htrace.impl;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.UnsupportedOperationException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -152,6 +153,11 @@ public class TestHBaseSpanReceiver {
       return (span.getParentId() == 0L) ?
         (new long[] {}) :
         (new long[] { span.getParentId() });
+    }
+
+    @Override
+    public void setParents(long[] parents) {
+      throw new UnsupportedOperationException();
     }
 
     @Override
