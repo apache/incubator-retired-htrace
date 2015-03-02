@@ -177,13 +177,13 @@ func LevelFromString(str string) (Level, error) {
 
 type Logger struct {
 	sink  *logSink
-	level Level
+	Level Level
 }
 
 func NewLogger(faculty string, cnf *conf.Config) *Logger {
 	path, level := parseConf(faculty, cnf)
 	sink := getOrCreateLogSink(path)
-	return &Logger{sink: sink, level: level}
+	return &Logger{sink: sink, Level: level}
 }
 
 func parseConf(faculty string, cnf *conf.Config) (string, Level) {
@@ -256,7 +256,7 @@ func (lg *Logger) Errorf(format string, v ...interface{}) error {
 }
 
 func (lg *Logger) write(level Level, str string) {
-	if level >= lg.level {
+	if level >= lg.Level {
 		lg.sink.write(time.Now().Format(time.RFC3339) + " " +
 			level.LogString() + ": " + str)
 	}

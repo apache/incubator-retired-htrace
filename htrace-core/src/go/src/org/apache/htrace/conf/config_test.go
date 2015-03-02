@@ -20,6 +20,7 @@
 package conf
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -124,12 +125,13 @@ func TestXmlConfigurationFile(t *testing.T) {
 // Test our handling of the HTRACE_CONF_DIR environment variable.
 func TestGetHTracedConfDirs(t *testing.T) {
 	os.Setenv("HTRACED_CONF_DIR", "")
-	dirs := getHTracedConfDirs()
+	dlog := new(bytes.Buffer)
+	dirs := getHTracedConfDirs(dlog)
 	if len(dirs) != 1 || dirs[0] != "." {
 		t.Fatal()
 	}
 	os.Setenv("HTRACED_CONF_DIR", "/foo/bar:/baz")
-	dirs = getHTracedConfDirs()
+	dirs = getHTracedConfDirs(dlog)
 	if len(dirs) != 2 || dirs[0] != "/foo/bar" || dirs[1] != "/baz" {
 		t.Fatal()
 	}

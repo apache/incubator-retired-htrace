@@ -21,11 +21,13 @@ package conf
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -66,8 +68,9 @@ type Builder struct {
 	Argv []string
 }
 
-func getHTracedConfDirs() []string {
+func getHTracedConfDirs(dlog io.Writer) []string {
 	confDir := os.Getenv("HTRACED_CONF_DIR")
+	io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR=%s\n", confDir))
 	paths := filepath.SplitList(confDir)
 	if len(paths) < 1 {
 		return []string{"."}
@@ -77,11 +80,9 @@ func getHTracedConfDirs() []string {
 
 // Load a configuration from the application's argv, configuration file, and the standard
 // defaults.
-func LoadApplicationConfig() *Config {
-	reader, err := openFile(CONFIG_FILE_NAME, getHTracedConfDirs())
-	if err != nil {
-		log.Fatal("Error opening config file: " + err.Error())
-	}
+func LoadApplicationConfig() (*Config, io.Reader) {
+	dlog := new(bytes.Buffer)
+	reader := openFile(CONFIG_FILE_NAME, getHTracedConfDirs(dlog), dlog)
 	bld := Builder{}
 	if reader != nil {
 		defer reader.Close()
@@ -89,30 +90,38 @@ func LoadApplicationConfig() *Config {
 	}
 	bld.Argv = os.Args[1:]
 	bld.Defaults = DEFAULTS
-	var cnf *Config
-	cnf, err = bld.Build()
+	cnf, err := bld.Build()
 	if err != nil {
 		log.Fatal("Error building configuration: " + err.Error())
 	}
 	os.Args = append(os.Args[0:1], bld.Argv...)
-	return cnf
+	keys := make(sort.StringSlice, 0, 20)
+	for k, _ := range cnf.settings {
+		keys = append(keys, k)
+	}
+	sort.Sort(keys)
+	for i := range keys {
+		io.WriteString(dlog, fmt.Sprintf("%s = %s\n",
+			keys[i], cnf.settings[keys[i]]))
+	}
+	return cnf, dlog
 }
 
 // Attempt to open a configuration file somewhere on the provided list of paths.
-func openFile(cnfName string, paths []string) (io.ReadCloser, error) {
+func openFile(cnfName string, paths []string, dlog io.Writer) io.ReadCloser {
 	for p := range paths {
 		path := fmt.Sprintf("%s%c%s", paths[p], os.PathSeparator, cnfName)
 		file, err := os.Open(path)
 		if err == nil {
-			log.Println("Reading configuration from " + path)
-			return file, nil
+			io.WriteString(dlog, fmt.Sprintf("Reading configuration from %s.\n", path))
+			return file
 		}
 		if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
 			continue
 		}
-		log.Println("Error opening " + path + " for read: " + err.Error())
+		io.WriteString(dlog, fmt.Sprintf("Error opening %s for read: %s\n", path, err.Error()))
 	}
-	return nil, nil
+	return nil
 }
 
 // Try to parse a command-line element as a key=value pair.

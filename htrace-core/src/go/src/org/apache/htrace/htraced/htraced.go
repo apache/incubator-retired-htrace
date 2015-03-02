@@ -63,7 +63,8 @@ func main() {
 			os.Exit(0)
 		}
 	}
-	cnf := conf.LoadApplicationConfig()
+	cnf := common.LoadApplicationConfig()
+	common.InstallSignalHandlers(cnf)
 	lg := common.NewLogger("main", cnf)
 	defer lg.Close()
 	store, err := CreateDataStore(cnf, nil)

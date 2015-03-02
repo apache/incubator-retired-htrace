@@ -51,7 +51,7 @@ the defaults will be used.
 
 func main() {
 	// Load htraced configuration
-	cnf := conf.LoadApplicationConfig()
+	cnf := common.LoadApplicationConfig()
 
 	// Parse argv
 	app := kingpin.New(os.Args[0], USAGE)
