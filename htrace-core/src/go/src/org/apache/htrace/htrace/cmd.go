@@ -263,8 +263,10 @@ func doDumpAll(hcl *htrace.Client, outPath string, lim int) error {
 	if err != nil {
 		return err
 	}
+	w := bufio.NewWriter(file)
 	defer func() {
 		if file != nil {
+			w.Flush()
 			file.Close()
 		}
 	}()
@@ -280,15 +282,15 @@ func doDumpAll(hcl *htrace.Client, outPath string, lim int) error {
 		if !channelOpen {
 			break
 		}
-		if err != nil {
-			_, err = fmt.Fprintf(file, "%s\n", span.ToJson())
+		if err == nil {
+			_, err = fmt.Fprintf(w, "%s\n", span.ToJson())
 		}
 		if *verbose {
 			numSpans++
 			now := time.Now()
 			if !now.Before(nextLogTime) {
 				nextLogTime = now.Add(time.Second * 5)
-				fmt.Printf("wrote %d span(s)...\n", numSpans)
+				fmt.Printf("received %d span(s)...\n", numSpans)
 			}
 		}
 	}
@@ -297,6 +299,10 @@ func doDumpAll(hcl *htrace.Client, outPath string, lim int) error {
 	}
 	if dumpErr != nil {
 		return errors.New(fmt.Sprintf("Dump error %s", dumpErr.Error()))
+	}
+	err = w.Flush()
+	if err != nil {
+		return err
 	}
 	err = file.Close()
 	file = nil
