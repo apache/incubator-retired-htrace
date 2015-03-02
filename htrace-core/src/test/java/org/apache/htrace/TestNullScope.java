@@ -16,29 +16,22 @@
  */
 package org.apache.htrace;
 
-/**
- * Singleton instance representing an empty {@link TraceScope}.
- */
-public final class NullScope extends TraceScope {
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.NullScope;
+import org.junit.Assert;
+import org.junit.Test;
 
-  public static final TraceScope INSTANCE = new NullScope();
-
-  private NullScope() {
-    super(null, null);
-  }
-
-  @Override
-  public Span detach() {
-    return null;
-  }
-
-  @Override
-  public void close() {
-    return;
-  }
-
-  @Override
-  public String toString() {
-    return "NullScope";
+public class TestNullScope {
+  @Test
+  public void testNullScope() {
+    Assert.assertTrue(!Trace.isTracing());
+    TraceScope tc = Trace.startSpan("NullScopeSingleton");
+    Assert.assertTrue(tc == NullScope.INSTANCE);
+    tc.detach();
+    tc.detach(); // should not fail even if called multiple times.
+    Assert.assertFalse(tc.isDetached());
+    tc.close();
+    tc.close(); // should not fail even if called multiple times.
   }
 }

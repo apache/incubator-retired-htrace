@@ -81,7 +81,7 @@ public class TraceScope implements Closeable {
 
   @Override
   public void close() {
-    if ((span == null) || detached) {
+    if (detached) {
       return;
     }
     detached = true;
