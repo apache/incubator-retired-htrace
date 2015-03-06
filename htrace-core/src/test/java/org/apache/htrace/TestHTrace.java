@@ -115,4 +115,14 @@ public class TestHTrace {
     tc.createSimpleTrace();
     tc.createSampleRpcTrace();
   }
+
+  @Test(timeout=60000)
+  public void testRootSpansHaveNonZeroSpanId() throws Exception {
+    TraceInfo traceInfo = new TraceInfo(100L, 200L);
+    TraceScope scope = Trace.startSpan("myRootSpan", traceInfo);
+    Assert.assertNotNull(scope);
+    Assert.assertEquals("myRootSpan", scope.getSpan().getDescription());
+    Assert.assertEquals(100L, scope.getSpan().getTraceId());
+    Assert.assertTrue(0 != scope.getSpan().getSpanId());
+  }
 }

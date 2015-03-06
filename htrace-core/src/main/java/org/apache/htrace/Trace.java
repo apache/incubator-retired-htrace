@@ -82,6 +82,7 @@ public class Trace {
         end(0).
         description(description).
         traceId(tinfo.traceId).
+        spanId(Tracer.nonZeroRandom64()).
         parents(new long[] { tinfo.spanId }).
         processId(Tracer.getProcessId()).
         build();

@@ -32,7 +32,7 @@ public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
   private final static Random random = new Random();
 
-  private static long random64() {
+  static long nonZeroRandom64() {
     long id;
     do {
       id = random.nextLong();
@@ -81,9 +81,9 @@ public class Tracer {
           begin(System.currentTimeMillis()).
           end(0).
           description(description).
-          traceId(random64()).
+          traceId(nonZeroRandom64()).
           parents(EMPTY_PARENT_ARRAY).
-          spanId(random64()).
+          spanId(nonZeroRandom64()).
           processId(getProcessId()).
           build();
     } else {

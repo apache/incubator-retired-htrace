@@ -61,7 +61,7 @@ public class MilliSpan implements Span {
   private List<TimelineAnnotation> timeline = null;
   private final static Random random = new Random();
 
-  private static long random64() {
+  private static long nonZeroRandom64() {
     long id;
     do {
       id = random.nextLong();
@@ -77,7 +77,7 @@ public class MilliSpan implements Span {
       description(childDescription).
       traceId(traceId).
       parents(new long[] {spanId}).
-      spanId(random64()).
+      spanId(nonZeroRandom64()).
       processId(processId).
       build();
   }
