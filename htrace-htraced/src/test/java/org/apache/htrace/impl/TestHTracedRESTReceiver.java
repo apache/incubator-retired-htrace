@@ -31,6 +31,7 @@ import org.apache.htrace.Span;
 import org.apache.htrace.util.DataDir;
 import org.apache.htrace.util.HTracedProcess;
 import org.apache.htrace.util.TestUtil;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
@@ -91,14 +92,18 @@ public class TestHTracedRESTReceiver {
   public void testBasicGet() throws Exception {
     HTracedRESTReceiver receiver =
       new HTracedRESTReceiver(new TestHTraceConfiguration(this.restServerUrl));
+    HttpClient http = receiver.createHttpClient(60000L, 60000L);
+    http.start();
     try {
       // Do basic a GET /server/info against htraced
-      ContentResponse response = receiver.httpClient.GET(restServerUrl + "server/info");
+      ContentResponse response =
+        http.GET(restServerUrl + "server/info");
       assertEquals("application/json", response.getMediaType());
       String content = processGET(response);
       assertTrue(content.contains("ReleaseVersion"));
       System.out.println(content);
     } finally {
+      http.stop();
       receiver.close();
     }
   }
@@ -109,22 +114,25 @@ public class TestHTracedRESTReceiver {
     return response.getContentAsString();
   }
 
-  /**
-   * Send 100 spans then confirm they made it in.
-   * @throws Exception
-   */
-  @Test (timeout = 60000)
-  public void testSendingSpans() throws Exception {
+  private void testSendingSpansImpl(boolean testClose) throws Exception {
     final HTracedRESTReceiver receiver =
       new HTracedRESTReceiver(new TestHTraceConfiguration(this.restServerUrl));
     final int NUM_SPANS = 3;
+    final HttpClient http = receiver.createHttpClient(60000, 60000);
+    http.start();
     try {
       for (int i = 0; i < NUM_SPANS; i++) {
-        Span span = new MilliSpan.Builder().parents(new long [] {1L}).spanId(i).build();
+        Span span = new MilliSpan.Builder().parents(
+            new long [] {1L}).spanId(i).build();
         LOG.info(span.toString());
         receiver.receiveSpan(span);
       }
-      receiver.startFlushing();
+
+      if (testClose) {
+        receiver.close();
+      } else {
+        receiver.startFlushing();
+      }
       TestUtil.waitFor(new TestUtil.Supplier<Boolean>() {
         @Override
         public Boolean get() {
@@ -134,7 +142,7 @@ public class TestHTracedRESTReceiver {
               // span id.
               String findSpan = String.format("span/%016x", i);
               ContentResponse response =
-                  receiver.httpClient.GET(restServerUrl + findSpan);
+                  http.GET(restServerUrl + findSpan);
               String content = processGET(response);
               if ((content == null) || (content.length() == 0)) {
                 LOG.info("Failed to find span " + i);
@@ -150,7 +158,30 @@ public class TestHTracedRESTReceiver {
         }
       }, 10, 20000);
     } finally {
-      receiver.close();
+      http.stop();
+      if (!testClose) {
+        receiver.close();
+      }
     }
+  }
+
+  /**
+   * Send 100 spans then confirm they made it in.
+   * @throws Exception
+   */
+  @Test (timeout = 60000)
+  public void testSendingSpans() throws Exception {
+    testSendingSpansImpl(false);
+  }
+
+  /**
+   * Test that the REST receiver blocks during shutdown until all spans are sent
+   * (or a long timeout elapses).  Otherwise, short-lived client processes will
+   * never have a chance to send all their spans and we will have incomplete
+   * information.
+   */
+  @Test (timeout = 60000)
+  public void testShutdownBlocksUntilSpanAreSent() throws Exception {
+    testSendingSpansImpl(true);
   }
 }
