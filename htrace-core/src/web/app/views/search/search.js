@@ -17,16 +17,26 @@
  * under the License.
  */
 
-App.SearchView = Backbone.View.extend({
+app.SearchView = Backbone.Marionette.LayoutView.extend({
+  "template": "#search-layout-template",
+  "regions": {
+    "controls": "div[role='form']",
+    "main": "div[role='main']",
+    "pagination": "div[role='complementary']"
+  }
+});
+
+app.SearchControlsView = Backbone.Marionette.View.extend({
+  "template": _.template($("#search-controls-template").html()),
   "events": {
     "click a.add-field": "addSearchField",
     "click button.search": "search",
   },
 
-  'initialize': function() {
+  "initialize": function() {
     this.predicates = [];
     this.searchFields = [];
-    this.searchFields.push(new App.SearchFieldView({
+    this.searchFields.push(new app.SearchFieldView({
       predicates: this.predicates,
       manager: this,
       field: 'description'
@@ -34,24 +44,25 @@ App.SearchView = Backbone.View.extend({
     this.on('removeSearchField', this.removeSearchField, this);
   },
 
-  'render': function() {
-    this.$('.search-fields').append(this.searchFields[0].render().$el);
+  "render": function() {
+    this.$el.html(this.template());
+    this.$el.find('.search-fields').append(this.searchFields[0].render().$el);
     return this;
   },
 
-  'addSearchField': function(e) {
+  "addSearchField": function(e) {
     var target = $(e.target);
     $('button.field').text(target.text());
-    var newSearchField = new App.SearchFieldView({
+    var newSearchField = new app.SearchFieldView({
       predicates: this.predicates,
       manager: this,
       field: target.data('field')
     });
-    this.$('.search-fields').append(newSearchField.render().$el);
+    this.$el.find('.search-fields').append(newSearchField.render().$el);
     this.searchFields.push(newSearchField);
   },
 
-  'removeSearchField': function(cid) {
+  "removeSearchField": function(cid) {
     var removedFieldIndex = _(this.searchFields).indexOf(_(this.searchFields).findWhere({cid: cid}));
     this.searchFields.splice(removedFieldIndex, 1);
   },
@@ -67,6 +78,7 @@ App.SearchView = Backbone.View.extend({
       fetch: false,
       resetState: true
     });
+
     this.collection.fullCollection.reset();
     this.collection.setPredicates(this.predicates);
     this.collection.fetch();

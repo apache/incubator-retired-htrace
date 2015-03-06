@@ -17,69 +17,81 @@
  * under the License.
  */
 
-var Router = Backbone.Router.extend({
-
-  routes: {
-    "": "search",
-    "spans/:span": "span"
-  },
-
-  initialize: function() {
-    this.spansCollection = new App.Spans();
-    this.spansCollection.fetch();
-
-    this.spanViews = {};
-
-    this.listSpansView = new App.ListSpansView({
-      "collection": this.spansCollection
-    }).render();
-    $("#list *[role='main']").append(this.listSpansView.$el);
-
-    this.searchView = new App.SearchView({
-      "collection": this.spansCollection,
-      "el": $("#list").find("[role='form']")
-    }).render();
-  },
-
-  search: function() {
-    $("*[role='application']").css('display', 'none');
-    $("#list").show();
-  },
-
-  span: function(span) {
-    var root = $("#span");
-
-    // Cache views to avoid leaks
-    if (!(span in this.spanViews)) {
-      var model = this.spansCollection.findWhere({
-        "spanId": span
-      });
-
-      if (!model) {
-        urlconf.navigate("/", true);
-        return;
-      }
-
-      this.spanViews[span] = new App.SpanView({
-        "model": model,
-        "id": "span-details"
-      });
-    }
-
-    var view = this.spanViews[span];
-
-    $("*[role='application']").css('display', 'none');
-
-    view.render();
-    root.find("*[role='main']").empty();
-    root.find("*[role='main']").append(view.$el);
-
-    root.show();
+var BaseView = Backbone.Marionette.LayoutView.extend({
+  "el": "body",
+  "regions": {
+    "header": "#header",
+    "app": "#app"
   }
 });
 
-window.urlconf = new Router();
+var Router = Backbone.Marionette.AppRouter.extend({
+  "routes": {
+    "": "init",
+    "!/search(/:query)": "search",
+    "!/spans/:id": "span"
+  },
 
-$(function() {
+  "initialize": function() {
+    // Collection
+    this.spansCollection = new app.Spans();
+    this.spansCollection.fetch();
+  },
+
+  "init": function() {
+    Backbone.history.navigate("!/search", {"trigger": true});
+  },
+
+  "search": function(query) {
+    var top = new app.SearchView();
+    app.root.app.show(top);
+
+    top.controls.show(new app.SearchControlsView({
+      "collection": this.spansCollection
+    }));
+    top.main.show(new Backgrid.Grid({
+      "collection": this.spansCollection,
+      "columns": [{
+        "name": "spanId",
+        "label": "ID",
+        "cell": "string",
+        "editable": false
+      }, {
+        "name": "description",
+        "label": "Description",
+        "cell": "string",
+        "editable": false
+      }],
+      "row": Backgrid.Row.extend({
+        "events": {
+          "click": "details"
+        },
+        "details": function() {
+          Backbone.history.navigate("!/spans/" + this.model.get("spanId"), {"trigger": true});
+        }
+      })
+    }));
+    top.pagination.show(new Backgrid.Extension.Paginator({
+      collection: this.spansCollection,
+    }));
+  },
+
+  "span": function(id) {
+    var top = new app.DetailsView();
+    app.root.app.show(top);
+    top.span.show(new app.SpanDetailsView({
+      "model": this.spansCollection.findWhere({
+        "spanId": id
+      })
+    }));
+  }
+});
+
+app.on("start", function(options) {
+  app.root = new BaseView();
+  app.routes = new Router();
+
   Backbone.history.start();
 });
+
+app.start();

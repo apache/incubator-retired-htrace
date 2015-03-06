@@ -17,4 +17,23 @@
  * under the License.
  */
 
-window.app = new Marionette.Application();
+app.DetailsView = Backbone.Marionette.LayoutView.extend({
+  "template": "#details-layout-template",
+  "regions": {
+    "span": "div[role='complementary']",
+    "content": "div[role='main']"
+  }
+});
+
+app.SpanDetailsView = Backbone.Marionette.ItemView.extend({
+  "className": "span",
+  "template": "#span-details-template",
+
+  "serializeData": function() {
+    var context = {
+      "span": this.model.toJSON()
+    };
+    context["span"]["duration"] = this.model.duration();
+    return context;
+  }
+});

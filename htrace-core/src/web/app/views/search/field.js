@@ -17,7 +17,7 @@
  * under the License.
  */
 
-App.SearchFieldView = Backbone.View.extend({
+app.SearchFieldView = Backbone.View.extend({
   'className': 'search-field',
 
   'template': _.template($("#search-field-template").html()),

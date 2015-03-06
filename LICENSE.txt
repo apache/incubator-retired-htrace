@@ -264,3 +264,15 @@ https://github.com/moment/moment/blob/develop/LICENSE
 rome.js is a customizable date (and time) picker.
 It is Copyright © 2014 Nicolas Bevacqua
 https://github.com/bevacqua/rome
+
+Backbone.Wreqr is a message passing system for Backbone.js.
+It is (c) 2012 Derick Bailey, Muted Solutions, LLC and MIT licensed:
+https://github.com/marionettejs/backbone.wreqr/blob/v1.3.1/LICENSE.md
+
+Backbone.Babysitter manages child views for Backbone.js.
+It is (c) 2013 Derick Bailey, Muted Solutions, LLC and MIT licensed:
+https://github.com/marionettejs/backbone.babysitter/blob/v0.1.6/LICENSE.md
+
+Backbone.Marionette is a composite application library for Backbone.js.
+It is MIT licensed:
+https://github.com/marionettejs/backbone.marionette/blob/v2.4.1/license.txt

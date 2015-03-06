@@ -18,7 +18,7 @@
  */
 
 // Span model
-App.Span = Backbone.Model.extend({
+app.Span = Backbone.Model.extend({
   "defaults": {
     "spanId": null,
     "traceId": null,
@@ -53,8 +53,8 @@ App.Span = Backbone.Model.extend({
   }
 });
 
-App.Spans = Backbone.PageableCollection.extend({
-  model: App.Span,
+app.Spans = Backbone.PageableCollection.extend({
+  model: app.Span,
   mode: "infinite",
   url: "/query",
   state: {
