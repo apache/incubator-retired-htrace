@@ -52,9 +52,43 @@ var Router = Backbone.Marionette.AppRouter.extend({
     top.main.show(new Backgrid.Grid({
       "collection": this.spansCollection,
       "columns": [{
+        "label": "Begin",
+        "cell": Backgrid.Cell.extend({
+          className: "begin-cell",
+          formatter: {
+            fromRaw: function(rawData, model) {
+              var beginMs = model.get("beginTime")
+              return moment(beginMs).format('YYYY/MM/DD HH:mm:ss,SSS');
+            },
+            toRaw: function(formattedData, model) {
+              return formattedData // data entry not supported for this cell
+            }
+          }
+        }),
+        "editable": false
+      }, {
         "name": "spanId",
         "label": "ID",
         "cell": "string",
+        "editable": false
+      }, {
+        "name": "processId",
+        "label": "processId",
+        "cell": "string",
+        "editable": false
+      }, {
+        "label": "Duration",
+        "cell": Backgrid.Cell.extend({
+          className: "duration-cell",
+          formatter: {
+            fromRaw: function(rawData, model) {
+              return model.duration() + " ms"
+            },
+            toRaw: function(formattedData, model) {
+              return formattedData // data entry not supported for this cell
+            }
+          }
+        }),
         "editable": false
       }, {
         "name": "description",
