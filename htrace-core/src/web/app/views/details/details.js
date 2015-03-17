@@ -35,5 +35,13 @@ app.SpanDetailsView = Backbone.Marionette.ItemView.extend({
     };
     context["span"]["duration"] = this.model.duration();
     return context;
+  },
+  
+  "events": {
+    "click": "swimlane"
+  },
+  "swimlane": function() {
+    Backbone.history.navigate("!/swimlane/" + this.model.get("spanId"),
+                              {"trigger": true});
   }
 });
