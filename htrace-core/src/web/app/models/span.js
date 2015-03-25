@@ -102,7 +102,7 @@ app.Spans = Backbone.PageableCollection.extend({
   },
 
   initialize: function() {
-    this.on("sync", function(collection, response, options) {
+    this.on("reset", function(collection, response, options) {
       if (response.length == 0) {
         delete this.links[this.state.currentPage];
         this.getPreviousPage();
