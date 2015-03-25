@@ -162,6 +162,7 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	setResponseHeaders(w.Header())
 	dec := json.NewDecoder(req.Body)
 	spans := make([]*common.Span, 0, 32)
+	defaultPid := req.Header.Get("htrace-pid")
 	for {
 		var span common.Span
 		err := dec.Decode(&span)
@@ -173,9 +174,13 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 			}
 			break
 		}
+		if span.ProcessId == "" {
+			span.ProcessId = defaultPid
+		}
 		spans = append(spans, &span)
 	}
-	hand.lg.Debugf("writeSpansHandler: received %d span(s).\n", len(spans))
+	hand.lg.Debugf("writeSpansHandler: received %d span(s).  defaultPid = %s\n",
+		len(spans), defaultPid)
 	for spanIdx := range spans {
 		hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
 		hand.store.WriteSpan(spans[spanIdx])

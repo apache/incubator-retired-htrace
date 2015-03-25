@@ -49,7 +49,6 @@ public class Tracer {
   };
   public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
   private static final long EMPTY_PARENT_ARRAY[] = new long[0];
-  protected static String processId = null;
 
   /**
    * Log a client error, and throw an exception.
@@ -84,7 +83,6 @@ public class Tracer {
           traceId(nonZeroRandom64()).
           parents(EMPTY_PARENT_ARRAY).
           spanId(nonZeroRandom64()).
-          processId(getProcessId()).
           build();
     } else {
       return parent.child(description);
@@ -121,7 +119,6 @@ public class Tracer {
     return span;
   }
 
-
   public TraceScope continueSpan(Span s) {
     Span oldCurrent = currentSpan();
     setCurrentSpan(s);
@@ -130,19 +127,5 @@ public class Tracer {
 
   protected int numReceivers() {
     return receivers.size();
-  }
-
-  static String getProcessId() {
-    if (processId == null) {
-      String cmdLine = System.getProperty("sun.java.command");
-      if (cmdLine != null && !cmdLine.isEmpty()) {
-        String fullClassName = cmdLine.split("\\s+")[0];
-        String[] classParts = fullClassName.split("\\.");
-        cmdLine = classParts[classParts.length - 1];
-      }
-
-      processId = (cmdLine == null || cmdLine.isEmpty()) ? "Unknown" : cmdLine;
-    }
-    return processId;
   }
 }

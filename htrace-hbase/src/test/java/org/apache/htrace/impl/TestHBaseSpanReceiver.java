@@ -181,6 +181,11 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
+    public void setProcessId(String processId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public String getDescription() {
       return span.getDescription();
     }

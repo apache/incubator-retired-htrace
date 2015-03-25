@@ -144,4 +144,13 @@ public class TestMilliSpan {
     MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
     compareSpans(span, dspan);
   }
+
+  @Test
+  public void testJsonSerializationWithFieldsNotSet() throws Exception {
+    MilliSpan span = new MilliSpan.Builder().build();
+    String json = span.toJson();
+    ObjectMapper mapper = new ObjectMapper();
+    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    compareSpans(span, dspan);
+  }
 }

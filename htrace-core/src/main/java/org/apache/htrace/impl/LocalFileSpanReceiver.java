@@ -59,6 +59,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private final FileOutputStream stream;
   private final FileChannel channel;
   private final ReentrantLock channelLock = new ReentrantLock();
+  private final ProcessId processId;
 
   public LocalFileSpanReceiver(HTraceConfiguration conf) {
     int capacity = conf.getInt(CAPACITY_KEY, CAPACITY_DEFAULT);
@@ -93,6 +94,7 @@ public class LocalFileSpanReceiver implements SpanReceiver {
       LOG.debug("Created new LocalFileSpanReceiver with path = " + path +
                 ", capacity = " + capacity);
     }
+    this.processId = new ProcessId(conf);
   }
 
   /**
@@ -135,6 +137,10 @@ public class LocalFileSpanReceiver implements SpanReceiver {
 
   @Override
   public void receiveSpan(Span span) {
+    if (span.getProcessId().isEmpty()) {
+      span.setProcessId(processId.get());
+    }
+
     // Serialize the span data into a byte[].  Note that we're not holding the
     // lock here, to improve concurrency.
     byte jsonBuf[] = null;

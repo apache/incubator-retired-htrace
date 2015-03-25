@@ -126,6 +126,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
   private final byte[] cf;
   private final byte[] icf;
   private final int maxSpanBatchSize;
+  private final ProcessId processId;
 
   public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
@@ -153,6 +154,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
     for (int i = 0; i < numThreads; i++) {
       this.service.submit(new WriteSpanRunnable());
     }
+    this.processId = new ProcessId(conf);
   }
 
   private class WriteSpanRunnable implements Runnable {
@@ -331,6 +333,9 @@ public class HBaseSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
+        if (span.getProcessId().isEmpty()) {
+          span.setProcessId(processId.get());
+        }
         this.queue.add(span);
       } catch (IllegalStateException e) {
         // todo: supress repeating error logs.

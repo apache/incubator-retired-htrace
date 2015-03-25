@@ -170,6 +170,11 @@ public class HTracedRESTReceiver implements SpanReceiver {
   private boolean mustStartFlush;
 
   /**
+   * The process ID to use for all spans.
+   */
+  private final ProcessId processId;
+
+  /**
    * Create an HttpClient instance.
    *
    * @param connTimeout         The timeout to use for connecting.
@@ -221,6 +226,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
             capacity + ", url=" + url +  ", periodInMs=" + periodInMs +
             ", maxToSendAtATime=" + maxToSendAtATime);
     }
+    processId = new ProcessId(conf);
   }
 
   /**
@@ -316,6 +322,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
       try {
         Request request = httpClient.newRequest(url).method(HttpMethod.POST);
         request.header(HttpHeader.CONTENT_TYPE, "application/json");
+        request.header("htrace-pid", processId.get());
         StringBuilder bld = new StringBuilder();
         for (Span span : spanBuf) {
           bld.append(span.toJson());
@@ -412,7 +419,8 @@ public class HTracedRESTReceiver implements SpanReceiver {
       lock.unlock();
     }
     if (!added) {
-      long now = System.nanoTime() / 1000000L;
+      long now = TimeUnit.MILLISECONDS.convert(System.nanoTime(),
+          TimeUnit.NANOSECONDS);
       long last = lastAtCapacityWarningLog.get();
       if (now - last > WARN_TIMEOUT_MS) {
         // Only log every 5 minutes. Any more than this for a guest process

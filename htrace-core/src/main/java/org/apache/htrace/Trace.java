@@ -84,7 +84,6 @@ public class Trace {
         traceId(tinfo.traceId).
         spanId(Tracer.nonZeroRandom64()).
         parents(new long[] { tinfo.spanId }).
-        processId(Tracer.getProcessId()).
         build();
     return continueSpan(newSpan);
   }
@@ -131,15 +130,6 @@ public class Trace {
     // Return an empty TraceScope that does nothing on close
     if (s == null) return NullScope.INSTANCE;
     return Tracer.getInstance().continueSpan(s);
-  }
-
-  /**
-   * Set the processId to be used for all Spans created by this Tracer.
-   *
-   * @see Span
-   */
-  public static void setProcessId(String processId) {
-    Tracer.processId = processId;
   }
 
   /**

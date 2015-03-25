@@ -132,6 +132,8 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     }
   };
 
+  private final ProcessId processId;
+
   ////////////////////
   /// Variables that will change on each call to configure()
   ///////////////////
@@ -144,6 +146,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   public ZipkinSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.protocolFactory = new TBinaryProtocol.Factory();
+    this.processId = new ProcessId(conf);
     configure(conf);
   }
 
@@ -360,6 +363,9 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
+        if (span.getProcessId().isEmpty()) {
+          span.setProcessId(processId.get());
+        }
         this.queue.add(span);
       } catch (IllegalStateException e) {
         LOG.error("Error trying to append span (" + span.getDescription() + ") to the queue."

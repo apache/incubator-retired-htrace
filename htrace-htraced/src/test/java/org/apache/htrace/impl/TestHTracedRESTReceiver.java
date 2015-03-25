@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.net.URL;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
@@ -65,6 +66,7 @@ public class TestHTracedRESTReceiver {
    */
   private final class TestHTraceConfiguration extends HTraceConfiguration {
     private final URL restServerUrl;
+    final static String PROCESS_ID = "TestHTracedRESTReceiver";
 
     public TestHTraceConfiguration(final URL restServerUrl) {
       this.restServerUrl = restServerUrl;
@@ -79,6 +81,8 @@ public class TestHTracedRESTReceiver {
     public String get(String key, String defaultValue) {
       if (key.equals(HTracedRESTReceiver.HTRACED_REST_URL_KEY)) {
         return this.restServerUrl.toString();
+      } else if (key.equals(ProcessId.PROCESS_ID_KEY)) {
+        return PROCESS_ID;
       }
       return defaultValue;
     }
@@ -120,14 +124,21 @@ public class TestHTracedRESTReceiver {
     final int NUM_SPANS = 3;
     final HttpClient http = receiver.createHttpClient(60000, 60000);
     http.start();
+    Span spans[] = new Span[NUM_SPANS];
+    for (int i = 0; i < NUM_SPANS; i++) {
+      MilliSpan.Builder builder = new MilliSpan.Builder().
+          parents(new long[]{1L}).
+          spanId(i);
+      if (i == NUM_SPANS - 1) {
+        builder.processId("specialPid");
+      }
+      spans[i] = builder.build();
+    }
     try {
       for (int i = 0; i < NUM_SPANS; i++) {
-        Span span = new MilliSpan.Builder().parents(
-            new long [] {1L}).spanId(i).build();
-        LOG.info(span.toString());
-        receiver.receiveSpan(span);
+        LOG.info("receiving " + spans[i].toString());
+        receiver.receiveSpan(spans[i]);
       }
-
       if (testClose) {
         receiver.close();
       } else {
@@ -149,6 +160,18 @@ public class TestHTracedRESTReceiver {
                 return false;
               }
               LOG.info("Got " + content + " for span " + i);
+              ObjectMapper mapper = new ObjectMapper();
+              MilliSpan dspan = mapper.readValue(content, MilliSpan.class);
+              assertEquals((long)i, dspan.getSpanId());
+              // Every span should have the process ID we set in the
+              // configuration... except for the last span, which had
+              // a custom value set.
+              if (i == NUM_SPANS - 1) {
+                assertEquals("specialPid", dspan.getProcessId());
+              } else {
+                assertEquals(TestHTraceConfiguration.PROCESS_ID,
+                    dspan.getProcessId());
+              }
             }
             return true;
           } catch (Throwable t) {

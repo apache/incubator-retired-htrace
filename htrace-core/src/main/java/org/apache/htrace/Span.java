@@ -63,7 +63,9 @@ public interface Span {
   boolean isRunning();
 
   /**
-   * Return a textual description of this span
+   * Return a textual description of this span.<p/>
+   *
+   * Will never be null.
    */
   String getDescription();
 
@@ -120,20 +122,30 @@ public interface Span {
   void addTimelineAnnotation(String msg);
 
   /**
-   * Get data associated with this span (read only)
+   * Get data associated with this span (read only)<p/>
+   *
+   * Will never be null.
    */
   Map<String, String> getKVAnnotations();
 
   /**
-   * Get any timeline annotations (read only)
+   * Get any timeline annotations (read only)<p/>
+   *
+   * Will never be null.
    */
   List<TimelineAnnotation> getTimelineAnnotations();
 
   /**
-   * Return a unique id for the node or process from which this Span originated.
-   * IP address is a reasonable choice.
+   * Return a unique id for the process from which this Span originated.<p/>
+   *
+   * Will never be null.
    */
   String getProcessId();
+
+  /**
+   * Set the process id of a span.
+   */
+  void setProcessId(String s);
 
   /**
    * Serialize to Json
@@ -145,12 +157,25 @@ public interface Span {
     public void serialize(Span span, JsonGenerator jgen, SerializerProvider provider)
         throws IOException {
       jgen.writeStartObject();
-      jgen.writeStringField("i", String.format("%016x", span.getTraceId()));
-      jgen.writeStringField("s", String.format("%016x", span.getSpanId()));
-      jgen.writeNumberField("b", span.getStartTimeMillis());
-      jgen.writeNumberField("e", span.getStopTimeMillis());
-      jgen.writeStringField("d", span.getDescription());
-      jgen.writeStringField("r", span.getProcessId());
+      if (span.getTraceId() != 0) {
+        jgen.writeStringField("i", String.format("%016x", span.getTraceId()));
+      }
+      if (span.getSpanId() != 0) {
+        jgen.writeStringField("s", String.format("%016x", span.getSpanId()));
+      }
+      if (span.getStartTimeMillis() != 0) {
+        jgen.writeNumberField("b", span.getStartTimeMillis());
+      }
+      if (span.getStopTimeMillis() != 0) {
+        jgen.writeNumberField("e", span.getStopTimeMillis());
+      }
+      if (!span.getDescription().isEmpty()) {
+        jgen.writeStringField("d", span.getDescription());
+      }
+      String processId = span.getProcessId();
+      if (!processId.isEmpty()) {
+        jgen.writeStringField("r", processId);
+      }
       jgen.writeArrayFieldStart("p");
       for (long parent : span.getParents()) {
         jgen.writeString(String.format("%016x", parent));

@@ -49,6 +49,7 @@ import java.util.Random;
 public class MilliSpan implements Span {
   private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
   private static final long EMPTY_PARENT_ARRAY[] = new long[0];
+  private static final String EMPTY_STRING = "";
 
   private long begin;
   private long end;
@@ -57,7 +58,7 @@ public class MilliSpan implements Span {
   private long parents[];
   private final long spanId;
   private Map<String, String> traceInfo = null;
-  private final String processId;
+  private String processId;
   private List<TimelineAnnotation> timeline = null;
   private final static Random random = new Random();
 
@@ -88,12 +89,12 @@ public class MilliSpan implements Span {
   public static class Builder {
     private long begin;
     private long end;
-    private String description;
+    private String description = EMPTY_STRING;
     private long traceId;
     private long parents[] = EMPTY_PARENT_ARRAY;
     private long spanId;
     private Map<String, String> traceInfo = null;
-    private String processId;
+    private String processId = EMPTY_STRING;
     private List<TimelineAnnotation> timeline = null;
 
     public Builder() {
@@ -156,6 +157,18 @@ public class MilliSpan implements Span {
     public MilliSpan build() {
       return new MilliSpan(this);
     }
+  }
+
+  public MilliSpan() {
+    this.begin = 0;
+    this.end = 0;
+    this.description = EMPTY_STRING;
+    this.traceId = 0;
+    this.parents = EMPTY_PARENT_ARRAY;
+    this.spanId = 0;
+    this.traceInfo = null;
+    this.processId = EMPTY_STRING;
+    this.timeline = null;
   }
 
   private MilliSpan(Builder builder) {
@@ -285,6 +298,11 @@ public class MilliSpan implements Span {
   }
 
   @Override
+  public void setProcessId(String processId) {
+    this.processId = processId;
+  }
+
+  @Override
   public String toJson() {
     StringWriter writer = new StringWriter();
     try {
@@ -307,18 +325,38 @@ public class MilliSpan implements Span {
           throws IOException, JsonProcessingException {
       JsonNode root = jp.getCodec().readTree(jp);
       Builder builder = new Builder();
-      builder.begin(root.get("b").asLong());
-      builder.end(root.get("e").asLong());
-      builder.description(root.get("d").asText());
-      builder.traceId(parseUnsignedHexLong(root.get("i").asText()));
-      builder.spanId(parseUnsignedHexLong(root.get("s").asText()));
-      builder.processId(root.get("r").asText());
+      JsonNode bNode = root.get("b");
+      if (bNode != null) {
+        builder.begin(bNode.asLong());
+      }
+      JsonNode eNode = root.get("e");
+      if (eNode != null) {
+        builder.end(eNode.asLong());
+      }
+      JsonNode dNode = root.get("d");
+      if (dNode != null) {
+        builder.description(dNode.asText());
+      }
+      JsonNode iNode = root.get("i");
+      if (iNode != null) {
+        builder.traceId(parseUnsignedHexLong(iNode.asText()));
+      }
+      JsonNode sNode = root.get("s");
+      if (sNode != null) {
+        builder.spanId(parseUnsignedHexLong(sNode.asText()));
+      }
+      JsonNode rNode = root.get("r");
+      if (rNode != null) {
+        builder.processId(rNode.asText());
+      }
       JsonNode parentsNode = root.get("p");
       LinkedList<Long> parents = new LinkedList<Long>();
-      for (Iterator<JsonNode> iter = parentsNode.elements();
-           iter.hasNext(); ) {
-        JsonNode parentIdNode = iter.next();
-        parents.add(parseUnsignedHexLong(parentIdNode.asText()));
+      if (parentsNode != null) {
+        for (Iterator<JsonNode> iter = parentsNode.elements();
+             iter.hasNext(); ) {
+          JsonNode parentIdNode = iter.next();
+          parents.add(parseUnsignedHexLong(parentIdNode.asText()));
+        }
       }
       builder.parents(parents);
       JsonNode traceInfoNode = root.get("n");
