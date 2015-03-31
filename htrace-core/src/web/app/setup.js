@@ -67,17 +67,20 @@ var Router = Backbone.Marionette.AppRouter.extend({
             }
           }
         }),
-        "editable": false
+        "editable": false,
+        "sortable": false
       }, {
         "name": "spanId",
         "label": "ID",
         "cell": "string",
-        "editable": false
+        "editable": false,
+        "sortable": false
       }, {
         "name": "processId",
         "label": "processId",
         "cell": "string",
-        "editable": false
+        "editable": false,
+        "sortable": false
       }, {
         "label": "Duration",
         "cell": Backgrid.Cell.extend({
@@ -91,12 +94,14 @@ var Router = Backbone.Marionette.AppRouter.extend({
             }
           }
         }),
-        "editable": false
+        "editable": false,
+        "sortable": false
       }, {
         "name": "description",
         "label": "Description",
         "cell": "string",
-        "editable": false
+        "editable": false,
+        "sortable": false
       }],
       "row": Backgrid.Row.extend({
         "events": {

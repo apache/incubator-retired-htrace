@@ -60,6 +60,7 @@ app.Spans = Backbone.PageableCollection.extend({
   state: {
     pageSize: 10,
     lastSpanId: null,
+    finished: false,
     predicates: []
   },
   queryParams: {
@@ -95,7 +96,7 @@ app.Spans = Backbone.PageableCollection.extend({
       }
 
       return JSON.stringify({
-        lim: this.state.pageSize,
+        lim: this.state.pageSize + 1,
         pred: predicates
       });
     }
@@ -111,17 +112,25 @@ app.Spans = Backbone.PageableCollection.extend({
   },
 
   parseLinks: function(resp, xhr) {
-    if (resp.length >= this.state.pageSize) {
-      this.state.lastSpanId = resp[resp.length - 1].s;
+    this.state.finished = resp.length <= this.state.pageSize;
 
-      return {
-        "next": "/query?query=" + this.queryParams.query.call(this)
-      };
-    } else {
+    if (this.state.finished) {
       this.state.lastSpanId = null;
+    } else {
+      this.state.lastSpanId = resp[this.state.pageSize - 1].s;
+    }
 
+    if (this.state.finished) {
       return {};
     }
+
+    return {
+      "next": "/query?query=" + this.queryParams.query.call(this)
+    };
+  },
+
+  parseRecords: function(resp) {
+    return resp.slice(0, 10);
   },
 
   setPredicates: function(predicates) {
