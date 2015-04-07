@@ -19,8 +19,7 @@
 app.SwimlaneView = Backbone.Marionette.LayoutView.extend({
   "template": "#swimlane-layout-template",
   "regions": {
-    "swimlane": "div[role='complementary']",
-    "content": "div[role='main']"
+    "swimlane": "div[role='main']",
   }
 });
 
@@ -34,7 +33,7 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
                                this.getJsonSync);
   },
   
-  render: function() {
+  onShow: function() {
     this.appendSVG(this.spans);
   },
 
@@ -77,6 +76,7 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
       .domain([new Date(tmin), new Date(tmax)]).range([0, width_span]);
 
     var svg = d3.select("div[role='main']").append("svg")
+      .attr("id", "svg-swimlane")
       .attr("width", width_span + margin.process + margin.left + margin.right)
       .attr("height", height_screen + margin.top + margin.bottom)
       .append("g")
@@ -87,6 +87,15 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
       .attr("width", width_span)
       .attr("height", height_screen)
       .attr("transform", "translate(" + (10 * dmax + margin.process) + ", 0)");
+
+    var axis = d3.svg.axis()
+      .scale(xscale)
+      .orient("top")
+      .tickValues(xscale.domain())
+      .tickFormat(d3.time.format("%x %X.%L"))
+      .tickSize(6, 3);
+
+    bars.append("g").attr("class", "axis").call(axis);
     
     var span_g = bars.selectAll("g.span")
       .data(spans)
@@ -135,12 +144,12 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
       .enter()
       .append("rect")
       .style("fill", "red")
+      .attr("class", "timeline")
       .attr("height", size_tl)
       .attr("width", size_tl)
       .attr("transform", function(t) {
         return "translate(" + xscale(t.t) + "," + (height_span - 1 - size_tl) + ")";
-      })
-      .classed("timeline");
+      });
 
     var popup = d3.select("div[role='main']").append("div")
       .attr("class", "popup")
@@ -152,7 +161,7 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
         var text = "<table>";
         d.t.forEach(function (t) {
           text += "<tr><td>" + (t.t - tmin) + "</td>";
-          text += "<td> : " + t.m + "<td/></tr>";
+          text += "<td> : " + t.m + "</td></tr>";
         });
         text += "</table>"
         popup.html(text)
@@ -165,14 +174,5 @@ app.SwimlaneGraphView = Backbone.Marionette.View.extend({
       .on("mouseout", function(d) {
         popup.transition().duration(300).style("opacity", 0);
       });
-    
-    var axis = d3.svg.axis()
-      .scale(xscale)
-      .orient("top")
-      .tickValues(xscale.domain())
-      .tickFormat(d3.time.format("%x %X.%L"))
-      .tickSize(6, 3);
-
-    bars.append("g").attr("class", "axis").call(axis);
   }
 });
