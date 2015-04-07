@@ -35,6 +35,7 @@ app.SearchFieldView = Backbone.View.extend({
   'render': function() {
     this.$el.html(this.template({ field: this.field }));
     this.showSearchField();
+    if (this.options.value) this.setValue();
     return this;
   },
 
@@ -105,6 +106,19 @@ app.SearchFieldView = Backbone.View.extend({
         return this.$('input.description').val();
       default:
         return '';
+    }
+  },
+
+  'setValue': function() {
+    switch (this.field) {
+      case 'begin':
+      case 'end':
+        this.$('select.op').val(this.options.op);
+        this.$('input.start-end-date-time').val(moment.unix(this.options.value).format('YYYY-MM-DD HH:mm'));
+      case 'duration':
+        this.$("input.duration").val(this.options.value);
+      case 'description':
+        this.$('input.description').val(this.options.value);
     }
   }
 });

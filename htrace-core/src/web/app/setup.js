@@ -28,7 +28,7 @@ var BaseView = Backbone.Marionette.LayoutView.extend({
 var Router = Backbone.Marionette.AppRouter.extend({
   "routes": {
     "": "init",
-    "!/search(/:query)": "search",
+    "!/search(?:query)": "search",
     "!/spans/:id": "span",
     "!/swimlane/:id": "swimlane",
     "!/swimlane/:id:?:lim": "swimlane"
@@ -37,7 +37,6 @@ var Router = Backbone.Marionette.AppRouter.extend({
   "initialize": function() {
     // Collection
     this.spansCollection = new app.Spans();
-    this.spansCollection.fetch();
   },
 
   "init": function() {
@@ -46,9 +45,37 @@ var Router = Backbone.Marionette.AppRouter.extend({
 
   "search": function(query) {
     app.root.app.show(new app.SearchView());
+
+    var predicates;
+
+    this.spansCollection.switchMode("infinite", {
+      fetch: false,
+      resetState: true
+    });
+
+    if (query) {
+      predicates = _(query.split(";"))
+      .map(function(predicate) {
+        return _(predicate.split('&'))
+          .reduce(function(mem, op) {
+            var op = op.split('=');
+            mem[op[0]] = op[1];
+            return mem;
+          }, {});
+      });
+      this.spansCollection.fullCollection.reset();
+      this.spansCollection.setPredicates(predicates);
+    }
+    else {
+      this.spansCollection.fullCollection.reset();
+      this.spansCollection.setPredicates([{"op":"cn","field":"description","val":""}]);
+    }
+    this.spansCollection.fetch();
+
     app.root.app.currentView.controls.show(
       new app.SearchControlsView({
-        "collection": this.spansCollection
+        "collection": this.spansCollection,
+        "predicates": predicates
       }));
     app.root.app.currentView.main.show(
       new Backgrid.Grid({

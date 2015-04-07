@@ -33,7 +33,8 @@ app.SearchControlsView = Backbone.Marionette.View.extend({
     "click button.search": "search",
   },
 
-  "initialize": function() {
+  "initialize": function(options) {
+    this.options = options;
     this.predicates = [];
     this.searchFields = [];
     this.searchFields.push(new app.SearchFieldView({
@@ -47,17 +48,29 @@ app.SearchControlsView = Backbone.Marionette.View.extend({
   "render": function() {
     this.$el.html(this.template());
     this.$el.find('.search-fields').append(this.searchFields[0].render().$el);
+
+    _(this.options.predicates).each(function(pred) {
+      if (pred.field === 'description') {
+        this.$el.find('input.description').val(pred.val);
+      } else {
+        this.addSearchField(pred);
+      }
+    }.bind(this));
+
     return this;
   },
 
   "addSearchField": function(e) {
-    var target = $(e.target);
-    $('button.field').text(target.text());
-    var newSearchField = new app.SearchFieldView({
+    var target = e.target ? $(e.target) : e;
+    if (e.target) $('button.field').text(target.text());
+    var searchOptions = {
       predicates: this.predicates,
       manager: this,
-      field: target.data('field')
-    });
+      field: target.data ? target.data('field') : target.field,
+    };
+    if (!e.target) _.extend(searchOptions, { value: target.val, op: target.op})
+
+    var newSearchField = new app.SearchFieldView(searchOptions);
     this.$el.find('.search-fields').append(newSearchField.render().$el);
     this.searchFields.push(newSearchField);
   },
@@ -73,6 +86,11 @@ app.SearchControlsView = Backbone.Marionette.View.extend({
     }).filter(function(predicate) {
       return predicate.val;
     });
+
+    this.searchParams = _(this.predicates).map(function(predicate) {
+      return $.param(predicate);
+    }).join(';');
+    Backbone.history.navigate('!/search?' + this.searchParams, { trigger: false });
 
     this.collection.switchMode("infinite", {
       fetch: false,
