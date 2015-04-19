@@ -25,12 +25,10 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
-	"mime"
 	"net"
 	"net/http"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
-	"org/apache/htrace/resource"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -224,29 +222,6 @@ func (hand *queryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Write(jbytes)
-}
-
-type defaultServeHandler struct {
-	lg *common.Logger
-}
-
-func (hand *defaultServeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ident := strings.TrimLeft(req.URL.Path, "/")
-	if ident == "" {
-		ident = "index.html" // default to index.html
-	}
-	ident = strings.Replace(ident, "/", "__", -1)
-	hand.lg.Debugf("defaultServeHandler(path=%s, ident=%s)\n", req.URL.Path, ident)
-	rsc := resource.Catalog[ident]
-	if rsc == "" {
-		hand.lg.Warnf("failed to find entry for %s\n", ident)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	file_ext := filepath.Ext(req.URL.Path)
-	mime_type := mime.TypeByExtension(file_ext)
-	w.Header().Set("Content-Type", mime_type)
-	w.Write([]byte(rsc))
 }
 
 type logErrorHandler struct {
