@@ -28,6 +28,7 @@ language governing permissions and limitations under the License. -->
   <url>http://htrace.incubator.apache.org</url>
 
   <modules>
+    <module>htrace-c</module>
     <module>htrace-core</module>
     <module>htrace-zipkin</module>
     <module>htrace-hbase</module>

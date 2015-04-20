@@ -1,0 +1,32 @@
+Building the htrace-c client
+===============================================================================
+To build the htrace-c client, activate the native profile.  Example:
+
+    mvn package -DskipTests -Dmaven.javadoc.skip=true -Pnative
+
+BUILD DEPENDENCIES
+    C compiler
+        To compile the sources.
+
+    CMake
+        The CMake build system.  Needed to run the native build.  See
+        www.cmake.org.  This should be available via "yum install cmake" or
+        similar.
+
+    libcurl-devel
+        A library to transfer data over HTTP.  See http://curl.haxx.se/dev/.
+        Should be available via "yum install libcurl-devel" or similar.
+
+TEST DEPENDENCIES
+    C++ compiler
+        To compile some of the unit tests.
+
+    libjson-c
+        A library to parse JSON.  This is only used for unit tests.  See
+        https://github.com/json-c/json-c/wiki.  Should be available via "yum
+        install json-c-devel" or similar.
+
+    htraced binary
+        You must compile the htraced binaries before running the unit tests.
+        You can do this by running "mvn compile" on the top-level project, or
+        in the htrace-htraced directory. 

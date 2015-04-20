@@ -1,0 +1,219 @@
+HTrace C client coding style
+===============================================================================
+WHITESPACE
+    The HTrace C client uses 4-space indentation.  We use spaces rather than
+hard tabs.  4 space tabs discourage excessive nesting, which makes C code
+harder to understand.  We do not use hard tabs because it requires additional
+editor configuration for many people to see them as intended.
+
+    We have a 79-column limit on line lengths.  Excessively long lines make it
+difficult to perform side-by side diffs during a code review.  They are also
+difficult to read.
+
+    The opening brace for functions is placed on the line after the function
+definition.  Example:
+
+ > void my_function(int foo)
+ > {
+ >     ...
+ > }
+
+    However, the brace for an if statement or structure definition does not get
+its own line:
+ > if (foo) {
+ >     ...
+ > }
+ > struct bar {
+ >     ...
+ > }
+
+    This style visually emphasizes the start of the function, but avoids using
+excessive vertical space for if statements and structures.
+
+    When declaring pointers, we use "int *foo" rather than "int* foo".
+Using the second form implies that "int*" is the type of everything that
+follows.  However, this is incorrect; "int* foo, bar;" declares a foo as a
+pointer-to-int, but bar as an int.  To declare two pointers-to-int on the same
+line in C, you must use int *foo, *bar"-- a reality which the second form makes
+obvious.
+
+    We put braces around all "if" statements, to avoid situations where
+a statement visually appears to be part of an if statement, but in reality is
+not.
+
+
+NAMING
+    We use_underscores for naming rather than CamelCase.  This is a somewhat
+arbitrary choice, but it fits in better with the C standard library and
+most other C libraries.  We do not use "Hungarian Notation," the practice of
+encoding type names into variable names.  Variables have types that are
+enforced by the compiler in C, so this should be sufficient.
+
+    In general, we do not use typedefs for structure names.  Using typedefs for
+structure names prevents the use of forward declarations (see FORWARD
+DECLARATIONS).  It also obscures the true nature of the type... is a foo_t a
+primitive type such as an int, or a structure?  It is usually a bad idea to
+copy a large structure by passing it directly rather than passing a pointer to
+it.  This anti-pattern is more likely to occur if the true nature of the type
+is hidden from the programmer.
+
+    Typedefs are sometimes useful for shortening the type of function pointers.
+They also may be used to represent types that can vary based on architecture of
+platform (although it would be better still to avoid this, most of the time.)
+However, they should not be overused.
+
+    Macros are named in ALL_UPPER_CASE.
+
+
+PUBLIC API
+    Most functions and structures inside the HTrace C client are not "publicly
+visible."  What this means is that they are not accessible to external users of
+libhtrace.so.  These internal functions and structures are part of the
+implementation of libhtrace, not the API.  We have the freedom to change or
+remove them as appropriate without worrying about downstream users being
+affected.
+
+    A few functions and symbols are publicly visible.  These functions are part
+of the "public API" of libhtrace.so.  Every function and structure defined in
+htrace.h is part of the public API.  This public/private separation is enforced
+by the linker, which strips out non-public symbols from the library symbol
+table.
+
+    Publicly visible functions and structures should avoid making architectural
+or platform assumptions.  For example, assuming that time_t is 64 bit is a
+mistake in the public API.
+
+    In general, we want to avoid making backwards-incompatible changes to the
+public API within minor releases of HTrace.  What changes are backwards
+incompatible?  A few examples of backwards incompatible changes are:
+
+* Modifying the types of parameters taken by a publicly visible function.
+* Changing the number of parameters passed to a publicly visible function.
+* Modifying or removing parameters from a publicly visible structure.
+* Removing a publicly visible macro
+
+    In contrast, we can add new functions or structure definitions to the
+public API without breaking backwards compatibility.
+
+    The C++ API is implemented as a header file which wraps the C API.  This
+means that we don't have to worry about C++ binary compatibility issues, which
+can be quite complex.
+
+    The htrace C client exports only the files libhtrace.so, htrace.h, and
+htrace.hpp.  We do not package up our internal header files in the final build!
+They are not accessible or usable outside the library itself.
+
+
+FORWARD DECLARATIONS
+    It is often a good idea to avoid defining a structure in a header file.
+Instead, one can often use a "forward declaration" to make the compiler aware
+that the structure type exists, without specifying its details.  Here is an
+example of a forward declaration:
+
+> struct htrace_conf;
+
+    This declaration notifies the compiler that the type exists.  Most types
+discussed in htrace.h are forward declarations rather than definitions.  This
+gives us the freedom to change the type later, without breaking the public API
+(see PUBLIC API).  Forward declarations can also speed up compilation, by
+minimizing the number of header files that need to be included.
+
+
+ERROR HANDLING
+    C does not have "finally" blocks like Java or a "defer" statement like
+Golang.  As a consequence, programmers must clean up resources which they
+allocate manually.
+
+    One useful pattern for handling errors is the "single exit function"
+pattern.  In this pattern, a function has a single exit point and we perform
+cleanup right before the exit.  An example:
+
+ > int my_function()
+ > {
+ >     int success = 0;
+ >     struct my_resource *resource1 = NULL, *resource2 = NULL;
+ > 
+ >     resource1 = allocate_resource1();
+ >     if (!resource1) {
+ >         goto done;
+ >     }
+ >     resource2 = allocate_resource1();
+ >     if (!resource2) {
+ >         goto done;
+ >     }
+ >     do_stuff(resource1, resource2);
+ >     success = 1;
+ > done:
+ >     if (resource1) {
+ >         free_resource1();
+ >     }
+ >     if (resource2) {
+ >         free_resource2();
+ >     }
+ >     return success;
+ > }
+
+    Similar to a "finally" block in Java, the code after "done" is always
+executed, and will do whatever cleanup is required.  This is much easier and
+more maintainable than trying to manually deallocate whatever is necessary each
+time an error must be handled.  Although this may seem unfamiliar to new C
+programmers, it is a traditional error handling paradigm in kernel code.
+
+    Another error handling paradigm that is sometimes used in HTrace is the
+"error string return."  This paradigm works as follows:
+
+ > void my_function(char *err, size_t err_len)
+ > {
+ >     err[0] = '\0';
+ >     ...
+ >     if (failed) {
+ >         snprintf(err, err_len, "Failed because the foo was %d", foo);
+ >         return;
+ >     }
+ >     ...
+ > }
+
+    The idea behind the error string return is that an error string is more
+flexible than an error code return.  This is generally more useful for
+internal, non-public APIs where there aren't a set of well-defined error codes
+for every possible failure case.  Note that functions which accept an error
+string always initialize the error string to the empty string (no error) as the
+first thing they do.
+
+
+PORTABILITY
+    This code should be portable to both UNIX-based platforms and Microsoft
+Windows.  Although we don't have Windows support yet, it would be nice to
+implement it eventually.
+
+    Using #ifdefs for large blocks of platform-specific code makes source code
+files difficult to read.  When we need to have different implementations of
+something based on the platform or architecture, it is often more appropriate
+to simply exclude or include an entire file from compilation.  This also
+encourages programmers to think about creating platform-neutral interfaces to
+well-encapsulated platform-specific code segments.
+
+
+LIBRARY CONTEXT ISSUES
+    Writing code for a library is more challenging in some ways than writing
+code for an application.
+
+    We cannot call fork() or exec() from our library, because the host
+application may have serious problems with these functions.  For example, if
+the host application has set up atexit() handlers, a fork plus an exit will
+cause those handlers to run unexpectedly.
+
+    We should minimize library dependencies to avoid creating headaches for our
+users.  The more dependencies we use, the more dependencies they must pull in,
+whether they want them or not.  This is why we use the libjson library for unit
+tests, but we do not include it as a dependency of libhtrace.so itself.
+
+    We cannot assume that our implementation of malloc() is the same one used
+by the calling code.  If the library dynamically allocates something, the
+library must also provide a complimentary function to free that thing.  The
+calling code should never call free() or delete on a memory area allocated by
+libhtrace.
+
+    libhtrace may be pulled in "transitively" as a dependency of another
+library.  Or it may be pulled in transitively as well as being used directly by
+the application.  We should support all of these use-cases.

@@ -44,7 +44,7 @@ func setResponseHeaders(hdr http.Header) {
 func writeError(lg *common.Logger, w http.ResponseWriter, errCode int,
 	errStr string) {
 	str := strings.Replace(errStr, `"`, `'`, -1)
-	lg.Info(str)
+	lg.Info(str + "\n")
 	w.WriteHeader(errCode)
 	w.Write([]byte(`{ "error" : "` + str + `"}`))
 }
