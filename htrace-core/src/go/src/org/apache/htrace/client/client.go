@@ -35,13 +35,24 @@ import (
 // TODO: fancier APIs for streaming spans in the background, optimize TCP stuff
 
 func NewClient(cnf *conf.Config) (*Client, error) {
-	hcl := Client{restAddr: cnf.Get(conf.HTRACE_WEB_ADDRESS)}
+	hcl := Client{}
+	hcl.restAddr = cnf.Get(conf.HTRACE_WEB_ADDRESS)
+	if cnf.Get(conf.HTRACE_HRPC_ADDRESS) != "" {
+		var err error
+		hcl.hcr, err = newHClient(cnf)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &hcl, nil
 }
 
 type Client struct {
 	// REST address of the htraced server.
 	restAddr string
+
+	// The HRPC client, or null if it is not enabled.
+	hcr *hClient
 }
 
 // Get the htraced server information.
@@ -77,12 +88,42 @@ func (hcl *Client) FindSpan(sid common.SpanId) (*common.Span, error) {
 	return &span, nil
 }
 
-func (hcl *Client) WriteSpan(span *common.Span) error {
-	buf, err := json.Marshal(span)
-	if err != nil {
-		return err
+func (hcl *Client) WriteSpans(req *common.WriteSpansReq) error {
+	if hcl.hcr != nil {
+		return hcl.hcr.writeSpans(req)
+	} else {
+		return hcl.writeSpansHttp(req)
 	}
-	_, _, err = hcl.makeRestRequest("POST", "writeSpans", bytes.NewReader(buf))
+}
+
+func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {
+	var w bytes.Buffer
+	var err error
+	for i := range req.Spans {
+		var buf []byte
+		buf, err = json.Marshal(req.Spans[i])
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error serializing span: %s",
+				err.Error()))
+		}
+		_, err = w.Write(buf)
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error writing span: %s",
+				err.Error()))
+		}
+		_, err = w.Write([]byte{'\n'})
+		//err = io.WriteString(&w, "\n")
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error writing: %s",
+				err.Error()))
+		}
+	}
+	customHeaders := make(map[string]string)
+	if req.DefaultPid != "" {
+		customHeaders["htrace-pid"] = req.DefaultPid
+	}
+	_, _, err = hcl.makeRestRequest("POST", "writeSpans",
+		&w, customHeaders)
 	if err != nil {
 		return err
 	}
@@ -90,7 +131,6 @@ func (hcl *Client) WriteSpan(span *common.Span) error {
 }
 
 // Find the child IDs of a given span ID.
-// TODO: add offset as well as limit?
 func (hcl *Client) FindChildren(sid common.SpanId, lim int) ([]common.SpanId, error) {
 	buf, _, err := hcl.makeGetRequest(fmt.Sprintf("span/%016x/children?lim=%d",
 		uint64(sid), lim))
@@ -126,17 +166,24 @@ func (hcl *Client) Query(query *common.Query) ([]common.Span, error) {
 	return spans, nil
 }
 
+var EMPTY = make(map[string]string)
+
 func (hcl *Client) makeGetRequest(reqName string) ([]byte, int, error) {
-	return hcl.makeRestRequest("GET", reqName, nil)
+	return hcl.makeRestRequest("GET", reqName, nil, EMPTY)
 }
 
 // Make a general JSON REST request.
 // Returns the request body, the response code, and the error.
 // Note: if the response code is non-zero, the error will also be non-zero.
-func (hcl *Client) makeRestRequest(reqType string, reqName string, reqBody io.Reader) ([]byte, int, error) {
-	url := fmt.Sprintf("http://%s/%s", hcl.restAddr, reqName)
+func (hcl *Client) makeRestRequest(reqType string, reqName string, reqBody io.Reader,
+	customHeaders map[string]string) ([]byte, int, error) {
+	url := fmt.Sprintf("http://%s/%s",
+		hcl.restAddr, reqName)
 	req, err := http.NewRequest(reqType, url, reqBody)
 	req.Header.Set("Content-Type", "application/json")
+	for k, v := range customHeaders {
+		req.Header.Set(k, v)
+	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -186,4 +233,12 @@ func (hcl *Client) DumpAll(lim int, out chan *common.Span) error {
 		}
 		searchId = spans[len(spans)-1].Id + 1
 	}
+}
+
+func (hcl *Client) Close() {
+	if hcl.hcr != nil {
+		hcl.hcr.Close()
+	}
+	hcl.restAddr = ""
+	hcl.hcr = nil
 }

@@ -21,6 +21,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -203,8 +204,17 @@ func doLoadSpanJsonFile(hcl *htrace.Client, spanFile string) int {
 		return EXIT_FAILURE
 	}
 	defer file.Close()
-	in := bufio.NewReader(file)
-	dec := json.NewDecoder(in)
+	return doLoadSpans(hcl, bufio.NewReader(file))
+}
+
+func doLoadSpanJson(hcl *htrace.Client, spanJson string) int {
+	return doLoadSpans(hcl, bytes.NewBufferString(spanJson))
+}
+
+func doLoadSpans(hcl *htrace.Client, reader io.Reader) int {
+	dec := json.NewDecoder(reader)
+	spans := make([]*common.Span, 0, 32)
+	var err error
 	for {
 		var span common.Span
 		if err = dec.Decode(&span); err != nil {
@@ -214,26 +224,20 @@ func doLoadSpanJsonFile(hcl *htrace.Client, spanFile string) int {
 			fmt.Printf("Failed to decode JSON: %s\n", err.Error())
 			return EXIT_FAILURE
 		}
-		if *verbose {
-			fmt.Printf("wrote %s\n", span.ToJson())
-		}
-		if err = hcl.WriteSpan(&span); err != nil {
-			fmt.Println(err.Error())
-			return EXIT_FAILURE
-		}
+		spans = append(spans, &span)
 	}
-	return EXIT_SUCCESS
-}
-
-func doLoadSpanJson(hcl *htrace.Client, spanJson string) int {
-	spanBytes := []byte(spanJson)
-	var span common.Span
-	err := json.Unmarshal(spanBytes, &span)
-	if err != nil {
-		fmt.Printf("Error parsing provided JSON: %s\n", err.Error())
-		return EXIT_FAILURE
+	if *verbose {
+		fmt.Printf("Writing ")
+		prefix := ""
+		for i := range spans {
+			fmt.Printf("%s%s", prefix, spans[i].ToJson())
+			prefix = ", "
+		}
+		fmt.Printf("\n")
 	}
-	err = hcl.WriteSpan(&span)
+	err = hcl.WriteSpans(&common.WriteSpansReq{
+		Spans: spans,
+	})
 	if err != nil {
 		fmt.Println(err.Error())
 		return EXIT_FAILURE

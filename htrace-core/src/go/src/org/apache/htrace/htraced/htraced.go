@@ -78,11 +78,25 @@ func main() {
 		lg.Errorf("Error creating REST server: %s\n", err.Error())
 		os.Exit(1)
 	}
+	var hsv *HrpcServer
+	if cnf.Get(conf.HTRACE_HRPC_ADDRESS) != "" {
+		hsv, err = CreateHrpcServer(cnf, store)
+		if err != nil {
+			lg.Errorf("Error creating HRPC server: %s\n", err.Error())
+			os.Exit(1)
+		}
+	} else {
+		lg.Infof("Not starting HRPC server because no value was given for %s.\n",
+			conf.HTRACE_HRPC_ADDRESS)
+	}
 	naddr := cnf.Get(conf.HTRACE_STARTUP_NOTIFICATION_ADDRESS)
 	if naddr != "" {
 		notif := StartupNotification{
 			HttpAddr:  rsv.Addr().String(),
 			ProcessId: os.Getpid(),
+		}
+		if hsv != nil {
+			notif.HrpcAddr = hsv.Addr().String()
 		}
 		err = sendStartupNotification(naddr, &notif)
 		if err != nil {
@@ -100,6 +114,7 @@ func main() {
 // Used by unit tests.
 type StartupNotification struct {
 	HttpAddr  string
+	HrpcAddr  string
 	ProcessId int
 }
 

@@ -62,6 +62,7 @@ type MiniHTraced struct {
 	DataDirs            []string
 	Store               *dataStore
 	Rsv                 *RestServer
+	Hsv                 *HrpcServer
 	Lg                  *common.Logger
 	KeepDataDirsOnClose bool
 }
@@ -70,6 +71,7 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	var err error
 	var store *dataStore
 	var rsv *RestServer
+	var hsv *HrpcServer
 	if bld.Name == "" {
 		bld.Name = "HTraceTest"
 	}
@@ -90,7 +92,8 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	}
 	bld.Cnf[conf.HTRACE_DATA_STORE_DIRECTORIES] =
 		strings.Join(bld.DataDirs, conf.PATH_LIST_SEP)
-	bld.Cnf[conf.HTRACE_WEB_ADDRESS] = ":0" // use a random port for the REST server
+	bld.Cnf[conf.HTRACE_WEB_ADDRESS] = ":0"  // use a random port for the REST server
+	bld.Cnf[conf.HTRACE_HRPC_ADDRESS] = ":0" // use a random port for the HRPC server
 	bld.Cnf[conf.HTRACE_LOG_LEVEL] = "TRACE"
 	cnfBld := conf.Builder{Values: bld.Cnf, Defaults: conf.DEFAULTS}
 	cnf, err := cnfBld.Build()
@@ -123,6 +126,11 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	if err != nil {
 		return nil, err
 	}
+	hsv, err = CreateHrpcServer(cnf, store)
+	if err != nil {
+		return nil, err
+	}
+
 	lg.Infof("Created MiniHTraced %s\n", bld.Name)
 	return &MiniHTraced{
 		Name:                bld.Name,
@@ -130,6 +138,7 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 		DataDirs:            bld.DataDirs,
 		Store:               store,
 		Rsv:                 rsv,
+		Hsv:                 hsv,
 		Lg:                  lg,
 		KeepDataDirsOnClose: bld.KeepDataDirsOnClose,
 	}, nil
@@ -137,7 +146,8 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 
 // Return a Config object that clients can use to connect to this MiniHTraceD.
 func (ht *MiniHTraced) ClientConf() *conf.Config {
-	return ht.Cnf.Clone(conf.HTRACE_WEB_ADDRESS, ht.Rsv.Addr().String())
+	return ht.Cnf.Clone(conf.HTRACE_WEB_ADDRESS, ht.Rsv.Addr().String(),
+		conf.HTRACE_HRPC_ADDRESS, ht.Hsv.Addr().String())
 }
 
 func (ht *MiniHTraced) Close() {

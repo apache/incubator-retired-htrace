@@ -79,10 +79,12 @@ func TestClientOperations(t *testing.T) {
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
 
 	// Write half of the spans to htraced via the client.
-	for i := 0; i < NUM_TEST_SPANS/2; i++ {
-		if err := hcl.WriteSpan(allSpans[i]); err != nil {
-			t.Fatalf("WriteSpan(%d) failed: %s\n", i, err.Error())
-		}
+	err = hcl.WriteSpans(&common.WriteSpansReq{
+		Spans: allSpans[0 : NUM_TEST_SPANS/2],
+	})
+	if err != nil {
+		t.Fatalf("WriteSpans(0:%d) failed: %s\n", NUM_TEST_SPANS/2,
+			err.Error())
 	}
 
 	// Look up the first half of the spans.  They should be found.
@@ -165,11 +167,11 @@ func TestDumpAll(t *testing.T) {
 	NUM_TEST_SPANS := 100
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
 	sort.Sort(allSpans)
-	for i := range allSpans {
-		err = hcl.WriteSpan(allSpans[i])
-		if err != nil {
-			t.Fatalf("failed to write span %d: %s", i, err.Error())
-		}
+	err = hcl.WriteSpans(&common.WriteSpansReq{
+		Spans: allSpans,
+	})
+	if err != nil {
+		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}
 	out := make(chan *common.Span, 50)
 	var dumpErr error

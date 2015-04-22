@@ -374,10 +374,11 @@ func TestReloadDataStore(t *testing.T) {
 	// Create some random trace spans.
 	NUM_TEST_SPANS := 5
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
-	for i := 0; i < NUM_TEST_SPANS; i++ {
-		if err := hcl.WriteSpan(allSpans[i]); err != nil {
-			t.Fatalf("WriteSpan(%d) failed: %s\n", i, err.Error())
-		}
+	err = hcl.WriteSpans(&common.WriteSpansReq{
+		Spans: allSpans,
+	})
+	if err != nil {
+		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}
 
 	// Look up the spans we wrote.
