@@ -16,6 +16,7 @@
  */
 package org.apache.htrace.util;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,6 +47,7 @@ public class HTracedProcess extends Process {
   /**
    * Data send back from the HTraced process on the notification port.
    */
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class StartupNotificationData {
     /**
      * The hostname:port pair which the HTraced process uses for HTTP requests.
