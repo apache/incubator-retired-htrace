@@ -99,6 +99,53 @@ language governing permissions and limitations under the License. -->
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <id>go_compile</id>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <tasks>
+                <exec executable="./gobuild.sh" 
+                      dir="${basedir}/src/go/"
+                      failonerror="true"> 
+                  <env key="RELEASE_VERSION" value="${project.version}"/>
+                </exec>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <phase>test</phase>
+            <id>go_test</id>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <tasks>
+                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                  <arg value="-c"/>
+                  <arg value="[ x$SKIPTESTS = xtrue ] || ./gobuild.sh test"/>
+                  <env key="SKIPTESTS" value="${skipTests}"/>
+                </exec>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <phase>clean</phase>
+            <id>go_clean</id>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <tasks>
+                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                  <arg value="-c"/>
+                  <arg value="./gobuild.sh clean"/>
+                </exec>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>

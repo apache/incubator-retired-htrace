@@ -166,7 +166,7 @@ public class HTracedProcess extends Process {
    * @return Path to the htraced binary.
    */
   public static File getPathToHTraceBinaryFromTopLevel(final File topLevel) {
-    return new File(new File(new File(new File(new File(topLevel, "htrace-core"), "src"), "go"),
+    return new File(new File(new File(new File(new File(topLevel, "htrace-htraced"), "src"), "go"),
       "build"), "htraced");
   }
 }
