@@ -9,7 +9,5 @@
 *~
 *.swp
 dependency-reduced-pom.xml
-htrace-htraced/src/go/src/org/apache/htrace/resource
-!htrace-htraced/src/go/src/org/apache/htrace/resource/catalog.go
 htrace-htraced/src/go/build
 htrace-htraced/src/go/pkg
