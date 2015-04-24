@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.net.URL;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
@@ -160,8 +159,7 @@ public class TestHTracedRESTReceiver {
                 return false;
               }
               LOG.info("Got " + content + " for span " + i);
-              ObjectMapper mapper = new ObjectMapper();
-              MilliSpan dspan = mapper.readValue(content, MilliSpan.class);
+              MilliSpan dspan = MilliSpan.fromJson(content);
               assertEquals((long)i, dspan.getSpanId());
               // Every span should have the process ID we set in the
               // configuration... except for the last span, which had

@@ -21,12 +21,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.htrace.Span;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.Tracer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -47,7 +48,9 @@ import java.util.Random;
  */
 @JsonDeserialize(using = MilliSpan.MilliSpanDeserializer.class)
 public class MilliSpan implements Span {
-  private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
+  private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static ObjectReader JSON_READER = OBJECT_MAPPER.reader(MilliSpan.class);
+  private static ObjectWriter JSON_WRITER = OBJECT_MAPPER.writer();
   private static final long EMPTY_PARENT_ARRAY[] = new long[0];
   private static final String EMPTY_STRING = "";
 
@@ -383,5 +386,9 @@ public class MilliSpan implements Span {
       }
       return builder.build();
     }
+  }
+
+  static MilliSpan fromJson(String json) throws IOException {
+    return JSON_READER.readValue(json);
   }
 }

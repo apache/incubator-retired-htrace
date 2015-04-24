@@ -16,8 +16,6 @@
  */
 package org.apache.htrace.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -81,8 +79,7 @@ public class TestMilliSpan {
         spanId(989L).
         traceId(444).build();
     String json = span.toJson();
-    ObjectMapper mapper = new ObjectMapper();
-    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
   }
 
@@ -97,8 +94,7 @@ public class TestMilliSpan {
         spanId(-1L).
         traceId(-1L).build();
     String json = span.toJson();
-    ObjectMapper mapper = new ObjectMapper();
-    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
   }
 
@@ -114,8 +110,7 @@ public class TestMilliSpan {
         spanId(random.nextLong()).
         traceId(random.nextLong()).build();
     String json = span.toJson();
-    ObjectMapper mapper = new ObjectMapper();
-    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
   }
 
@@ -140,8 +135,7 @@ public class TestMilliSpan {
     builder.timeline(timeline);
     MilliSpan span = builder.build();
     String json = span.toJson();
-    ObjectMapper mapper = new ObjectMapper();
-    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
   }
 
@@ -149,8 +143,7 @@ public class TestMilliSpan {
   public void testJsonSerializationWithFieldsNotSet() throws Exception {
     MilliSpan span = new MilliSpan.Builder().build();
     String json = span.toJson();
-    ObjectMapper mapper = new ObjectMapper();
-    MilliSpan dspan = mapper.readValue(json, MilliSpan.class);
+    MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
   }
 }
