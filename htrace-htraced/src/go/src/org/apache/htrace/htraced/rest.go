@@ -63,7 +63,9 @@ func (hand *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 			fmt.Sprintf("error marshalling ServerInfo: %s\n", err.Error()))
 		return
 	}
-	hand.lg.Debugf("Returned serverInfo %s\n", string(buf))
+	if hand.lg.DebugEnabled() {
+		hand.lg.Debugf("Returned serverInfo %s\n", string(buf))
+	}
 	w.Write(buf)
 }
 
@@ -180,7 +182,9 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	hand.lg.Debugf("writeSpansHandler: received %d span(s).  defaultPid = %s\n",
 		len(spans), defaultPid)
 	for spanIdx := range spans {
-		hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
+		if hand.lg.DebugEnabled() {
+			hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
+		}
 		hand.store.WriteSpan(spans[spanIdx])
 	}
 }

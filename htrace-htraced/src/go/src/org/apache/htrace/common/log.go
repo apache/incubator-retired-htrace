@@ -104,7 +104,7 @@ func (path logPath) Open() *logSink {
 	if path == STDOUT_LOG_PATH {
 		return &logSink{path: path, file: os.Stdout}
 	}
-	file, err := os.OpenFile(string(path), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0777)
+	file, err := os.OpenFile(string(path), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		sink := &logSink{path: STDOUT_LOG_PATH, file: os.Stdout}
 		fmt.Fprintf(os.Stderr, "Failed to open log file %s: %s\n",
@@ -260,6 +260,34 @@ func (lg *Logger) write(level Level, str string) {
 		lg.sink.write(time.Now().Format(time.RFC3339) + " " +
 			level.LogString() + ": " + str)
 	}
+}
+
+//
+// A few functions which can be used to determine if a certain level of tracing
+// is enabled.  These are useful in situations when evaluating the parameters
+// of a logging function is expensive.  (Note, however, that we don't pay the
+// cost of string concatenation and manipulation when a log message doesn't
+// trigger.)
+//
+
+func (lg *Logger) TraceEnabled() bool {
+	return lg.Level >= TRACE
+}
+
+func (lg *Logger) DebugEnabled() bool {
+	return lg.Level >= DEBUG
+}
+
+func (lg *Logger) InfoEnabled() bool {
+	return lg.Level >= INFO
+}
+
+func (lg *Logger) WarnEnabled() bool {
+	return lg.Level >= WARN
+}
+
+func (lg *Logger) ErrorEnabled() bool {
+	return lg.Level >= ERROR
 }
 
 func (lg *Logger) Close() {

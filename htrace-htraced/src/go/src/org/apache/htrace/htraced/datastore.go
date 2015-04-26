@@ -913,7 +913,9 @@ func (store *dataStore) HandleQuery(query *common.Query) ([]*common.Span, error)
 		if span == nil {
 			break // the source has no more spans to give
 		}
-		lg.Debugf("src.next returned span %s\n", span.ToJson())
+		if lg.DebugEnabled() {
+			lg.Debugf("src.next returned span %s\n", span.ToJson())
+		}
 		satisfied := true
 		for predIdx := range preds {
 			if !preds[predIdx].satisfiedBy(span) {
