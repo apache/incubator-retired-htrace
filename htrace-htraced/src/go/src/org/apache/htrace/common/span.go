@@ -130,6 +130,10 @@ func (span *Span) ToJson() []byte {
 	return jbytes
 }
 
+func (span *Span) String() string {
+	return string(span.ToJson())
+}
+
 // Compute the span duration.  We ignore overflow since we never deal with negative times.
 func (span *Span) Duration() int64 {
 	return span.End - span.Begin

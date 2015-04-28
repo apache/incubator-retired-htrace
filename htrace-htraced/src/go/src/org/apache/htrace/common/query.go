@@ -103,9 +103,18 @@ type Predicate struct {
 	Val   string `val:"val"`
 }
 
+func (pred *Predicate) String() string {
+	buf, err := json.Marshal(pred)
+	if err != nil {
+		panic(err)
+	}
+	return string(buf)
+}
+
 type Query struct {
 	Predicates []Predicate `json:"pred"`
 	Lim        int         `json:"lim"`
+	Prev       *Span       `json:"prev"`
 }
 
 func (query *Query) String() string {

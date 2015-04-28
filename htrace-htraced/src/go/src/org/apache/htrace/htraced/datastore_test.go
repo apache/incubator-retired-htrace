@@ -443,3 +443,72 @@ func TestReloadDataStore(t *testing.T) {
 			"incorrect version.  But it failed with error %s\n", err.Error())
 	}
 }
+
+func TestQueriesWithContinuationTokens1(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueriesWithContinuationTokens1",
+		WrittenSpans: make(chan *common.Span, 100)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
+		t.Fatal()
+	}
+	// Adding a prev value to this query excludes the first result that we
+	// would normally get.
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.BEGIN_TIME,
+				Val:   "120",
+			},
+		},
+		Lim: 5,
+		Prev: &SIMPLE_TEST_SPANS[0],
+	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[2]})
+
+	// There is only one result from an EQUALS query on SPAN_ID.
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.EQUALS,
+				Field: common.SPAN_ID,
+				Val:   "1",
+			},
+		},
+		Lim: 100,
+		Prev: &SIMPLE_TEST_SPANS[0],
+	}, []common.Span{})
+
+	// When doing a LESS_THAN_OR_EQUALS search, we still don't get back the
+	// span we pass as a continuation token. (Primary index edition).
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.SPAN_ID,
+				Val:   "2",
+			},
+		},
+		Lim: 100,
+		Prev: &SIMPLE_TEST_SPANS[1],
+	}, []common.Span{SIMPLE_TEST_SPANS[0]})
+
+	// When doing a GREATER_THAN_OR_EQUALS search, we still don't get back the
+	// span we pass as a continuation token. (Secondary index edition).
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.DURATION,
+				Val:   "0",
+			},
+		},
+		Lim: 100,
+		Prev: &SIMPLE_TEST_SPANS[1],
+	}, []common.Span{SIMPLE_TEST_SPANS[2], SIMPLE_TEST_SPANS[0]})
+}
