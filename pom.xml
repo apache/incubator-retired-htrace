@@ -161,6 +161,7 @@ language governing permissions and limitations under the License. -->
                 <exclue>**/README.md</exclue>
                 <exclude>**/src/go/bin/*</exclude>
                 <exclude>**/src/go/pkg/*</exclude>
+                <exclude>style.txt</exclude>
                 <!-- external projects -->
                 <exclude>**/bootstrap-3.3.1/**</exclude>
                 <exclude>**/web/lib/js/**</exclude>
