@@ -11,3 +11,4 @@
 dependency-reduced-pom.xml
 htrace-htraced/src/go/build
 htrace-htraced/src/go/pkg
+htrace-htraced/bin
