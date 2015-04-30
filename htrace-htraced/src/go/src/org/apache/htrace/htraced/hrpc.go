@@ -47,27 +47,50 @@ type HrpcServer struct {
 
 // Codec which encodes HRPC data via JSON
 type HrpcServerCodec struct {
-	rwc    io.ReadWriteCloser
+	lg     *common.Logger
+	conn   net.Conn
 	length uint32
+}
+
+func asJson(val interface{}) string {
+	js, err := json.Marshal(val)
+	if err != nil {
+		return "encoding error: " + err.Error()
+	}
+	return string(js)
+}
+
+func createErrAndLog(lg *common.Logger, val string) error {
+	lg.Warnf("%s\n", val)
+	return errors.New(val)
 }
 
 func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 	hdr := common.HrpcRequestHeader{}
-	err := binary.Read(cdc.rwc, binary.BigEndian, &hdr)
+	if cdc.lg.TraceEnabled() {
+		cdc.lg.Tracef("Reading HRPC request header from %s\n", cdc.conn.RemoteAddr())
+	}
+	err := binary.Read(cdc.conn, binary.LittleEndian, &hdr)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error reading header bytes: %s", err.Error()))
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Error reading header bytes: %s",
+			err.Error()))
+	}
+	if cdc.lg.TraceEnabled() {
+		cdc.lg.Tracef("Read HRPC request header %s from %s\n",
+			asJson(&hdr), cdc.conn.RemoteAddr())
 	}
 	if hdr.Magic != common.HRPC_MAGIC {
-		return errors.New(fmt.Sprintf("Invalid request header: expected "+
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Invalid request header: expected "+
 			"magic number of 0x%04x, but got 0x%04x", common.HRPC_MAGIC, hdr.Magic))
 	}
 	if hdr.Length > common.MAX_HRPC_BODY_LENGTH {
-		return errors.New(fmt.Sprintf("Length prefix was too long.  Maximum "+
-			"length is %d, but we got %d.", common.MAX_HRPC_BODY_LENGTH, hdr.Length))
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Length prefix was too long.  "+
+			"Maximum length is %d, but we got %d.", common.MAX_HRPC_BODY_LENGTH,
+			hdr.Length))
 	}
 	req.ServiceMethod = common.HrpcMethodIdToMethodName(hdr.MethodId)
 	if req.ServiceMethod == "" {
-		return errors.New(fmt.Sprintf("Unknown MethodID code 0x%04x",
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Unknown MethodID code 0x%04x",
 			hdr.MethodId))
 	}
 	req.Seq = hdr.Seq
@@ -76,11 +99,19 @@ func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 }
 
 func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
-	dec := json.NewDecoder(io.LimitReader(cdc.rwc, int64(cdc.length)))
+	if cdc.lg.TraceEnabled() {
+		cdc.lg.Tracef("Reading HRPC %d-byte request body from %s\n",
+			cdc.length, cdc.conn.RemoteAddr())
+	}
+	dec := json.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)))
 	err := dec.Decode(body)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to read request body: %s",
-			err.Error()))
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to read request "+
+			"body from %s: %s", cdc.conn.RemoteAddr(), err.Error()))
+	}
+	if cdc.lg.TraceEnabled() {
+		cdc.lg.Tracef("Read body from %s: %s\n",
+			cdc.conn.RemoteAddr(), asJson(&body))
 	}
 	return nil
 }
@@ -93,8 +124,8 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	if msg != nil {
 		buf, err = json.Marshal(msg)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Failed to marshal response message: %s",
-				err.Error()))
+			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to marshal "+
+				"response message: %s", err.Error()))
 		}
 	}
 	hdr := common.HrpcResponseHeader{}
@@ -102,41 +133,41 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	hdr.Seq = resp.Seq
 	hdr.ErrLength = uint32(len(resp.Error))
 	hdr.Length = uint32(len(buf))
-	writer := bufio.NewWriterSize(cdc.rwc, 256)
-	err = binary.Write(writer, binary.BigEndian, &hdr)
+	writer := bufio.NewWriterSize(cdc.conn, 256)
+	err = binary.Write(writer, binary.LittleEndian, &hdr)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to write response header: %s",
-			err.Error()))
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write response "+
+			"header: %s", err.Error()))
 	}
 	if hdr.ErrLength > 0 {
 		_, err = io.WriteString(writer, resp.Error)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Failed to write error string: %s",
-				err.Error()))
+			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write error "+
+				"string: %s", err.Error()))
 		}
 	}
 	if hdr.Length > 0 {
 		var length int
 		length, err = writer.Write(buf)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Failed to write response "+
+			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write response "+
 				"message: %s", err.Error()))
 		}
 		if uint32(length) != hdr.Length {
-			return errors.New(fmt.Sprintf("Failed to write all of response "+
-				"message: %s", err.Error()))
+			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write all of "+
+				"response message: %s", err.Error()))
 		}
 	}
 	err = writer.Flush()
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to write the response bytes: "+
-			"%s", err.Error()))
+		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write the response "+
+			"bytes: %s", err.Error()))
 	}
 	return nil
 }
 
 func (cdc *HrpcServerCodec) Close() error {
-	return cdc.rwc.Close()
+	return cdc.conn.Close()
 }
 
 func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
@@ -148,7 +179,9 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 		if span.ProcessId == "" {
 			span.ProcessId = req.DefaultPid
 		}
-		hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())
+		if hand.lg.TraceEnabled() {
+			hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())
+		}
 		hand.store.WriteSpan(span)
 	}
 	return nil
@@ -182,8 +215,12 @@ func (hsv *HrpcServer) run() {
 			lg.Errorf("HRPC Accept error: %s\n", err.Error())
 			continue
 		}
+		if lg.TraceEnabled() {
+			lg.Tracef("Accepted HRPC connection from %s\n", conn.RemoteAddr())
+		}
 		go hsv.ServeCodec(&HrpcServerCodec{
-			rwc: conn,
+			lg:   lg,
+			conn: conn,
 		})
 	}
 }

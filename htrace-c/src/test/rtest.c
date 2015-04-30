@@ -52,10 +52,16 @@ static void get_receiver_test_prid(char *prid, size_t prid_len)
 
 static int rtest_data_init(const char *conf_str, struct rtest_data **out)
 {
+    char *econf_str = NULL;
     struct rtest_data *rdata = calloc(1, sizeof(*(rdata)));
     EXPECT_NONNULL(rdata);
-    rdata->cnf = htrace_conf_from_strs(conf_str,
-            HTRACE_PROCESS_ID"=%{tname}/%{pid};sampler=always");
+    if (asprintf(&econf_str, HTRACE_PROCESS_ID"=%%{tname}/%%{pid};sampler=always;"
+              "%s", conf_str) < 0) {
+        fprintf(stderr, "asprintf(econf_str) failed: OOM\n");
+        return EXIT_FAILURE;
+    }
+    rdata->cnf = htrace_conf_from_str(econf_str);
+    free(econf_str);
     EXPECT_NONNULL(rdata->cnf);
     rdata->tracer = htracer_create(RECEIVER_TEST_TNAME, rdata->cnf);
     EXPECT_NONNULL(rdata->tracer);

@@ -44,6 +44,14 @@ void ms_to_timespec(uint64_t ms, struct timespec *ts)
     ts->tv_nsec = ms * 1000000LLU;
 }
 
+void ms_to_timeval(uint64_t ms, struct timeval *tv)
+{
+    uint64_t sec = ms / 1000LLU;
+    tv->tv_sec = sec;
+    ms -= (sec * 1000LLU);
+    tv->tv_usec = ms * 1000LLU;
+}
+
 uint64_t now_ms(struct htrace_log *lg)
 {
     struct timespec ts;

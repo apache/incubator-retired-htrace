@@ -28,7 +28,6 @@ import (
 	"net"
 	"net/rpc"
 	"org/apache/htrace/common"
-	"org/apache/htrace/conf"
 )
 
 type hClient struct {
@@ -62,7 +61,7 @@ func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) erro
 		Seq:      req.Seq,
 		Length:   uint32(len(buf)),
 	}
-	err = binary.Write(cdc.rwc, binary.BigEndian, &hdr)
+	err = binary.Write(cdc.rwc, binary.LittleEndian, &hdr)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error writing header bytes: %s",
 			err.Error()))
@@ -77,7 +76,7 @@ func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) erro
 
 func (cdc *HrpcClientCodec) ReadResponseHeader(resp *rpc.Response) error {
 	hdr := common.HrpcResponseHeader{}
-	err := binary.Read(cdc.rwc, binary.BigEndian, &hdr)
+	err := binary.Read(cdc.rwc, binary.LittleEndian, &hdr)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error reading response header "+
 			"bytes: %s", err.Error()))
@@ -129,13 +128,12 @@ func (cdc *HrpcClientCodec) Close() error {
 	return cdc.rwc.Close()
 }
 
-func newHClient(cnf *conf.Config) (*hClient, error) {
+func newHClient(hrpcAddr string) (*hClient, error) {
 	hcr := hClient{}
-	addr := cnf.Get(conf.HTRACE_HRPC_ADDRESS)
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.Dial("tcp", hrpcAddr)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error contacting the HRPC server "+
-			"at %s: %s", addr, err.Error()))
+			"at %s: %s", hrpcAddr, err.Error()))
 	}
 	hcr.rpcClient = rpc.NewClientWithCodec(&HrpcClientCodec{rwc: conn})
 	return &hcr, nil

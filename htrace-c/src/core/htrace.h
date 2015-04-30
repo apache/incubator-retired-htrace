@@ -115,9 +115,19 @@ extern  "C" {
 #define HTRACED_ADDRESS_KEY "htraced.address"
 
 /**
- * The timeout to use when sending spans to the htraced server.
+ * The maximum length of time to go before flushing spans to the htraced server.
  */
-#define HTRACED_SEND_TIMEOUT_MS_KEY "htraced.send.timeout.ms"
+#define HTRACED_FLUSH_INTERVAL_MS_KEY "htraced.flush.interval.ms"
+
+/**
+ * The TCP write timeout to use when communicating with the htraced server.
+ */
+#define HTRACED_WRITE_TIMEO_MS_KEY "htraced.write.timeo.ms"
+
+/**
+ * The TCP read timeout to use when communicating with the htraced server.
+ */
+#define HTRACED_READ_TIMEO_MS_KEY "htraced.read.timeo.ms"
 
 /**
  * The size of the circular buffer to use in the htraced receiver.

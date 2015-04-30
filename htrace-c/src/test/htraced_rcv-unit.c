@@ -51,7 +51,7 @@ static int htraced_rcv_test(struct rtest *rt)
                 ht->root_dir, "spans.json"));
     EXPECT_INT_GE(0, asprintf(&conf_str, "%s=%s;%s=%s",
                 HTRACE_SPAN_RECEIVER_KEY, "htraced",
-                HTRACED_ADDRESS_KEY, ht->htraced_http_addr));
+                HTRACED_ADDRESS_KEY, ht->htraced_hrpc_addr));
     EXPECT_INT_ZERO(rt->run(rt, conf_str));
     start_ms = monotonic_now_ms(NULL);
     //

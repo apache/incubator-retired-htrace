@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
+#include "core/conf.h"
+#include "core/htrace.h"
 #include "test/test.h"
+#include "util/log.h"
 #include "util/string.h"
 
 #include <errno.h>
@@ -63,10 +66,52 @@ static int test_validate_json_string(void)
     return EXIT_SUCCESS;
 }
 
+static int test_parse_endpoint(struct htrace_log *lg, const char *eremote,
+                               int eport, const char *endpoint)
+{
+    char *remote = NULL;
+    int port = 0;
+
+    EXPECT_INT_EQ(1, parse_endpoint(lg, endpoint, 80, &remote, &port));
+    EXPECT_NONNULL(remote);
+    EXPECT_STR_EQ(eremote, remote);
+    EXPECT_INT_EQ(eport, port);
+    free(remote);
+    return EXIT_SUCCESS;
+}
+
+static int test_parse_endpoints(void)
+{
+    struct htrace_conf *cnf;
+    struct htrace_log *lg;
+
+    cnf = htrace_conf_from_str("");
+    EXPECT_NONNULL(cnf);
+    lg = htrace_log_alloc(cnf);
+    EXPECT_NONNULL(lg);
+    EXPECT_INT_ZERO(test_parse_endpoint(lg, "", 80,
+                                        ""));
+    EXPECT_INT_ZERO(test_parse_endpoint(lg, "127.0.0.1", 8080,
+                                        "127.0.0.1:8080"));
+    EXPECT_INT_ZERO(test_parse_endpoint(lg, "127.0.0.1", 80,
+                                        "127.0.0.1"));
+    EXPECT_INT_ZERO(test_parse_endpoint(lg, "foobar.example.com", 99,
+                                        "foobar.example.com:99"));
+    EXPECT_INT_ZERO(test_parse_endpoint(lg, "foobar", 80,
+                                        "foobar"));
+    EXPECT_INT_ZERO(test_parse_endpoint(lg,
+        "2001:db8:85a3:8d3:1319:8a2e:370:7348", 9075,
+        "[2001:db8:85a3:8d3:1319:8a2e:370:7348]:9075"));
+    htrace_log_free(lg);
+    htrace_conf_free(cnf);
+    return EXIT_SUCCESS;
+}
+
 int main(void)
 {
     EXPECT_INT_ZERO(test_fwdprintf());
     EXPECT_INT_ZERO(test_validate_json_string());
+    EXPECT_INT_ZERO(test_parse_endpoints());
     return EXIT_SUCCESS;
 }
 

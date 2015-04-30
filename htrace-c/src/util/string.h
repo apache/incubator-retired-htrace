@@ -59,6 +59,28 @@ int fwdprintf(char **buf, int* rem, const char *fmt, ...)
  */
 int validate_json_string(struct htrace_log *lg, const char *str);
 
+/**
+ * Parse an endpoint string.
+ *
+ * We support a few different formats:
+ * Hostname/port:
+ *      my.hostname:9075
+ * ipv4/port:
+ *      127.0.0.1:9075
+ * ipv6/port:
+ *      [2001:db8:85a3:8d3:1319:8a2e:370:7348]:9075
+ *
+ * @param lg                    The htrace log object.
+ * @param endpoint              The endpoint string.
+ * @param default_port          The default port to use if no port is given.
+ * @param remote                (out param) The remote name.  Malloced.
+ * @param port                  (out param) The port.
+ *
+ * @return                      0 on failure; 1 on success.
+ */
+int parse_endpoint(struct htrace_log *lg, const char *endpoint,
+                   int default_port, char **remote, int *port);
+
 #endif
 
 // vim: ts=4:sw=4:et

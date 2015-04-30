@@ -37,19 +37,16 @@ import (
 func NewClient(cnf *conf.Config) (*Client, error) {
 	hcl := Client{}
 	hcl.restAddr = cnf.Get(conf.HTRACE_WEB_ADDRESS)
-	if cnf.Get(conf.HTRACE_HRPC_ADDRESS) != "" {
-		var err error
-		hcl.hcr, err = newHClient(cnf)
-		if err != nil {
-			return nil, err
-		}
-	}
+	hcl.hrpcAddr = cnf.Get(conf.HTRACE_HRPC_ADDRESS)
 	return &hcl, nil
 }
 
 type Client struct {
 	// REST address of the htraced server.
 	restAddr string
+
+	// HRPC address of the htraced server.
+	hrpcAddr string
 
 	// The HRPC client, or null if it is not enabled.
 	hcr *hClient
@@ -89,11 +86,15 @@ func (hcl *Client) FindSpan(sid common.SpanId) (*common.Span, error) {
 }
 
 func (hcl *Client) WriteSpans(req *common.WriteSpansReq) error {
-	if hcl.hcr != nil {
-		return hcl.hcr.writeSpans(req)
-	} else {
+	if hcl.hrpcAddr == "" {
 		return hcl.writeSpansHttp(req)
 	}
+	hcr, err := newHClient(hcl.hrpcAddr)
+	if err != nil {
+		return err
+	}
+	defer hcr.Close()
+	return hcr.writeSpans(req)
 }
 
 func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {

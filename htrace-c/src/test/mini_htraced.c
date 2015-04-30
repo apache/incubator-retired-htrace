@@ -318,6 +318,9 @@ static void mini_htraced_write_conf_file(struct mini_htraced *ht,
     if (mini_htraced_write_conf_key(fp, "web.address", "127.0.0.1:0")) {
         goto ioerror;
     }
+    if (mini_htraced_write_conf_key(fp, "hrpc.address", "127.0.0.1:0")) {
+        goto ioerror;
+    }
     if (mini_htraced_write_conf_key(fp, "data.store.directories",
             "%s%c%s", ht->data_dir[0], PATH_LIST_SEP, ht->data_dir[1])) {
         goto ioerror;
@@ -546,7 +549,7 @@ static void parse_startup_notification(struct mini_htraced *ht,
                                        char *err, size_t err_len)
 {
     struct json_tokener *tok = NULL;
-    struct json_object *root = NULL, *http_addr, *process_id;
+    struct json_object *root = NULL, *http_addr, *process_id, *hrpc_addr;
     int32_t pid;
 
     err[0] = '\0';
@@ -571,6 +574,18 @@ static void parse_startup_notification(struct mini_htraced *ht,
     }
     ht->htraced_http_addr = strdup(json_object_get_string(http_addr));
     if (!ht->htraced_http_addr) {
+        snprintf(err, err_len, "OOM");
+        goto done;
+    }
+    // Find the HRPC address, in the form of hostname:port, which the htraced
+    // is listening on.
+    if (!json_object_object_get_ex(root, "HrpcAddr", &hrpc_addr)) {
+        snprintf(err, err_len, "Failed to find HrpcAddr in the startup "
+                 "notification.");
+        goto done;
+    }
+    ht->htraced_hrpc_addr = strdup(json_object_get_string(hrpc_addr));
+    if (!ht->htraced_hrpc_addr) {
         snprintf(err, err_len, "OOM");
         goto done;
     }

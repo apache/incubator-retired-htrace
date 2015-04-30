@@ -21,6 +21,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int fwdprintf(char **buf, int* rem, const char *fmt, ...)
@@ -101,6 +102,60 @@ int validate_json_string(struct htrace_log *lg, const char *str)
         }
         return 0;
     }
+    return 1;
+}
+
+int parse_endpoint(struct htrace_log *lg, const char *endpoint,
+                   int default_port, char **remote_out, int *port)
+{
+    const char *remotestr;
+    const char *portstr;
+    char *remote = NULL;
+    int remote_len;
+
+    if (endpoint[0] == '[') {
+        remotestr = endpoint + 1;
+        remote_len = strcspn(remotestr, "]");
+        if (remotestr[remote_len] != ']') {
+            htrace_log(lg, "parse_hostport: found open square bracket, but "
+                       "not matching close square bracket.\n");
+            return 0;
+        }
+        if (remotestr[remote_len + 1] == ':') {
+            portstr = remotestr + remote_len + 2;
+        } else {
+            portstr = NULL;
+        }
+    } else {
+        remotestr = endpoint;
+        remote_len = strcspn(remotestr, ":");
+        if (remotestr[remote_len] == ':') {
+            portstr = remotestr + remote_len + 1;
+        } else {
+            portstr = NULL;
+        }
+    }
+    remote = malloc(remote_len + 1);
+    if (!remote) {
+        htrace_log(lg, "parse_hostport: unable to allocate %d-byte string.\n",
+                   remote_len);
+        return 0;
+    }
+    memcpy(remote, remotestr, remote_len);
+    remote[remote_len] = '\0';
+    if (!portstr) {
+        *port = default_port;
+    } else {
+        int p = atoi(portstr);
+        if ((p <= 0) || (p > 0xffff)) {
+            free(remote);
+            htrace_log(lg, "parse_hostport: parse port string '%s'\n",
+                       portstr);
+            return 0;
+        }
+        *port = p;
+    }
+    *remote_out = remote;
     return 1;
 }
 

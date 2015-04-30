@@ -20,14 +20,14 @@
 #include "core/htrace.h"
 #include "core/htracer.h"
 #include "core/span.h"
-#include "receiver/curl.h"
+#include "receiver/hrpc.h"
 #include "receiver/receiver.h"
 #include "test/test.h"
 #include "util/log.h"
+#include "util/string.h"
 #include "util/time.h"
 
 #include <errno.h>
-#include <curl/curl.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -56,15 +56,25 @@
 #define HTRACED_MAX_BUFFER_SIZE 0x7ffffffffffffffLL
 
 /**
- * The minimum number of milliseconds to allow for send_timeo_ms.
+ * The minimum number of milliseconds to allow for flush_interval_ms.
  */
-#define HTRACED_SEND_TIMEO_MS_MIN 30000LL
+#define HTRACED_FLUSH_INTERVAL_MS_MIN 30000LL
 
 /**
- * The maximum number of milliseconds to allow for send_timeo_ms.
+ * The maximum number of milliseconds to allow for flush_interval_ms.
  * This is mainly to avoid overflow.
  */
-#define HTRACED_SEND_TIMEO_MS_MAX 86400000LL
+#define HTRACED_FLUSH_INTERVAL_MS_MAX 86400000LL
+
+/**
+ * The minimum number of milliseconds to allow for tcp write timeouts.
+ */
+#define HTRACED_WRITE_TIMEO_MS_MIN 50LL
+
+/**
+ * The minimum number of milliseconds to allow for tcp read timeouts.
+ */
+#define HTRACED_READ_TIMEO_MS_MIN 50LL
 
 /**
  * The maximum size of the message we will send over the wire.
@@ -108,16 +118,10 @@ struct htraced_rcv {
     struct htracer *tracer;
 
     /**
-     * The HTraced server URL.
-     * Dynamically allocated.
-     */
-    char *url;
-
-    /**
      * Buffered span data becomes eligible to be sent even if there isn't much
      * in the buffer after this timeout elapses.
      */
-    uint64_t send_timeo_ms;
+    uint64_t flush_interval_ms;
 
     /**
      * The maximum number of bytes we will buffer before waking the sending
@@ -127,9 +131,9 @@ struct htraced_rcv {
     uint64_t send_threshold;
 
     /**
-     * The CURL handle.
+     * The HRPC client.
      */
-    CURL *curl;
+    struct hrpc_client *hcli;
 
     /**
      * Length of the circular buffer.
@@ -184,15 +188,35 @@ static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now);
 static uint64_t cbuf_used(const struct htraced_rcv *rcv);
 static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv);
 
+static uint64_t htraced_get_bounded_u64(struct htrace_log *lg,
+                const struct htrace_conf *cnf, const char *prop,
+                uint64_t min, uint64_t max)
+{
+    uint64_t val = htrace_conf_get_u64(lg, cnf, prop);
+    if (val < min) {
+        htrace_log(lg, "htraced_rcv_create: can't set %s to %"PRId64
+                   ".  Using minimum value of %"PRId64 " instead.\n",
+                   prop, val, min);
+        return min;
+    } else if (val > max) {
+        htrace_log(lg, "htraced_rcv_create: can't set %s to %"PRId64
+                   ".  Using maximum value of %"PRId64 " instead.\n",
+                   prop, val, max);
+        return max;
+    }
+    return val;
+}
+
 static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
                                              const struct htrace_conf *conf)
 {
     struct htraced_rcv *rcv;
-    const char *url;
+    const char *endpoint;
     int ret;
+    uint64_t write_timeo_ms, read_timeo_ms;
 
-    url = htrace_conf_get(conf, HTRACED_ADDRESS_KEY);
-    if (!url) {
+    endpoint = htrace_conf_get(conf, HTRACED_ADDRESS_KEY);
+    if (!endpoint) {
         htrace_log(tracer->lg, "htraced_rcv_create: no value found for %s. "
                    "You must set this configuration key to the "
                    "hostname:port identifying the htraced server.\n",
@@ -208,26 +232,20 @@ static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
     rcv->base.ty = &g_htraced_rcv_ty;
     rcv->shutdown = 0;
     rcv->tracer = tracer;
-    if (asprintf(&rcv->url, "%s/writeSpans", url) < 0) {
-        rcv->url = NULL;
+
+    rcv->flush_interval_ms = htraced_get_bounded_u64(tracer->lg, conf,
+                HTRACED_FLUSH_INTERVAL_MS_KEY, HTRACED_FLUSH_INTERVAL_MS_MIN,
+                HTRACED_FLUSH_INTERVAL_MS_MAX);
+    write_timeo_ms = htraced_get_bounded_u64(tracer->lg, conf,
+                HTRACED_WRITE_TIMEO_MS_KEY, HTRACED_WRITE_TIMEO_MS_MIN,
+                0x7fffffffffffffffULL);
+    read_timeo_ms = htraced_get_bounded_u64(tracer->lg, conf,
+                HTRACED_READ_TIMEO_MS_KEY, HTRACED_READ_TIMEO_MS_MIN,
+                0x7fffffffffffffffULL);
+    rcv->hcli = hrpc_client_alloc(tracer->lg, write_timeo_ms,
+                                  read_timeo_ms, endpoint);
+    if (!rcv->hcli) {
         goto error_free_rcv;
-    }
-    rcv->send_timeo_ms = htrace_conf_get_u64(tracer->lg, conf,
-                    HTRACED_SEND_TIMEOUT_MS_KEY);
-    if (rcv->send_timeo_ms < HTRACED_SEND_TIMEO_MS_MIN) {
-        htrace_log(tracer->lg, "htraced_rcv_create: invalid send timeout of %"
-                   PRId64 " ms.  Setting the minimum timeout of %lld"
-                   " ms instead.\n", rcv->send_timeo_ms, HTRACED_SEND_TIMEO_MS_MIN);
-        rcv->send_timeo_ms = HTRACED_SEND_TIMEO_MS_MIN;
-    } else if (rcv->send_timeo_ms > HTRACED_SEND_TIMEO_MS_MAX) {
-        htrace_log(tracer->lg, "htraced_rcv_create: invalid send timeout of %"
-                   PRId64 " ms.  Setting the maximum timeout of %lld"
-                   " ms instead.\n", rcv->send_timeo_ms, HTRACED_SEND_TIMEO_MS_MAX);
-        rcv->send_timeo_ms = HTRACED_SEND_TIMEO_MS_MAX;
-    }
-    rcv->curl = htrace_curl_init(tracer->lg, conf);
-    if (!rcv->curl) {
-        goto error_free_url;
     }
     rcv->clen = htrace_conf_get_u64(tracer->lg, conf, HTRACED_BUFFER_SIZE_KEY);
     if (rcv->clen < HTRACED_MIN_BUFFER_SIZE) {
@@ -245,7 +263,7 @@ static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
     if (!rcv->cbuf) {
         htrace_log(tracer->lg, "htraced_rcv_create: failed to malloc %"PRId64
                    " bytes for the htraced circular buffer.\n", rcv->clen);
-        goto error_free_curl;
+        goto error_free_hcli;
     }
     // Send when the buffer gets 1/4 full.
     rcv->send_threshold = rcv->clen * 0.25;
@@ -274,10 +292,12 @@ static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
                    "error %d: %s\n", ret, terror(ret));
         goto error_free_cvar;
     }
-    htrace_log(tracer->lg, "Initialized htraced receiver with url=%s, "
-               "send_timeo_ms=%" PRId64 ", send_threshold=%" PRId64 ", clen=%"
-               PRId64 ".\n", rcv->url, rcv->send_timeo_ms, rcv->send_threshold,
-               rcv->clen);
+    htrace_log(tracer->lg, "Initialized htraced receiver for %s"
+                ", flush_interval_ms=%" PRId64 ", send_threshold=%" PRId64
+                ", write_timeo_ms=%" PRId64 ", read_timeo_ms=%" PRId64
+                ", clen=%" PRId64 ".\n", hrpc_client_get_endpoint(rcv->hcli),
+                rcv->flush_interval_ms, rcv->send_threshold,
+                write_timeo_ms, read_timeo_ms, rcv->clen);
     return (struct htrace_rcv*)rcv;
 
 error_free_cvar:
@@ -288,10 +308,8 @@ error_free_sbuf:
     free(rcv->sbuf);
 error_free_cbuf:
     free(rcv->cbuf);
-error_free_curl:
-    htrace_curl_free(tracer->lg, rcv->curl);
-error_free_url:
-    free(rcv->url);
+error_free_hcli:
+    hrpc_client_free(rcv->hcli);
 error_free_rcv:
     free(rcv);
 error:
@@ -324,7 +342,7 @@ void* run_htraced_xmit_manager(void *data)
         //      because of send_timeo_ms.
         // * A writer to signal that we should wake up because enough bytes are
         //      buffered.
-        wakeup = now + (rcv->send_timeo_ms / 2);
+        wakeup = now + (rcv->flush_interval_ms / 2);
         ms_to_timespec(wakeup, &wakeup_ts);
         ret = pthread_cond_timedwait(&rcv->cond, &rcv->lock, &wakeup_ts);
         if ((ret != 0) && (ret != ETIMEDOUT)) {
@@ -356,7 +374,7 @@ static int should_xmit(struct htraced_rcv *rcv, uint64_t now)
         // We have buffered a lot of bytes, so let's send.
         return 1;
     }
-    if (now - rcv->last_send_ms > rcv->send_timeo_ms) {
+    if (now - rcv->last_send_ms > rcv->flush_interval_ms) {
         // It's been too long since the last transmission, so let's send.
         if (used > 0) {
             return 1;
@@ -376,55 +394,25 @@ static int should_xmit(struct htraced_rcv *rcv, uint64_t now)
 static int htraced_xmit_impl(struct htraced_rcv *rcv, int32_t slen)
 {
     struct htrace_log *lg = rcv->tracer->lg;
-    CURLcode res;
-    char *pid_header = NULL;
-    struct curl_slist *headers = NULL;
-    int ret = 0;
+    int res, retval = 0;
+    char *prequel = NULL, *err = NULL, *resp = NULL;
+    size_t resp_len = 0;
 
-    // Disable the use of SIGALARM to interrupt DNS lookups.
-    curl_easy_setopt(rcv->curl, CURLOPT_NOSIGNAL, 1);
-    // Do not use a global DNS cache.
-    curl_easy_setopt(rcv->curl, CURLOPT_DNS_USE_GLOBAL_CACHE, 0);
-    // Disable verbosity.
-    curl_easy_setopt(rcv->curl, CURLOPT_VERBOSE, 0);
-    // The user agent is libhtraced.
-    curl_easy_setopt(rcv->curl, CURLOPT_USERAGENT, "libhtraced");
-    // Set URL
-    curl_easy_setopt(rcv->curl, CURLOPT_URL, rcv->url);
-    // Set POST
-    curl_easy_setopt(rcv->curl, CURLOPT_POST, 1L);
-    // Set the size that we're copying from rcv->sbuf
-    curl_easy_setopt(rcv->curl, CURLOPT_POSTFIELDSIZE, (long)slen);
-    if (asprintf(&pid_header, "htrace-pid: %s", rcv->tracer->prid) < 0) {
-        htrace_log(lg, "htraced_xmit(%s) failed: OOM allocating htrace-pid\n",
-                   rcv->url);
-        goto done;
+    res = hrpc_client_call(rcv->hcli, METHOD_ID_WRITE_SPANS,
+                     rcv->sbuf, slen, &err, (void**)&resp, &resp_len);
+    if (!res) {
+        htrace_log(lg, "htrace_xmit_impl: hrpc_client_call failed.\n");
+        retval = 0;
+    } else if (err) {
+        htrace_log(lg, "htrace_xmit_impl: server returned error: %s\n", err);
+        retval = 0;
+    } else {
+        retval = 1;
     }
-    curl_easy_setopt(rcv->curl, CURLOPT_POSTFIELDS, rcv->sbuf);
-    headers = curl_slist_append(headers, pid_header);
-    if (!headers) {
-        htrace_log(lg, "htraced_xmit(%s) failed: OOM allocating headers\n",
-                   rcv->url);
-        return 0;
-    }
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    if (!headers) {
-        htrace_log(lg, "htraced_xmit(%s) failed: OOM allocating headers\n",
-                   rcv->url);
-        return 0;
-    }
-    curl_easy_setopt(rcv->curl, CURLOPT_HTTPHEADER, headers);
-    res = curl_easy_perform(rcv->curl);
-    if (res != CURLE_OK) {
-        htrace_log(lg, "htraced_xmit(%s) failed: error %lld (%s)\n",
-                   rcv->url, (long long)res, curl_easy_strerror(res));
-    }
-    ret = res == CURLE_OK;
-done:
-    curl_easy_reset(rcv->curl);
-    free(pid_header);
-    curl_slist_free_all(headers);
-    return ret;
+    free(prequel);
+    free(err);
+    free(resp);
+    return retval;
 }
 
 static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now)
@@ -446,7 +434,7 @@ static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now)
         tries++;
         retry = (tries < HTRACED_MAX_SEND_TRIES);
         htrace_log(rcv->tracer->lg, "htraced_xmit(%s) failed on try %d.  %s\n",
-                   rcv->url, tries,
+                   hrpc_client_get_endpoint(rcv->hcli), tries,
                    (retry ? "Retrying after a delay." : "Giving up."));
         if (!retry) {
             break;
@@ -471,15 +459,21 @@ static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now)
  */
 static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv)
 {
-    int32_t rem = HTRACED_MAX_MSG_LEN;
+    const char * const SUFFIX = "]}";
+    int SUFFIX_LEN = sizeof(SUFFIX) - 1;
+    int rem = HTRACED_MAX_MSG_LEN - SUFFIX_LEN;
     size_t amt;
+    char *sbuf = (char*)rcv->sbuf;
 
+    fwdprintf(&sbuf, &rem, "{\"DefaultPid\":\"%s\",\"Spans\":[",
+             rcv->tracer->prid);
     if (rcv->cstart < rcv->cend) {
         amt = rcv->cend - rcv->cstart;
         if (amt > rem) {
             amt = rem;
         }
-        memcpy(rcv->sbuf, rcv->cbuf + rcv->cstart, amt);
+        memcpy(sbuf, rcv->cbuf + rcv->cstart, amt);
+        sbuf += amt;
         rem -= amt;
         rcv->cstart += amt;
     } else {
@@ -487,7 +481,8 @@ static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv)
         if (amt > rem) {
             amt = rem;
         }
-        memcpy(rcv->sbuf, rcv->cbuf + rcv->cstart, amt);
+        memcpy(sbuf, rcv->cbuf + rcv->cstart, amt);
+        sbuf += amt;
         rem -= amt;
         rcv->cstart += amt;
         if (rem > 0) {
@@ -495,11 +490,17 @@ static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv)
             if (amt > rem) {
                 amt = rem;
             }
-            memcpy(rcv->sbuf, rcv->cbuf, amt);
+            memcpy(sbuf, rcv->cbuf, amt);
+            sbuf += amt;
             rem -= amt;
             rcv->cstart = amt;
         }
     }
+    // overwrite last comma
+    rem++;
+    sbuf--;
+    rem += SUFFIX_LEN;
+    fwdprintf(&sbuf, &rem, "%s", SUFFIX);
     return HTRACED_MAX_MSG_LEN - rem;
 }
 
@@ -526,11 +527,6 @@ static void htraced_rcv_add_span(struct htrace_rcv *r,
     uint64_t used, rem;
     struct htraced_rcv *rcv = (struct htraced_rcv *)r;
     struct htrace_log *lg = rcv->tracer->lg;
-
-    {
-        char buf[4096];
-        span_json_sprintf(span, sizeof(buf), buf);
-    }
 
     json_len = span_json_size(span);
     tries = 0;
@@ -559,21 +555,28 @@ static void htraced_rcv_add_span(struct htrace_rcv *r,
     if (rem < json_len) {
         // Handle a 'torn write' where the circular buffer loops around to the
         // beginning in the middle of the write.
-        char *temp = alloca(json_len);
+        char *temp = malloc(json_len);
+        if (!temp) {
+            htrace_log(lg, "htraced_rcv_add_span: failed to malloc %d byte "
+                       "buffer for torn write.\n", json_len);
+            goto done;
+        }
         span_json_sprintf(span, json_len, temp);
-        temp[json_len - 1] = '\n';
+        temp[json_len - 1] = ',';
         memcpy(rcv->cbuf + rcv->cend, temp, rem);
         memcpy(rcv->cbuf, temp + rem, json_len - rem);
         rcv->cend = json_len - rem;
+        free(temp);
     } else {
         span_json_sprintf(span, json_len, rcv->cbuf + rcv->cend);
-        rcv->cbuf[rcv->cend + json_len - 1] = '\n';
+        rcv->cbuf[rcv->cend + json_len - 1] = ',';
         rcv->cend += json_len;
     }
     used += json_len;
     if (used > rcv->send_threshold) {
         pthread_cond_signal(&rcv->cond);
     }
+done:
     pthread_mutex_unlock(&rcv->lock);
 }
 
@@ -611,7 +614,8 @@ static void htraced_rcv_free(struct htrace_rcv *r)
         return;
     }
     lg = rcv->tracer->lg;
-    htrace_log(lg, "Shutting down htraced receiver with url=%s\n", rcv->url);
+    htrace_log(lg, "Shutting down htraced receiver for %s\n",
+               hrpc_client_get_endpoint(rcv->hcli));
     pthread_mutex_lock(&rcv->lock);
     rcv->shutdown = 1;
     pthread_cond_signal(&rcv->cond);
@@ -621,10 +625,9 @@ static void htraced_rcv_free(struct htrace_rcv *r)
         htrace_log(lg, "htraced_rcv_free: pthread_join "
                    "error %d: %s\n", ret, terror(ret));
     }
-    free(rcv->url);
     free(rcv->cbuf);
     free(rcv->sbuf);
-    htrace_curl_free(lg, rcv->curl);
+    hrpc_client_free(rcv->hcli);
     ret = pthread_mutex_destroy(&rcv->lock);
     if (ret) {
         htrace_log(lg, "htraced_rcv_free: pthread_mutex_destroy "

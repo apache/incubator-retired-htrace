@@ -48,8 +48,6 @@ get_filename_component(HTRACE_ABSPATH "../../htrace-htraced/src/go/build/htrace"
 get_filename_component(HTRACED_ABSPATH "../../htrace-htraced/src/go/build/htraced" ABSOLUTE)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/test/test_config.h.cmake ${CMAKE_BINARY_DIR}/test/test_config.h)
 
-find_package(CURL REQUIRED)
-
 find_package(PkgConfig)
 pkg_check_modules(PC_JSON-C QUIET json-c)
 find_path(JSON_C_INCLUDE_DIR "json.h"
@@ -61,8 +59,7 @@ ELSE(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
     MESSAGE(FATAL_ERROR "Failed to find libjson-c. Try installing libjson-c with apt-get or yum, or install it manually from http://oss.metaparadigm.com/json-c/")
 ENDIF(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
 
-include_directories(${CURL_INCLUDE_DIR}
-                    ${CMAKE_BINARY_DIR}
+include_directories(${CMAKE_BINARY_DIR}
                     ${CMAKE_SOURCE_DIR})
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -77,7 +74,7 @@ set(SRC_ALL
     core/htracer.c
     core/scope.c
     core/span.c
-    receiver/curl.c
+    receiver/hrpc.c
     receiver/htraced.c
     receiver/local_file.c
     receiver/noop.c
@@ -94,9 +91,7 @@ set(SRC_ALL
     util/time.c
 )
 
-set(DEPS_ALL
-    ${CURL_LIBRARY}
-    pthread)
+set(DEPS_ALL pthread)
 
 # The unit test version of the library, which exposes all symbols.
 add_library(htrace_test STATIC

@@ -106,6 +106,11 @@ struct mini_htraced {
      * The HTTP address of the htraced, in hostname:port format.
      */
     char *htraced_http_addr;
+
+    /**
+     * The HRPC address of the htraced, in hostname:port format.
+     */
+    char *htraced_hrpc_addr;
 };
 
 /**
