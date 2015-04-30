@@ -60,8 +60,12 @@ func asJson(val interface{}) string {
 	return string(js)
 }
 
-func createErrAndLog(lg *common.Logger, val string) error {
-	lg.Warnf("%s\n", val)
+func createErrAndWarn(lg *common.Logger, val string) error {
+	return createErrAndLog(lg, val, common.WARN)
+}
+
+func createErrAndLog(lg *common.Logger, val string, level common.Level) error {
+	lg.Write(level, val + "\n")
 	return errors.New(val)
 }
 
@@ -72,25 +76,29 @@ func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 	}
 	err := binary.Read(cdc.conn, binary.LittleEndian, &hdr)
 	if err != nil {
+		level := common.WARN
+		if err == io.EOF {
+			level = common.DEBUG
+		}
 		return createErrAndLog(cdc.lg, fmt.Sprintf("Error reading header bytes: %s",
-			err.Error()))
+			err.Error()), level)
 	}
 	if cdc.lg.TraceEnabled() {
 		cdc.lg.Tracef("Read HRPC request header %s from %s\n",
 			asJson(&hdr), cdc.conn.RemoteAddr())
 	}
 	if hdr.Magic != common.HRPC_MAGIC {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Invalid request header: expected "+
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Invalid request header: expected "+
 			"magic number of 0x%04x, but got 0x%04x", common.HRPC_MAGIC, hdr.Magic))
 	}
 	if hdr.Length > common.MAX_HRPC_BODY_LENGTH {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Length prefix was too long.  "+
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Length prefix was too long.  "+
 			"Maximum length is %d, but we got %d.", common.MAX_HRPC_BODY_LENGTH,
 			hdr.Length))
 	}
 	req.ServiceMethod = common.HrpcMethodIdToMethodName(hdr.MethodId)
 	if req.ServiceMethod == "" {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Unknown MethodID code 0x%04x",
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Unknown MethodID code 0x%04x",
 			hdr.MethodId))
 	}
 	req.Seq = hdr.Seq
@@ -106,7 +114,7 @@ func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
 	dec := json.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)))
 	err := dec.Decode(body)
 	if err != nil {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to read request "+
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to read request "+
 			"body from %s: %s", cdc.conn.RemoteAddr(), err.Error()))
 	}
 	if cdc.lg.TraceEnabled() {
@@ -124,7 +132,7 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	if msg != nil {
 		buf, err = json.Marshal(msg)
 		if err != nil {
-			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to marshal "+
+			return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to marshal "+
 				"response message: %s", err.Error()))
 		}
 	}
@@ -136,13 +144,13 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	writer := bufio.NewWriterSize(cdc.conn, 256)
 	err = binary.Write(writer, binary.LittleEndian, &hdr)
 	if err != nil {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write response "+
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to write response "+
 			"header: %s", err.Error()))
 	}
 	if hdr.ErrLength > 0 {
 		_, err = io.WriteString(writer, resp.Error)
 		if err != nil {
-			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write error "+
+			return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to write error "+
 				"string: %s", err.Error()))
 		}
 	}
@@ -150,17 +158,17 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 		var length int
 		length, err = writer.Write(buf)
 		if err != nil {
-			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write response "+
+			return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to write response "+
 				"message: %s", err.Error()))
 		}
 		if uint32(length) != hdr.Length {
-			return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write all of "+
+			return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to write all of "+
 				"response message: %s", err.Error()))
 		}
 	}
 	err = writer.Flush()
 	if err != nil {
-		return createErrAndLog(cdc.lg, fmt.Sprintf("Failed to write the response "+
+		return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to write the response "+
 			"bytes: %s", err.Error()))
 	}
 	return nil

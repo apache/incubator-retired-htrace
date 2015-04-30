@@ -210,52 +210,52 @@ func parseConf(faculty string, cnf *conf.Config) (string, Level) {
 }
 
 func (lg *Logger) Trace(str string) {
-	lg.write(TRACE, str)
+	lg.Write(TRACE, str)
 }
 
 func (lg *Logger) Tracef(format string, v ...interface{}) {
-	lg.write(TRACE, fmt.Sprintf(format, v...))
+	lg.Write(TRACE, fmt.Sprintf(format, v...))
 }
 
 func (lg *Logger) Debug(str string) {
-	lg.write(DEBUG, str)
+	lg.Write(DEBUG, str)
 }
 
 func (lg *Logger) Debugf(format string, v ...interface{}) {
-	lg.write(DEBUG, fmt.Sprintf(format, v...))
+	lg.Write(DEBUG, fmt.Sprintf(format, v...))
 }
 
 func (lg *Logger) Info(str string) {
-	lg.write(INFO, str)
+	lg.Write(INFO, str)
 }
 
 func (lg *Logger) Infof(format string, v ...interface{}) {
-	lg.write(INFO, fmt.Sprintf(format, v...))
+	lg.Write(INFO, fmt.Sprintf(format, v...))
 }
 
 func (lg *Logger) Warn(str string) error {
-	lg.write(WARN, str)
+	lg.Write(WARN, str)
 	return errors.New(str)
 }
 
 func (lg *Logger) Warnf(format string, v ...interface{}) error {
 	str := fmt.Sprintf(format, v...)
-	lg.write(WARN, str)
+	lg.Write(WARN, str)
 	return errors.New(str)
 }
 
 func (lg *Logger) Error(str string) error {
-	lg.write(ERROR, str)
+	lg.Write(ERROR, str)
 	return errors.New(str)
 }
 
 func (lg *Logger) Errorf(format string, v ...interface{}) error {
 	str := fmt.Sprintf(format, v...)
-	lg.write(ERROR, str)
+	lg.Write(ERROR, str)
 	return errors.New(str)
 }
 
-func (lg *Logger) write(level Level, str string) {
+func (lg *Logger) Write(level Level, str string) {
 	if level >= lg.Level {
 		lg.sink.write(time.Now().Format(time.RFC3339) + " " +
 			level.LogString() + ": " + str)

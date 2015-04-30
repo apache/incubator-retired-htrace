@@ -472,7 +472,7 @@ void mini_htraced_dump_spans(struct mini_htraced *ht,
 {
     pid_t pid;
     int ret;
-    char *addr = NULL;
+    char *addr = NULL, *log_path = NULL;
 
     err[0] = '\0';
     if (asprintf(&addr, "--addr=%s", ht->htraced_http_addr) < 0) {
@@ -480,9 +480,18 @@ void mini_htraced_dump_spans(struct mini_htraced *ht,
         snprintf(err, err_len, "OOM while allocating the addr string");
         return;
     }
+    if (asprintf(&log_path, "--Dlog.path=%s/htrace.%05"PRId64".log",
+                 ht->root_dir, ht->num_htrace_commands_run) < 0) {
+        log_path = NULL;
+        snprintf(err, err_len, "OOM while allocating the addr string");
+        free(addr);
+        return;
+    }
+    ht->num_htrace_commands_run++;
     pid = mini_htraced_launch(ht, HTRACE_ABSPATH, err, err_len, 0,
-                addr, "dumpAll", path, NULL);
+                addr, log_path, "dumpAll", path, NULL);
     free(addr);
+    free(log_path);
     if (err[0]) {
         return;
     }

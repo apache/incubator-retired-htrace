@@ -480,15 +480,15 @@ func (shd *shard) FindSpan(sid common.SpanId) *common.Span {
 		if strings.Index(err.Error(), "NotFound:") != -1 {
 			return nil
 		}
-		lg.Warnf("Shard(%s): FindSpan(%016x) error: %s\n",
-			shd.path, sid, err.Error())
+		lg.Warnf("Shard(%s): FindSpan(%s) error: %s\n",
+			shd.path, sid.String(), err.Error())
 		return nil
 	}
 	var span *common.Span
 	span, err = shd.decodeSpan(sid, buf)
 	if err != nil {
-		lg.Errorf("Shard(%s): FindSpan(%016x) decode error: %s\n",
-			shd.path, sid, err.Error())
+		lg.Errorf("Shard(%s): FindSpan(%s) decode error: %s\n",
+			shd.path, sid.String(), err.Error())
 		return nil
 	}
 	return span
@@ -525,8 +525,8 @@ func (store *dataStore) FindChildren(sid common.SpanId, lim int32) []common.Span
 		shd := store.shards[idx]
 		childIds, lim, err = shd.FindChildren(sid, childIds, lim)
 		if err != nil {
-			store.lg.Errorf("Shard(%s): FindChildren(%016x) error: %s\n",
-				shd.path, sid, err.Error())
+			store.lg.Errorf("Shard(%s): FindChildren(%s) error: %s\n",
+				shd.path, sid.String(), err.Error())
 		}
 		idx++
 		if idx >= numShards {
@@ -887,8 +887,8 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			src.nexts[shardIdx] = span // Found valid entry
 			return
 		} else {
-			lg.Debugf("Span %016x from shard %d does not satisfy the predicate.\n",
-				sid, shardIdx)
+			lg.Debugf("Span %s from shard %d does not satisfy the predicate.\n",
+				sid.String(), shardIdx)
 			if src.numRead[shardIdx] <= 1 && mayRequireOneSkip(src.pred.Op) {
 				continue
 			}

@@ -29,6 +29,7 @@
  * This is an internal header, not intended for external use.
  */
 
+#include <stdint.h> /* for uint64_t, etc. */
 #include <unistd.h> /* for pid_t and size_t */
 
 struct htrace_conf;
@@ -111,6 +112,11 @@ struct mini_htraced {
      * The HRPC address of the htraced, in hostname:port format.
      */
     char *htraced_hrpc_addr;
+
+    /**
+     * The number of htrace commands that have been run.
+     */
+    uint64_t num_htrace_commands_run;
 };
 
 /**
