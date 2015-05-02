@@ -52,7 +52,7 @@
  * Implements sending messages via HRPC.
  */
 
-#define HRPC_MAGIC 0x48545243U
+#define HRPC_MAGIC 0x43525448U
 
 #define MAX_HRPC_ERROR_LENGTH (4 * 1024 * 1024)
 
@@ -130,7 +130,8 @@ static int try_connect(struct hrpc_client *hcli, struct addrinfo *p);
 static int set_socket_read_and_write_timeout(struct hrpc_client *hcli,
                                              int sock);
 static int hrpc_client_send_req(struct hrpc_client *hcli, uint32_t method_id,
-                        const void *req, size_t req_len, uint64_t *seq);
+                    const void *buf1, size_t buf1_len,
+                    const void *buf2, size_t buf2_len, uint64_t *seq);
 static int hrpc_client_rcv_resp(struct hrpc_client *hcli, uint32_t method_id,
                        uint64_t seq, char **err, void **resp,
                        size_t *resp_len);
@@ -185,7 +186,8 @@ void hrpc_client_free(struct hrpc_client *hcli)
 }
 
 int hrpc_client_call(struct hrpc_client *hcli, uint32_t method_id,
-                    const void *req, size_t req_len,
+                    const void *buf1, size_t buf1_len,
+                    const void *buf2, size_t buf2_len,
                     char **err, void **resp, size_t *resp_len)
 {
     uint64_t seq;
@@ -198,7 +200,8 @@ int hrpc_client_call(struct hrpc_client *hcli, uint32_t method_id,
     } else {
         htrace_log(hcli->lg, "hrpc_client_call: connection was already open\n");
     }
-    if (!hrpc_client_send_req(hcli, method_id, req, req_len, &seq)) {
+    if (!hrpc_client_send_req(hcli, method_id,
+                              buf1, buf1_len, buf2, buf2_len, &seq)) {
         goto error;
     }
     htrace_log(hcli->lg, "hrpc_client_call: waiting for response\n");
@@ -338,20 +341,25 @@ static int set_socket_read_and_write_timeout(struct hrpc_client *hcli,
 }
 
 static int hrpc_client_send_req(struct hrpc_client *hcli, uint32_t method_id,
-                        const void *req, size_t req_len, uint64_t *seq)
+                    const void *buf1, size_t buf1_len,
+                    const void *buf2, size_t buf2_len, uint64_t *seq)
 {
+    // We use writev (scatter/gather I/O) here in order to avoid sending
+    // multiple packets when TCP_NODELAY is turned on.
     struct hrpc_req_header hdr;
-    struct iovec iov[2];
+    struct iovec iov[3];
 
     hdr.magic = htole64(HRPC_MAGIC);
     hdr.method_id = htole32(method_id);
     *seq = hcli->seq++;
     hdr.seq = htole64(*seq);
-    hdr.length = htole32(req_len);
+    hdr.length = htole32(buf1_len + buf2_len);
     iov[0].iov_base = &hdr;
     iov[0].iov_len = sizeof(hdr);
-    iov[1].iov_base = (void*)req;
-    iov[1].iov_len = req_len;
+    iov[1].iov_base = (void*)buf1;
+    iov[1].iov_len = buf1_len;
+    iov[2].iov_base = (void*)buf2;
+    iov[2].iov_len = buf2_len;
 
     while (1) {
         ssize_t res = writev(hcli->sock, iov, sizeof(iov)/sizeof(iov[0]));

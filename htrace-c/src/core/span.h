@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 
+struct cmp_ctx_s;
 struct htracer;
 
 struct htrace_span {
@@ -105,16 +106,6 @@ void htrace_span_free(struct htrace_span *span);
 void htrace_span_sort_and_dedupe_parents(struct htrace_span *span);
 
 /**
- * Escape a JSON string.  Specifically, put backslashes before double quotes and
- * other backslashes.
- *
- * @param in            The string to escape.
- *
- * @param out           The escaped string.  Malloced. NULL on OOM.
- */
-char *json_escape(const char *in);
-
-/**
  * Get the buffer size that would be needed to serialize this span to a buffer.
  *
  * @param span          The span.
@@ -132,6 +123,16 @@ int span_json_size(const struct htrace_span *span);
  * @return              The buffer size in bytes.
  */
 void span_json_sprintf(const struct htrace_span *span, int max, void *buf);
+
+/**
+ * Write a span to the provided CMP context.
+ *
+ * @param span          The span.
+ * @param ctx           The CMP context.
+ *
+ * @return              0 on failure; 1 on success.
+ */
+int span_write_msgpack(const struct htrace_span *span, struct cmp_ctx_s *ctx);
 
 #endif
 

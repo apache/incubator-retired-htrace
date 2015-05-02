@@ -18,6 +18,7 @@
 
 #include "core/span.h"
 #include "test/span_util.h"
+#include "util/cmp.h"
 #include "util/log.h"
 
 #include <errno.h>
@@ -289,6 +290,196 @@ int span_compare(struct htrace_span *a, struct htrace_span *b)
         return c;
     }
     return compare_parents(a, b);
+}
+
+static int span_read_key_str(struct cmp_ctx_s *ctx, char *out,
+                             uint32_t out_len, char *err, size_t err_len)
+{
+    uint32_t size = 0;
+
+    err[0] = '\0';
+    if (!cmp_read_str_size(ctx, &size)) {
+        snprintf(err, err_len, "span_read_key_str: cmp_read_str_size failed.");
+        return 0;
+    }
+    if (size >= out_len) {
+        snprintf(err, err_len, "span_read_key_str: size of key string was "
+                 "%"PRId32", but we can only handle key strings less than "
+                 "%"PRId32" bytes.", size, out_len);
+        return 0;
+    }
+    if (!ctx->read(ctx, out, size)) {
+        snprintf(err, err_len, "span_read_key_str: ctx->read failed for "
+                 "%"PRId32"-byte key string.", size);
+        return 0;
+    }
+    out[size] = '\0';
+    return 1;
+}
+
+static char *cmp_read_malloced_string(struct cmp_ctx_s *ctx, const char *what,
+                                      char *err, size_t err_len)
+{
+    uint32_t size = 0;
+    char *str;
+
+    err[0] = '\0';
+    if (!cmp_read_str_size(ctx, &size)) {
+        snprintf(err, err_len, "cmp_read_malloced_string: cmp_read_str_size "
+                 "failed for %s.", what);
+        return NULL;
+    }
+    str = malloc(size + 1);
+    if (!str) {
+        snprintf(err, err_len, "cmp_read_malloced_string: failed to malloc "
+                 "failed for %d-byte string for %s.", size + 1, what);
+        return NULL;
+    }
+    if (!ctx->read(ctx, str, size)) {
+        snprintf(err, err_len, "cmp_read_malloced_string: failed to read "
+                 "%"PRId32"-byte string for %s.", size, what);
+        free(str);
+        return NULL;
+    }
+    str[size] = '\0';
+    return str;
+}
+
+static void span_parse_msgpack_parents(struct cmp_ctx_s *ctx,
+                struct htrace_span *span, char *err, size_t err_len)
+{
+    uint32_t i, size;
+
+    err[0] = '\0';
+    if (span->num_parents > 1) {
+        free(span->parent.list);
+        span->parent.list = NULL;
+    }
+    span->parent.single = 0;
+    span->num_parents = 0;
+    if (!cmp_read_array(ctx, &size)) {
+        snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_array "
+                 "failed.");
+        return;
+    }
+    if (size == 1) {
+        if (!cmp_read_u64(ctx, &span->parent.single)) {
+            snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_u64 "
+                     "for single child ID failed");
+            return;
+        }
+    } else if (size > 1) {
+        span->parent.list = malloc(sizeof(uint64_t) * size);
+        if (!span->parent.list) {
+            snprintf(err, err_len, "span_parse_msgpack_parents: failed to "
+                     "malloc %"PRId32"-entry parent array.", size);
+            return;
+        }
+        for (i = 0; i < size; i++) {
+            if (!cmp_read_u64(ctx, &span->parent.list[i])) {
+                snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_u64 "
+                         "for child %d ID failed", i);
+                free(span->parent.list);
+                span->parent.list = NULL;
+                return;
+            }
+        }
+    }
+    span->num_parents = size;
+}
+
+struct htrace_span *span_read_msgpack(struct cmp_ctx_s *ctx,
+                                      char *err, size_t err_len)
+{
+    struct htrace_span *span = NULL;
+    uint32_t map_size = 0;
+    char key[8];
+
+    err[0] = '\0';
+    span = calloc(1, sizeof(*span));
+    if (!span) {
+        snprintf(err, err_len, "span_read_msgpack: OOM allocating "
+                 "htrace_span.");
+        goto error;
+    }
+    if (!cmp_read_map(ctx, &map_size)) {
+        snprintf(err, err_len, "span_read_msgpack: cmp_read_map failed to "
+                 "read enclosing map object.\n");
+        goto error;
+    }
+    while (map_size > 0) {
+        if (!span_read_key_str(ctx, key, sizeof(key), err, err_len)) {
+            goto error;
+        }
+        switch (key[0]) {
+        case 'd':
+            if (span->desc) {
+                free(span->desc);
+            }
+            span->desc = cmp_read_malloced_string(ctx, "description",
+                                                  err, err_len);
+            if (err[0]) {
+                goto error;
+            }
+            break;
+        case 'b':
+            if (!cmp_read_u64(ctx, &span->begin_ms)) {
+                snprintf(err, err_len, "span_read_msgpack: cmp_read_u64 "
+                         "failed for span->begin_ms.");
+                goto error;
+            }
+            break;
+        case 'e':
+            if (!cmp_read_u64(ctx, &span->end_ms)) {
+                snprintf(err, err_len, "span_read_msgpack: cmp_read_u64 "
+                         "failed for span->end_ms.");
+                goto error;
+            }
+            break;
+        case 's':
+            if (!cmp_read_u64(ctx, &span->span_id)) {
+                snprintf(err, err_len, "span_read_msgpack: cmp_read_u64 "
+                         "failed for span->span_id");
+                goto error;
+            }
+            break;
+        case 'r':
+            if (span->prid) {
+                free(span->prid);
+            }
+            span->prid = cmp_read_malloced_string(ctx, "process_id",
+                                                  err, err_len);
+            if (err[0]) {
+                goto error;
+            }
+            break;
+        case 'p':
+            span_parse_msgpack_parents(ctx, span, err, err_len);
+            if (err[0]) {
+                goto error;
+            }
+            break;
+        default:
+            snprintf(err, err_len, "span_read_msgpack: can't understand key "
+                     "'%s'.\n", key);
+            goto error;
+        }
+        map_size--;
+    }
+    // Description cannot be NULL.
+    if (!span->desc) {
+        span->desc = strdup("");
+        if (!span->desc) {
+            snprintf(err, err_len, "span_read_msgpack: OOM allocating empty "
+                     "description string.");
+            goto error;
+        }
+    }
+    return span;
+
+error:
+    htrace_span_free(span);
+    return NULL;
 }
 
 // vim:ts=4:sw=4:et

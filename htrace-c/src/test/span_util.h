@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <unistd.h> /* for size_t */
 
+struct cmp_ctx_s;
 struct htrace_span;
 
 /**
@@ -60,6 +61,19 @@ void span_json_parse(const char *in, struct htrace_span **span,
  *                  A positive number if the first span is greater.
  */
 int span_compare(struct htrace_span *a, struct htrace_span *b);
+
+/**
+ * Read a span from the provided CMP context.
+ *
+ * @param ctx       The CMP context.
+ * @param err       (out param) On error, where the error message will be
+ *                      written.  Will be set to the empty string on success.
+ * @param err_len   The length of the error buffer.  Must be nonzero.
+ *
+ * @return          The span on success; NULL otherwise.
+ */
+struct htrace_span *span_read_msgpack(struct cmp_ctx_s *ctx,
+                                      char *err, size_t err_len);
 
 #endif
 

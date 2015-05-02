@@ -60,8 +60,10 @@ void hrpc_client_free(struct hrpc_client *hcli);
  *
  * @param hcli              The HRPC client.
  * @param method_id         The method ID to use.
- * @param req               The request buffer to send.
- * @param req_len           The size of the request buffer to send.
+ * @param buf1              The first buffer to send.
+ * @param buf1_len          The size of the first buffer to send.
+ * @param buf2              The second buffer to send.
+ * @param buf2_len          The size of the second buffer to send.
  * @param err               (out param) Will be set to a malloced
  *                              NULL-terminated string if the server returned an
  *                              error response.  NULL otherwise.
@@ -72,7 +74,8 @@ void hrpc_client_free(struct hrpc_client *hcli);
  * @return                  0 on failure, 1 on success.
  */
 int hrpc_client_call(struct hrpc_client *hcli, uint32_t method_id,
-                     const void *req, size_t req_len,
+                     const void *buf1, size_t buf1_len,
+                     const void *buf2, size_t buf2_len,
                      char **err, void **resp, size_t *resp_len);
 
 /**

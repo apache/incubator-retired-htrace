@@ -23,6 +23,8 @@
 #include "receiver/hrpc.h"
 #include "receiver/receiver.h"
 #include "test/test.h"
+#include "util/cmp.h"
+#include "util/cmp_util.h"
 #include "util/log.h"
 #include "util/string.h"
 #include "util/time.h"
@@ -30,6 +32,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,22 +41,59 @@
 /**
  * @file htraced.c
  *
- * The htraced span receiver which implements sending spans on to htraced.
+ * The htraced span receiver which implements sending spans on to the htraced
+ * daemon.
+ *
+ * We send spans via the HRPC protocol.  HRPC consists of a simple fixed-size
+ * header specifying a magic number, the length, and a message type, followed by
+ * data in the msgpack serialization format.  The message type will determine
+ * the type of msgpack data.  Messages bodies are sent as maps, essentially
+ * making all fields optional and allowing the protocol to evolve.  See hrpc.c
+ * and rpc.go for the implementation of HRPC.
+ *
+ * Spans are serialized immediately when they are added to the buffer.  This is
+ * one of the advantages of msgpack-- it has a good streaming interface.  We do
+ * not need to keep around the span objects after htraced_rcv_add_span.
+ *
+ * The htraced receiver keeps two equally sized buffers around internally.
+ * While we are writing spans to one buffer, we can be sending the data from the
+ * other buffer over the wire.  The intention here is to avoid copies as much as
+ * possible.  In general, what we send over the wire is exactly what is in the
+ * buffer, except that we have to add a short "prequel" to it containing the
+ * other WriteSpansReq fields.
+ *
+ * Note that we may change the serialization in the future if we discover better
+ * alternatives.  Sending spans over HTTP as JSON will always be supported
+ * as a fallback.
  */
 
 /**
- * The minimum buffer size to allow for the htraced circular buffer.
+ * The maximum length of the message we will send to the server.
+ * This must be the same or shorter than MAX_HRPC_BODY_LENGTH in rpc.go.
+ */
+#define MAX_HRPC_LEN (64ULL * 1024ULL * 1024ULL)
+
+/**
+ * The maximum length of the prequel in a WriteSpans message.
+ */
+#define MAX_WRITESPANS_PREQUEL_LEN 1024
+
+/**
+ * The maximum length of the span data in a WriteSpans message.
+ */
+#define MAX_SPAN_DATA_LEN (MAX_HRPC_LEN - MAX_WRITESPANS_PREQUEL_LEN)
+
+/**
+ * The minimum total buffer size to allow.
  *
- * This should hopefully allow at least a few spans to be buffered.
+ * This should allow at least a few spans to be buffered.
  */
 #define HTRACED_MIN_BUFFER_SIZE (4ULL * 1024ULL * 1024ULL)
 
 /**
- * The maximum buffer size to allow for the htraced circular buffer.
- * This is mainly to avoid overflow.  Of course, you couldn't allocate a buffer
- * anywhere near this size anyway.
+ * The maximum total buffer size to allow.
  */
-#define HTRACED_MAX_BUFFER_SIZE 0x7ffffffffffffffLL
+#define HTRACED_MAX_BUFFER_SIZE (2ULL * MAX_SPAN_DATA_LEN)
 
 /**
  * The minimum number of milliseconds to allow for flush_interval_ms.
@@ -77,13 +117,6 @@
 #define HTRACED_READ_TIMEO_MS_MIN 50LL
 
 /**
- * The maximum size of the message we will send over the wire.
- * This also sets the size of the transmission buffer.
- * This constant must not be more than 2^^32 on 32-bit systems.
- */
-#define HTRACED_MAX_MSG_LEN (8ULL * 1024ULL * 1024ULL)
-
-/**
  * The maximum number of times we will try to add a span to the circular buffer
  * before giving up.
  */
@@ -100,6 +133,36 @@
  * htraced daemon.
  */
 #define HTRACED_SEND_RETRY_SLEEP_MS 5000
+
+/**
+ * The number of buffers used by htraced.
+ */
+#define HTRACED_NUM_BUFS 2
+
+/**
+ * An HTraced send buffer.
+ */
+struct htraced_sbuf {
+    /**
+     * Current offset within the buffer.
+     */
+    uint64_t off;
+
+    /**
+     * Length of the buffer.
+     */
+    uint64_t len;
+
+    /**
+     * The number of spans in the buffer.
+     */
+    uint64_t num_spans;
+
+    /**
+     * The buffer data.  This field actually has size 'len,' not size 1.
+     */
+    char buf[1];
+};
 
 /*
  * A span receiver that writes spans to htraced.
@@ -136,45 +199,34 @@ struct htraced_rcv {
     struct hrpc_client *hcli;
 
     /**
-     * Length of the circular buffer.
-     */
-    uint64_t clen;
-
-    /**
-     * A circular buffer containing span data.
-     */
-    uint8_t *cbuf;
-
-    /**
-     * 'start' pointer of the circular buffer.
-     */
-    uint64_t cstart;
-
-    /**
-     * 'end' pointer of the circular buffer.
-     */
-    uint64_t cend;
-
-    /**
      * The monotonic-clock time at which we last did a send operation.
      */
     uint64_t last_send_ms;
 
     /**
-     * RPC messages are copied into this buffer before being sent.
-     * Its length is HTRACED_MAX_MSG_LEN.
+     * The index of the active buffer.
      */
-    uint8_t *sbuf;
+    int active_buf;
 
     /**
-     * Lock protecting the circular buffer from concurrent writes.
+     * The two send buffers.
+     */
+    struct htraced_sbuf *sbuf[HTRACED_NUM_BUFS];
+
+    /**
+     * Lock protecting the buffers from concurrent writes.
      */
     pthread_mutex_t lock;
 
     /**
      * Condition variable used to wake up the background thread.
      */
-    pthread_cond_t cond;
+    pthread_cond_t bg_cond;
+
+    /**
+     * Condition variable used to wake up flushing threads.
+     */
+    pthread_cond_t flush_cond;
 
     /**
      * Background transmitter thread.
@@ -185,8 +237,44 @@ struct htraced_rcv {
 void* run_htraced_xmit_manager(void *data);
 static int should_xmit(struct htraced_rcv *rcv, uint64_t now);
 static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now);
-static uint64_t cbuf_used(const struct htraced_rcv *rcv);
-static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv);
+
+static int htraced_sbufs_empty(struct htraced_rcv *rcv)
+{
+    int i;
+    for (i = 0; i < HTRACED_NUM_BUFS; i++) {
+        if (rcv->sbuf[i]->off) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static struct htraced_sbuf *htraced_sbuf_alloc(uint64_t len)
+{
+    struct htraced_sbuf *sbuf;
+
+    // The final field of the htraced_sbuf structure is declared as having size
+    // 1, but really it has size 'len'.  This avoids a pointer dereference when
+    // accessing data in the sbuf.
+    sbuf = malloc(offsetof(struct htraced_sbuf, buf) + len);
+    if (!sbuf) {
+        return NULL;
+    }
+    sbuf->off = 0;
+    sbuf->len = len;
+    sbuf->num_spans = 0;
+    return sbuf;
+}
+
+static void htraced_sbuf_free(struct htraced_sbuf *sbuf)
+{
+    free(sbuf);
+}
+
+static uint64_t htraced_sbuf_remaining(const struct htraced_sbuf *sbuf)
+{
+    return sbuf->len - sbuf->off;
+}
 
 static uint64_t htraced_get_bounded_u64(struct htrace_log *lg,
                 const struct htrace_conf *cnf, const char *prop,
@@ -207,13 +295,33 @@ static uint64_t htraced_get_bounded_u64(struct htrace_log *lg,
     return val;
 }
 
+static double htraced_get_bounded_double(struct htrace_log *lg,
+                const struct htrace_conf *cnf, const char *prop,
+                double min, double max)
+{
+    double val = htrace_conf_get_double(lg, cnf, prop);
+    if (val < min) {
+        htrace_log(lg, "htraced_rcv_create: can't set %s to %g"
+                   ".  Using minimum value of %g instead.\n",
+                   prop, val, min);
+        return min;
+    } else if (val > max) {
+        htrace_log(lg, "htraced_rcv_create: can't set %s to %g"
+                   ".  Using maximum value of %g instead.\n",
+                   prop, val, max);
+        return max;
+    }
+    return val;
+}
+
 static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
                                              const struct htrace_conf *conf)
 {
     struct htraced_rcv *rcv;
     const char *endpoint;
-    int ret;
-    uint64_t write_timeo_ms, read_timeo_ms;
+    int i, ret;
+    uint64_t write_timeo_ms, read_timeo_ms, buf_len;
+    double send_fraction;
 
     endpoint = htrace_conf_get(conf, HTRACED_ADDRESS_KEY);
     if (!endpoint) {
@@ -223,7 +331,7 @@ static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
                    HTRACED_ADDRESS_KEY);
         goto error;
     }
-    rcv = malloc(sizeof(*rcv));
+    rcv = calloc(1, sizeof(*rcv));
     if (!rcv) {
         htrace_log(tracer->lg, "htraced_rcv_create: OOM while "
                    "allocating htraced_rcv.\n");
@@ -247,68 +355,66 @@ static struct htrace_rcv *htraced_rcv_create(struct htracer *tracer,
     if (!rcv->hcli) {
         goto error_free_rcv;
     }
-    rcv->clen = htrace_conf_get_u64(tracer->lg, conf, HTRACED_BUFFER_SIZE_KEY);
-    if (rcv->clen < HTRACED_MIN_BUFFER_SIZE) {
-        htrace_log(tracer->lg, "htraced_rcv_create: invalid buffer size %" PRId64
-                   ".  Setting the minimum buffer size of %llu"
-                   " instead.\n", rcv->clen, HTRACED_MIN_BUFFER_SIZE);
-        rcv->clen = HTRACED_MIN_BUFFER_SIZE;
-    } else if (rcv->clen > HTRACED_MAX_BUFFER_SIZE) {
-        htrace_log(tracer->lg, "htraced_rcv_create: invalid buffer size %" PRId64
-                   ".  Setting the maximum buffer size of %lld"
-                   " instead.\n", rcv->clen, HTRACED_MAX_BUFFER_SIZE);
-        rcv->clen = HTRACED_MAX_BUFFER_SIZE;
+    buf_len = htraced_get_bounded_u64(tracer->lg, conf,
+                HTRACED_BUFFER_SIZE_KEY, HTRACED_MIN_BUFFER_SIZE,
+                HTRACED_MAX_BUFFER_SIZE) / 2;
+    for (i = 0; i < HTRACED_NUM_BUFS; i++) {
+        rcv->sbuf[i] = htraced_sbuf_alloc(buf_len);
+        if (!rcv->sbuf[i]) {
+            htrace_log(tracer->lg, "htraced_rcv_create: htraced_sbuf_alloc("
+                       "buf_len=%"PRId64") failed: OOM.\n", buf_len);
+            goto error_free_bufs;
+        }
     }
-    rcv->cbuf = malloc(rcv->clen);
-    if (!rcv->cbuf) {
-        htrace_log(tracer->lg, "htraced_rcv_create: failed to malloc %"PRId64
-                   " bytes for the htraced circular buffer.\n", rcv->clen);
-        goto error_free_hcli;
+    send_fraction = htraced_get_bounded_double(tracer->lg, conf,
+                HTRACED_BUFFER_SEND_TRIGGER_FRACTION, 0.1, 1.0);
+    rcv->send_threshold = buf_len * send_fraction;
+    if (rcv->send_threshold > buf_len) {
+        rcv->send_threshold = buf_len;
     }
-    // Send when the buffer gets 1/4 full.
-    rcv->send_threshold = rcv->clen * 0.25;
-    rcv->cstart = 0;
-    rcv->cend = 0;
     rcv->last_send_ms = monotonic_now_ms(tracer->lg);
-    rcv->sbuf = malloc(HTRACED_MAX_MSG_LEN);
-    if (!rcv->sbuf) {
-        goto error_free_cbuf;
-    }
     ret = pthread_mutex_init(&rcv->lock, NULL);
     if (ret) {
         htrace_log(tracer->lg, "htraced_rcv_create: pthread_mutex_init "
                    "error %d: %s\n", ret, terror(ret));
-        goto error_free_sbuf;
+        goto error_free_bufs;
     }
-    ret = pthread_cond_init(&rcv->cond, NULL);
+    ret = pthread_cond_init(&rcv->bg_cond, NULL);
     if (ret) {
-        htrace_log(tracer->lg, "htraced_rcv_create: pthread_cond_init "
-                   "error %d: %s\n", ret, terror(ret));
+        htrace_log(tracer->lg, "htraced_rcv_create: pthread_cond_init("
+                   "bg_cond) error %d: %s\n", ret, terror(ret));
         goto error_free_lock;
+    }
+    ret = pthread_cond_init(&rcv->flush_cond, NULL);
+    if (ret) {
+        htrace_log(tracer->lg, "htraced_rcv_create: pthread_cond_init("
+                   "flush_cond) error %d: %s\n", ret, terror(ret));
+        goto error_free_bg_cond;
     }
     ret = pthread_create(&rcv->xmit_thread, NULL, run_htraced_xmit_manager, rcv);
     if (ret) {
         htrace_log(tracer->lg, "htraced_rcv_create: failed to create xmit thread: "
                    "error %d: %s\n", ret, terror(ret));
-        goto error_free_cvar;
+        goto error_free_flush_cond;
     }
     htrace_log(tracer->lg, "Initialized htraced receiver for %s"
                 ", flush_interval_ms=%" PRId64 ", send_threshold=%" PRId64
                 ", write_timeo_ms=%" PRId64 ", read_timeo_ms=%" PRId64
-                ", clen=%" PRId64 ".\n", hrpc_client_get_endpoint(rcv->hcli),
+                ", buf_len=%" PRId64 ".\n", hrpc_client_get_endpoint(rcv->hcli),
                 rcv->flush_interval_ms, rcv->send_threshold,
-                write_timeo_ms, read_timeo_ms, rcv->clen);
+                write_timeo_ms, read_timeo_ms, buf_len);
     return (struct htrace_rcv*)rcv;
 
-error_free_cvar:
-    pthread_cond_destroy(&rcv->cond);
+error_free_flush_cond:
+    pthread_cond_destroy(&rcv->flush_cond);
+error_free_bg_cond:
+    pthread_cond_destroy(&rcv->bg_cond);
 error_free_lock:
     pthread_mutex_destroy(&rcv->lock);
-error_free_sbuf:
-    free(rcv->sbuf);
-error_free_cbuf:
-    free(rcv->cbuf);
-error_free_hcli:
+error_free_bufs:
+    for (i = 0; i < HTRACED_NUM_BUFS; i++) {
+        htraced_sbuf_free(rcv->sbuf[i]);
+    }
     hrpc_client_free(rcv->hcli);
 error_free_rcv:
     free(rcv);
@@ -331,7 +437,7 @@ void* run_htraced_xmit_manager(void *data)
             htraced_xmit(rcv, now);
         }
         if (rcv->shutdown) {
-            while (cbuf_used(rcv) > 0) {
+            while (!htraced_sbufs_empty(rcv)) {
                 htraced_xmit(rcv, now);
             }
             break;
@@ -344,7 +450,7 @@ void* run_htraced_xmit_manager(void *data)
         //      buffered.
         wakeup = now + (rcv->flush_interval_ms / 2);
         ms_to_timespec(wakeup, &wakeup_ts);
-        ret = pthread_cond_timedwait(&rcv->cond, &rcv->lock, &wakeup_ts);
+        ret = pthread_cond_timedwait(&rcv->bg_cond, &rcv->lock, &wakeup_ts);
         if ((ret != 0) && (ret != ETIMEDOUT)) {
             htrace_log(lg, "run_htraced_xmit_manager: pthread_cond_timedwait "
                        "error: %d (%s)\n", ret, terror(ret));
@@ -367,67 +473,107 @@ void* run_htraced_xmit_manager(void *data)
  */
 static int should_xmit(struct htraced_rcv *rcv, uint64_t now)
 {
-    uint64_t used;
+    uint64_t off = rcv->sbuf[rcv->active_buf]->off;
 
-    used = cbuf_used(rcv);
-    if (used > rcv->send_threshold) {
+    if (off > rcv->send_threshold) {
         // We have buffered a lot of bytes, so let's send.
         return 1;
     }
     if (now - rcv->last_send_ms > rcv->flush_interval_ms) {
         // It's been too long since the last transmission, so let's send.
-        if (used > 0) {
+        if (off > 0) {
             return 1;
         }
     }
     return 0; // Let's wait.
 }
 
+#define DEFAULT_PID_STR         "DefaultPid"
+#define DEFAULT_PID_STR_LEN     (sizeof(DEFAULT_PID_STR) - 1)
+#define SPANS_STR               "Spans"
+#define SPANS_STR_LEN           (sizeof(SPANS_STR) - 1)
+
+/**
+ * Write the prequel to the WriteSpans message.
+ */
+static int add_writespans_prequel(struct htraced_rcv *rcv,
+                                  struct htraced_sbuf *sbuf, uint8_t *prequel)
+{
+    struct cmp_bcopy_ctx bctx;
+    struct cmp_ctx_s *ctx =  (struct cmp_ctx_s *)&bctx;
+    cmp_bcopy_ctx_init(&bctx, prequel, MAX_WRITESPANS_PREQUEL_LEN);
+    if (!cmp_write_fixmap(ctx, 2)) {
+        return -1;
+    }
+    if (!cmp_write_fixstr(ctx, DEFAULT_PID_STR, DEFAULT_PID_STR_LEN)) {
+        return -1;
+    }
+    if (!cmp_write_str(ctx, rcv->tracer->prid, strlen(rcv->tracer->prid))) {
+        return -1;
+    }
+    if (!cmp_write_fixstr(ctx, SPANS_STR, SPANS_STR_LEN)) {
+        return -1;
+    }
+    if (!cmp_write_array(ctx, sbuf->num_spans)) {
+        return -1;
+    }
+    return bctx.off;
+}
+
 /**
  * Send all the spans which we have buffered.
  *
  * @param rcv           The htraced receiver.
- * @param slen          The length of the buffer to send.
+ * @param sbuf          The span buffer to send.
  *
  * @return              1 on success; 0 otherwise.
  */
-static int htraced_xmit_impl(struct htraced_rcv *rcv, int32_t slen)
+static int htraced_xmit_impl(struct htraced_rcv *rcv, struct htraced_sbuf *sbuf)
 {
     struct htrace_log *lg = rcv->tracer->lg;
-    int res, retval = 0;
-    char *prequel = NULL, *err = NULL, *resp = NULL;
+    uint8_t prequel[MAX_WRITESPANS_PREQUEL_LEN];
+    int prequel_len, ret;
+    char *err = NULL, *resp = NULL;
     size_t resp_len = 0;
 
-    res = hrpc_client_call(rcv->hcli, METHOD_ID_WRITE_SPANS,
-                     rcv->sbuf, slen, &err, (void**)&resp, &resp_len);
-    if (!res) {
+    prequel_len = add_writespans_prequel(rcv, sbuf, prequel);
+    if (prequel_len < 0) {
+        htrace_log(lg, "htrace_xmit_impl: add_writespans_prequel failed.\n");
+        ret = 0;
+        goto done;
+    }
+    ret = hrpc_client_call(rcv->hcli, METHOD_ID_WRITE_SPANS,
+                    prequel, prequel_len, sbuf->buf, sbuf->off,
+                    &err, (void**)&resp, &resp_len);
+    if (!ret) {
         htrace_log(lg, "htrace_xmit_impl: hrpc_client_call failed.\n");
-        retval = 0;
+        goto done;
     } else if (err) {
         htrace_log(lg, "htrace_xmit_impl: server returned error: %s\n", err);
-        retval = 0;
-    } else {
-        retval = 1;
+        ret = 0;
+        goto done;
     }
-    free(prequel);
+    ret = 1;
+done:
     free(err);
     free(resp);
-    return retval;
+    return ret;
 }
 
 static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now)
 {
-    int32_t slen;
     int tries = 0;
+    struct htraced_sbuf *sbuf;
 
-    // Move span data from the circular buffer into the transmission buffer.
-    slen = cbuf_to_sbuf(rcv);
+    // Flip to the other buffer.
+    sbuf = rcv->sbuf[rcv->active_buf];
+    rcv->active_buf = !rcv->active_buf;
 
     // Release the lock while doing network I/O, so that we don't block threads
     // adding spans.
     pthread_mutex_unlock(&rcv->lock);
     while (1) {
-        int retry, success = htraced_xmit_impl(rcv, slen);
+        int retry, success = htraced_xmit_impl(rcv, sbuf);
         if (success) {
             break;
         }
@@ -440,175 +586,100 @@ static void htraced_xmit(struct htraced_rcv *rcv, uint64_t now)
             break;
         }
     }
+    sbuf->off = 0;
+    sbuf->num_spans = 0;
     pthread_mutex_lock(&rcv->lock);
     rcv->last_send_ms = now;
-}
-
-/**
- * Move data from the circular buffer into the transmission buffer, advancing
- * the circular buffer's start offset.
- *
- * This function must be called with the lock held.
- *
- * Note that we rely on HTRACED_MAX_MSG_LEN being < 4GB in this function for
- * correctness on 32-bit systems.
- *
- * @param rcv           The htraced receiver.
- *
- * @return              The amount of data copied.
- */
-static int32_t cbuf_to_sbuf(struct htraced_rcv *rcv)
-{
-    const char * const SUFFIX = "]}";
-    int SUFFIX_LEN = sizeof(SUFFIX) - 1;
-    int rem = HTRACED_MAX_MSG_LEN - SUFFIX_LEN;
-    size_t amt;
-    char *sbuf = (char*)rcv->sbuf;
-
-    fwdprintf(&sbuf, &rem, "{\"DefaultPid\":\"%s\",\"Spans\":[",
-             rcv->tracer->prid);
-    if (rcv->cstart < rcv->cend) {
-        amt = rcv->cend - rcv->cstart;
-        if (amt > rem) {
-            amt = rem;
-        }
-        memcpy(sbuf, rcv->cbuf + rcv->cstart, amt);
-        sbuf += amt;
-        rem -= amt;
-        rcv->cstart += amt;
-    } else {
-        amt = rcv->clen - rcv->cstart;
-        if (amt > rem) {
-            amt = rem;
-        }
-        memcpy(sbuf, rcv->cbuf + rcv->cstart, amt);
-        sbuf += amt;
-        rem -= amt;
-        rcv->cstart += amt;
-        if (rem > 0) {
-            amt = rcv->cend;
-            if (amt > rem) {
-                amt = rem;
-            }
-            memcpy(sbuf, rcv->cbuf, amt);
-            sbuf += amt;
-            rem -= amt;
-            rcv->cstart = amt;
-        }
-    }
-    // overwrite last comma
-    rem++;
-    sbuf--;
-    rem += SUFFIX_LEN;
-    fwdprintf(&sbuf, &rem, "%s", SUFFIX);
-    return HTRACED_MAX_MSG_LEN - rem;
-}
-
-/**
- * Returns the current number of bytes used in the htraced circular buffer.
- * Must be called under the lock.
- *
- * @param rcv           The htraced receiver.
- *
- * @return              The number of bytes used.
- */
-static uint64_t cbuf_used(const struct htraced_rcv *rcv)
-{
-    if (rcv->cstart <= rcv->cend) {
-        return rcv->cend - rcv->cstart;
-    }
-    return rcv->clen - (rcv->cstart - rcv->cend);
+    pthread_cond_broadcast(&rcv->flush_cond);
 }
 
 static void htraced_rcv_add_span(struct htrace_rcv *r,
                                  struct htrace_span *span)
 {
-    int json_len, tries, retry;
-    uint64_t used, rem;
+    int tries, retry;
+    uint64_t rem, off;
     struct htraced_rcv *rcv = (struct htraced_rcv *)r;
+    struct htraced_sbuf *sbuf;
     struct htrace_log *lg = rcv->tracer->lg;
+    struct cmp_counter_ctx cctx;
+    struct cmp_bcopy_ctx bctx;
+    uint64_t msgpack_len;
 
-    json_len = span_json_size(span);
+    // Determine the length of the span when serialized to msgpack.
+    cmp_counter_ctx_init(&cctx);
+    if (!span_write_msgpack(span, (cmp_ctx_t*)&cctx)) {
+        htrace_log(lg, "htraced_rcv_add_span: span_write_msgpack failed.\n");
+        return;
+    }
+    msgpack_len = cctx.count;
+
+    // Try to get enough space in the current buffer.
     tries = 0;
     do {
         pthread_mutex_lock(&rcv->lock);
-        used = cbuf_used(rcv);
-        if (used + json_len >= rcv->clen) {
-            pthread_cond_signal(&rcv->cond);
+        sbuf = rcv->sbuf[rcv->active_buf];
+        rem = htraced_sbuf_remaining(sbuf);
+        if (rem < msgpack_len) {
+            pthread_cond_signal(&rcv->bg_cond);
             pthread_mutex_unlock(&rcv->lock);
             tries++;
             retry = tries < HTRACED_MAX_ADD_TRIES;
             htrace_log(lg, "htraced_rcv_add_span: not enough space in the "
-                           "circular buffer.  Have %" PRId64 ", need %d"
-                           ".  %s...\n", (rcv->clen - used), json_len,
+                           "current buffer.  Have %" PRId64 ", need %"
+                           PRId64 ".  %s...\n", rem, msgpack_len,
                            (retry ? "Retrying" : "Giving up"));
             if (retry) {
                 pthread_yield();
                 continue;
             }
+            pthread_mutex_unlock(&rcv->lock);
             return;
         }
     } while (0);
     // OK, now we have the lock, and we know that there is enough space in the
-    // circular buffer.
-    rem = rcv->clen - rcv->cend;
-    if (rem < json_len) {
-        // Handle a 'torn write' where the circular buffer loops around to the
-        // beginning in the middle of the write.
-        char *temp = malloc(json_len);
-        if (!temp) {
-            htrace_log(lg, "htraced_rcv_add_span: failed to malloc %d byte "
-                       "buffer for torn write.\n", json_len);
-            goto done;
-        }
-        span_json_sprintf(span, json_len, temp);
-        temp[json_len - 1] = ',';
-        memcpy(rcv->cbuf + rcv->cend, temp, rem);
-        memcpy(rcv->cbuf, temp + rem, json_len - rem);
-        rcv->cend = json_len - rem;
-        free(temp);
-    } else {
-        span_json_sprintf(span, json_len, rcv->cbuf + rcv->cend);
-        rcv->cbuf[rcv->cend + json_len - 1] = ',';
-        rcv->cend += json_len;
+    // current buffer.
+    off = sbuf->off;
+    cmp_bcopy_ctx_init(&bctx, sbuf->buf + off, msgpack_len);
+    bctx.base.write = cmp_bcopy_write_nocheck_fn;
+    span_write_msgpack(span, (cmp_ctx_t*)&bctx);
+    off += msgpack_len;
+    sbuf->off = off;
+    sbuf->num_spans++;
+    if (off > rcv->send_threshold) {
+        pthread_cond_signal(&rcv->bg_cond);
     }
-    used += json_len;
-    if (used > rcv->send_threshold) {
-        pthread_cond_signal(&rcv->cond);
-    }
-done:
     pthread_mutex_unlock(&rcv->lock);
 }
 
 static void htraced_rcv_flush(struct htrace_rcv *r)
 {
     struct htraced_rcv *rcv = (struct htraced_rcv *)r;
+    uint64_t now;
 
+    // Note: This assumes that we only flush one buffer at once, and
+    // that we flush buffers in order.  If we revisit those assumptions we'll
+    // need to change this.
+    // The SpanReceiver flush is only used for testing anyway.
+    pthread_mutex_lock(&rcv->lock);
+    now = monotonic_now_ms(rcv->tracer->lg);
     while (1) {
-        pthread_mutex_lock(&rcv->lock);
-        if (cbuf_used(rcv) == 0) {
-            // If the buffer is empty, we're done.
-            // Note that there is no guarantee that we'll ever be done if spans
-            // are being added continuously throughout the flush.  This is OK,
-            // since flush() is actually only used by unit tests.
-            // We could do something more clever here, but it would be a lot more
-            // complex.
-            pthread_mutex_unlock(&rcv->lock);
+        if (rcv->last_send_ms >= now) {
             break;
         }
-        // Get the xmit thread to send what it can, by resetting the "last send
-        // time" to the oldest possible monotonic time.
+        if (htraced_sbufs_empty(rcv)) {
+            break;
+        }
         rcv->last_send_ms = 0;
-        pthread_cond_signal(&rcv->cond);
-        pthread_mutex_unlock(&rcv->lock);
+        pthread_cond_wait(&rcv->flush_cond, &rcv->lock);
     }
+    pthread_mutex_unlock(&rcv->lock);
 }
 
 static void htraced_rcv_free(struct htrace_rcv *r)
 {
     struct htraced_rcv *rcv = (struct htraced_rcv *)r;
     struct htrace_log *lg;
-    int ret;
+    int i, ret;
 
     if (!rcv) {
         return;
@@ -618,24 +689,30 @@ static void htraced_rcv_free(struct htrace_rcv *r)
                hrpc_client_get_endpoint(rcv->hcli));
     pthread_mutex_lock(&rcv->lock);
     rcv->shutdown = 1;
-    pthread_cond_signal(&rcv->cond);
+    pthread_cond_signal(&rcv->bg_cond);
     pthread_mutex_unlock(&rcv->lock);
     ret = pthread_join(rcv->xmit_thread, NULL);
     if (ret) {
         htrace_log(lg, "htraced_rcv_free: pthread_join "
                    "error %d: %s\n", ret, terror(ret));
     }
-    free(rcv->cbuf);
-    free(rcv->sbuf);
+    for (i = 0; i < HTRACED_NUM_BUFS; i++) {
+        htraced_sbuf_free(rcv->sbuf[i]);
+    }
     hrpc_client_free(rcv->hcli);
     ret = pthread_mutex_destroy(&rcv->lock);
     if (ret) {
         htrace_log(lg, "htraced_rcv_free: pthread_mutex_destroy "
                    "error %d: %s\n", ret, terror(ret));
     }
-    ret = pthread_cond_destroy(&rcv->cond);
+    ret = pthread_cond_destroy(&rcv->bg_cond);
     if (ret) {
-        htrace_log(lg, "htraced_rcv_free: pthread_cond_destroy "
+        htrace_log(lg, "htraced_rcv_free: pthread_cond_destroy(bg_cond) "
+                   "error %d: %s\n", ret, terror(ret));
+    }
+    ret = pthread_cond_destroy(&rcv->flush_cond);
+    if (ret) {
+        htrace_log(lg, "htraced_rcv_free: pthread_cond_destroy(flush_cond) "
                    "error %d: %s\n", ret, terror(ret));
     }
     free(rcv);

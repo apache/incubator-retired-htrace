@@ -34,6 +34,7 @@
      ";" HTRACED_READ_TIMEO_MS_KEY "=60000"\
      ";" HTRACE_PROCESS_ID "=%{tname}/%{ip}"\
      ";" HTRACED_ADDRESS_KEY "=localhost:9095"\
+     ";" HTRACED_BUFFER_SEND_TRIGGER_FRACTION "=0.50"\
     )
 
 static int parse_key_value(char *str, char **key, char **val)

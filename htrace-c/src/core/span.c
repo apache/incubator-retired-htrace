@@ -19,6 +19,7 @@
 #include "core/span.h"
 #include "receiver/receiver.h"
 #include "sampler/sampler.h"
+#include "util/cmp.h"
 #include "util/log.h"
 #include "util/rand.h"
 #include "util/string.h"
@@ -26,6 +27,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -127,7 +129,7 @@ void htrace_span_sort_and_dedupe_parents(struct htrace_span *span)
  * containing the span contents.  With buf non-NULL, we will write the span
  * contents to the provided buffer.
  *
- * @param scope             The scope
+ * @param span              The span
  * @param max               The maximum number of bytes to write to buf.
  * @param buf               If non-NULL, where the string will be written.
  *
@@ -147,7 +149,7 @@ static int span_json_sprintf_impl(const struct htrace_span *span,
     ret += fwdprintf(&buf, &max, "{\"s\":\"%016" PRIx64 "\",\"b\":%" PRId64
                  ",\"e\":%" PRId64",", span->span_id, span->begin_ms,
                  span->end_ms);
-    if (span->desc) {
+    if (span->desc[0]) {
         ret += fwdprintf(&buf, &max, "\"d\":\"%s\",", span->desc);
     }
     if (span->prid) {
@@ -174,14 +176,87 @@ static int span_json_sprintf_impl(const struct htrace_span *span,
     return ret + 1;
 }
 
-int span_json_size(const struct htrace_span *scope)
+int span_json_size(const struct htrace_span *span)
 {
-    return span_json_sprintf_impl(scope, 0, NULL);
+    return span_json_sprintf_impl(span, 0, NULL);
 }
 
-void span_json_sprintf(const struct htrace_span *scope, int max, void *buf)
+void span_json_sprintf(const struct htrace_span *span, int max, void *buf)
 {
-    span_json_sprintf_impl(scope, max, buf);
+    span_json_sprintf_impl(span, max, buf);
+}
+
+int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
+{
+    int i, num_parents;
+    uint16_t map_size =
+        1 + // desc
+        1 + // begin_ms
+        1 + // end_ms
+        1; // span_id
+
+    num_parents = span->num_parents;
+    if (span->prid) {
+        map_size++;
+    }
+    if (num_parents > 0) {
+        map_size++;
+    }
+    if (!cmp_write_map16(ctx, map_size)) {
+        return 0;
+    }
+    if (!cmp_write_fixstr(ctx, "d", 1)) {
+        return 0;
+    }
+    if (!cmp_write_str16(ctx, span->desc, strlen(span->desc))) {
+        return 0;
+    }
+    if (!cmp_write_fixstr(ctx, "b", 1)) {
+        return 0;
+    }
+    if (!cmp_write_u64(ctx, span->begin_ms)) {
+        return 0;
+    }
+    if (!cmp_write_fixstr(ctx, "e", 1)) {
+        return 0;
+    }
+    if (!cmp_write_u64(ctx, span->end_ms)) {
+        return 0;
+    }
+    if (!cmp_write_fixstr(ctx, "s", 1)) {
+        return 0;
+    }
+    if (!cmp_write_u64(ctx, span->span_id)) {
+        return 0;
+    }
+    if (span->prid) {
+        if (!cmp_write_fixstr(ctx, "r", 1)) {
+            return 0;
+        }
+        if (!cmp_write_str16(ctx, span->prid, strlen(span->prid))) {
+            return 0;
+        }
+    }
+    if (num_parents > 0) {
+        if (!cmp_write_fixstr(ctx, "p", 1)) {
+            return 0;
+        }
+        if (!cmp_write_array16(ctx, num_parents)) {
+            return 0;
+        }
+        if (num_parents == 1) {
+            if (!cmp_write_u64(ctx, span->parent.single)) {
+                return 0;
+            }
+        } else {
+            for (i = 0; i < num_parents; i++) {
+                if (!cmp_write_u64(ctx, span->parent.list[i])) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
 }
 
 // vim:ts=4:sw=4:et

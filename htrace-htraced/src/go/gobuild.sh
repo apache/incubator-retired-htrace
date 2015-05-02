@@ -47,6 +47,11 @@ mkdir -p "${GOBIN}" || die "failed to mkdir -p ${GOBIN}"
 cd "${GOBIN}" || die "failed to cd to ${SCRIPT_DIR}"
 export GOPATH="${GOBIN}:${SCRIPT_DIR}"
 
+# Use the unsafe package when possible to get greater speed.  For example,
+# go-codec can bypass the overhead of converting between []byte and string in
+# some cases when using unsafe.
+TAGS="-tags unsafe"
+
 # Check for go
 which go &> /dev/null
 if [ $? -ne 0 ]; then
@@ -100,12 +105,12 @@ install)
 
     # Inject the release and git version into the htraced ldflags.
     FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
-    go install -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
+    go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
     ;;
 bench)
-    go test org/apache/htrace/... -test.bench=. "$@"
+    go test org/apache/htrace/... ${TAGS} -test.bench=. "$@"
     ;;
 *)
-    go ${ACTION} org/apache/htrace/... "$@"
+    go ${ACTION} org/apache/htrace/... ${TAGS} "$@"
     ;;
 esac

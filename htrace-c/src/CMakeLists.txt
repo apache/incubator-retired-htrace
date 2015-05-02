@@ -83,6 +83,8 @@ set(SRC_ALL
     sampler/never.c
     sampler/prob.c
     sampler/sampler.c
+    util/cmp.c
+    util/cmp_util.c
     util/htable.c
     util/log.c
     util/process_id.c
@@ -129,6 +131,10 @@ macro(add_utest utest)
     target_link_libraries(${utest} htrace_test)
     add_test(${utest} ${CMAKE_CURRENT_BINARY_DIR}/${utest} ${utest})
 endmacro(add_utest)
+
+add_utest(cmp_util-unit
+    test/cmp_util-unit.c
+)
 
 add_utest(conf-unit
     test/conf-unit.c

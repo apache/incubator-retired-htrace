@@ -21,10 +21,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ugorji/go/codec"
 	"io"
 	"net"
 	"net/rpc"
@@ -111,7 +113,9 @@ func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
 		cdc.lg.Tracef("Reading HRPC %d-byte request body from %s\n",
 			cdc.length, cdc.conn.RemoteAddr())
 	}
-	dec := json.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)))
+	mh := new(codec.MsgpackHandle)
+	mh.WriteExt = true
+	dec := codec.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)), mh)
 	err := dec.Decode(body)
 	if err != nil {
 		return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to read request "+
@@ -130,11 +134,16 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	var err error
 	buf := EMPTY
 	if msg != nil {
-		buf, err = json.Marshal(msg)
+		mh := new(codec.MsgpackHandle)
+		mh.WriteExt = true
+		w := bytes.NewBuffer(make([]byte, 0, 128))
+		enc := codec.NewEncoder(w, mh)
+		err := enc.Encode(msg)
 		if err != nil {
 			return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to marshal "+
 				"response message: %s", err.Error()))
 		}
+		buf = w.Bytes()
 	}
 	hdr := common.HrpcResponseHeader{}
 	hdr.MethodId = common.HrpcMethodNameToId(resp.ServiceMethod)

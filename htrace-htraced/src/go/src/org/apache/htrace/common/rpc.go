@@ -20,7 +20,7 @@
 package common
 
 // The 4-byte magic number which is sent first in the HRPC header
-const HRPC_MAGIC = 0x48545243
+const HRPC_MAGIC = 0x43525448
 
 // Method ID codes.  Do not reorder these.
 const (

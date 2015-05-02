@@ -20,10 +20,11 @@
 package client
 
 import (
+	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ugorji/go/codec"
 	"io"
 	"net"
 	"net/rpc"
@@ -45,11 +46,16 @@ func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) erro
 		return errors.New(fmt.Sprintf("HrpcClientCodec: Unknown method name %s",
 			req.ServiceMethod))
 	}
-	buf, err := json.Marshal(msg)
+	mh := new(codec.MsgpackHandle)
+	mh.WriteExt = true
+	w := bytes.NewBuffer(make([]byte, 0, 2048))
+	enc := codec.NewEncoder(w, mh)
+	err := enc.Encode(msg)
 	if err != nil {
 		return errors.New(fmt.Sprintf("HrpcClientCodec: Unable to marshal "+
-			"message as JSON: %s", err.Error()))
+			"message as msgpack: %s", err.Error()))
 	}
+	buf := w.Bytes()
 	if len(buf) > common.MAX_HRPC_BODY_LENGTH {
 		return errors.New(fmt.Sprintf("HrpcClientCodec: message body is %d "+
 			"bytes, but the maximum message size is %d bytes.",
@@ -115,7 +121,9 @@ func (cdc *HrpcClientCodec) ReadResponseHeader(resp *rpc.Response) error {
 }
 
 func (cdc *HrpcClientCodec) ReadResponseBody(body interface{}) error {
-	dec := json.NewDecoder(io.LimitReader(cdc.rwc, int64(cdc.length)))
+	mh := new(codec.MsgpackHandle)
+	mh.WriteExt = true
+	dec := codec.NewDecoder(io.LimitReader(cdc.rwc, int64(cdc.length)), mh)
 	err := dec.Decode(body)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to read response body: %s",

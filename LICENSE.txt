@@ -276,3 +276,11 @@ https://github.com/marionettejs/backbone.babysitter/blob/v0.1.6/LICENSE.md
 Backbone.Marionette is a composite application library for Backbone.js.
 It is MIT licensed:
 https://github.com/marionettejs/backbone.marionette/blob/v2.4.1/license.txt
+
+CMP is an implementation of the MessagePack serialization format in
+C.  It is licensed under the MIT license:
+https://github.com/camgunz/cmp/blob/master/LICENSE
+
+go-codec is an implementation of several serialization and deserialization
+codecs in Go.  It is licensed under the MIT license:
+https://github.com/ugorji/go/blob/master/LICENSE

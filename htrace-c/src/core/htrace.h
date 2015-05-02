@@ -135,6 +135,13 @@ extern  "C" {
 #define HTRACED_BUFFER_SIZE_KEY "htraced.buffer.size"
 
 /**
+ * The fraction of the buffer that needs to be full to trigger the spans to be
+ * sent from the htraced span receiver.
+ */
+#define HTRACED_BUFFER_SEND_TRIGGER_FRACTION \
+    "htraced.buffer.send.trigger.fraction"
+
+/**
  * The process ID string to use.
  *
  * %{ip} will be replaced by an IP address;
