@@ -467,7 +467,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 				Val:   "120",
 			},
 		},
-		Lim: 5,
+		Lim:  5,
 		Prev: &SIMPLE_TEST_SPANS[0],
 	}, []common.Span{SIMPLE_TEST_SPANS[1], SIMPLE_TEST_SPANS[2]})
 
@@ -480,7 +480,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 				Val:   "1",
 			},
 		},
-		Lim: 100,
+		Lim:  100,
 		Prev: &SIMPLE_TEST_SPANS[0],
 	}, []common.Span{})
 
@@ -494,7 +494,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 				Val:   "2",
 			},
 		},
-		Lim: 100,
+		Lim:  100,
 		Prev: &SIMPLE_TEST_SPANS[1],
 	}, []common.Span{SIMPLE_TEST_SPANS[0]})
 
@@ -508,7 +508,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 				Val:   "0",
 			},
 		},
-		Lim: 100,
+		Lim:  100,
 		Prev: &SIMPLE_TEST_SPANS[1],
 	}, []common.Span{SIMPLE_TEST_SPANS[2], SIMPLE_TEST_SPANS[0]})
 }

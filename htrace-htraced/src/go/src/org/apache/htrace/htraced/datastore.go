@@ -741,7 +741,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 		// with the same secondary index field are ordered by span ID.  So we
 		// create a 17-byte key incorporating the span ID from 'prev.'
 		var startId common.SpanId
-		switch (pred.Op) {
+		switch pred.Op {
 		case common.EQUALS:
 			if pred.Field == common.SPAN_ID {
 				// This is an annoying corner case.  There can only be one
@@ -750,7 +750,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 				// But for some reason someone is asking for another result.
 				// We modify the query to search for the illegal 0 span ID,
 				// which will never be present.
-				lg.Debugf("Attempted to use a continuation token with an EQUALS " +
+				lg.Debugf("Attempted to use a continuation token with an EQUALS "+
 					"SPAN_ID query. %s.  Setting search id = 0",
 					pred.Predicate.String())
 				startId = 0
@@ -788,7 +788,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 			searchKey = makeSecondaryKey(src.keyPrefix, pred.uintKey, uint64(startId))
 		}
 		if lg.TraceEnabled() {
-			lg.Tracef("Handling continuation token %s for %s.  startId=%d, " +
+			lg.Tracef("Handling continuation token %s for %s.  startId=%d, "+
 				"pred.uintKey=%d\n", prev, pred.Predicate.String(), startId,
 				pred.uintKey)
 		}

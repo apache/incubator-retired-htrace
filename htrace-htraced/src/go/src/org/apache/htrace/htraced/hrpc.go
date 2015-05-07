@@ -65,7 +65,7 @@ func createErrAndWarn(lg *common.Logger, val string) error {
 }
 
 func createErrAndLog(lg *common.Logger, val string, level common.Level) error {
-	lg.Write(level, val + "\n")
+	lg.Write(level, val+"\n")
 	return errors.New(val)
 }
 
