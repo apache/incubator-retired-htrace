@@ -18,6 +18,7 @@ package org.apache.htrace;
 
 import java.util.Collection;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.htrace.Sampler;
 import org.apache.htrace.SpanReceiver;
@@ -80,7 +81,7 @@ public class TraceCreator {
   public void createThreadedTrace() {
     TraceScope s = Trace.startSpan(THREADED_TRACE_ROOT, Sampler.ALWAYS);
     try {
-      Random r = new Random();
+      Random r = ThreadLocalRandom.current();
       int numThreads = r.nextInt(4) + 1;
       Thread[] threads = new Thread[numThreads];
 
@@ -130,7 +131,7 @@ public class TraceCreator {
     public void run() {
       try {
         Thread.sleep(750);
-        Random r = new Random();
+        Random r = ThreadLocalRandom.current();
         int importantNumber = 100 / r.nextInt(3);
         System.out.println("Important number: " + importantNumber);
       } catch (InterruptedException ie) {

@@ -23,6 +23,7 @@ import org.apache.htrace.impl.MilliSpan;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Tracer provides the implementation for collecting and distributing Spans
@@ -30,10 +31,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Tracer {
   public static final Log LOG = LogFactory.getLog(Tracer.class);
-  private final static Random random = new Random();
 
   static long nonZeroRandom64() {
     long id;
+    Random random = ThreadLocalRandom.current();
     do {
       id = random.nextLong();
     } while (id == 0);

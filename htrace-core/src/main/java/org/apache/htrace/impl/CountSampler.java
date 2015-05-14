@@ -20,6 +20,7 @@ import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Sampler that returns true every N calls. Specify the frequency interval by configuring a
@@ -28,10 +29,8 @@ import java.util.Random;
 public class CountSampler implements Sampler<Object> {
   public final static String SAMPLER_FREQUENCY_CONF_KEY = "sampler.frequency";
 
-  final static Random random = new Random();
-
   final long frequency;
-  long count = random.nextLong();
+  long count = ThreadLocalRandom.current().nextLong();
 
   public CountSampler(HTraceConfiguration conf) {
     this.frequency = Long.parseLong(conf.get(SAMPLER_FREQUENCY_CONF_KEY), 10);

@@ -41,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Span implementation that stores its information in milliseconds since the
@@ -63,10 +64,10 @@ public class MilliSpan implements Span {
   private Map<String, String> traceInfo = null;
   private String processId;
   private List<TimelineAnnotation> timeline = null;
-  private final static Random random = new Random();
 
   private static long nonZeroRandom64() {
     long id;
+    Random random = ThreadLocalRandom.current();
     do {
       id = random.nextLong();
     } while (id == 0);

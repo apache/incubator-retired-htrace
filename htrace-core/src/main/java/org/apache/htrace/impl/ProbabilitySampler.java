@@ -22,6 +22,7 @@ import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Sampler that returns true a certain percentage of the time. Specify the frequency interval by
@@ -30,7 +31,6 @@ import java.util.Random;
 public class ProbabilitySampler implements Sampler<Object> {
   private static final Log LOG = LogFactory.getLog(ProbabilitySampler.class);
   public final double threshold;
-  private Random random = new Random();
   public final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
 
   public ProbabilitySampler(HTraceConfiguration conf) {
@@ -43,6 +43,6 @@ public class ProbabilitySampler implements Sampler<Object> {
 
   @Override
   public boolean next(Object info) {
-    return random.nextDouble() < threshold;
+    return ThreadLocalRandom.current().nextDouble() < threshold;
   }
 }
