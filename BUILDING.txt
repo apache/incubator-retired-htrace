@@ -1,21 +1,25 @@
-On Building HTrace
+Building HTrace
+===============
 
-Requires the go programming language, version 1.3 or higher.  See
-htrace-core/src/go/BUILDING.txt for more information.
+Building HTrace requires
 
-Requires Java 1.6 at least.
+* Java 1.7 at least.
+* Apache Maven 3.x.
+* Go programming language, version 1.3 or higher (for htrace-htraced)
+* The development package for leveldb (for htrace-htraced)
 
-Requires maven 3.x.
+After installing dependencies, to build, run:
 
-After installing go, to build, run:
-
- $ mvn install
+   $ mvn install
 
 To build a tarball, do:
 
- $ mvn clean install -DskipTests assembly:single -Pdist
+   $ mvn clean install -DskipTests assembly:single -Pdist
 
 This will build a tarball into ./target.
 
 To skip the rat-check -- it can take a while -- pass
 a -Drat.skip on the  mvn command-line.
+
+
+See htrace-htraced/BUILDING.txt for more information to build htrace-htraced.
