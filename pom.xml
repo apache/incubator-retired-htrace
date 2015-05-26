@@ -21,10 +21,10 @@ language governing permissions and limitations under the License. -->
 
   <groupId>org.apache.htrace</groupId>
   <artifactId>htrace</artifactId>
-  <version>3.2.0-incubating-SNAPSHOT</version>
+  <version>3.3.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HTrace</name>
-  <description>A tracing framework for use with distributed systems written in java</description>
+  <description>A distributed tracing framework.</description>
   <url>http://htrace.incubator.apache.org</url>
 
   <modules>
