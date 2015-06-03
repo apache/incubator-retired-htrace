@@ -66,11 +66,19 @@ public class ZipkinSpanReceiver implements SpanReceiver {
    * Default hostname to fall back on.
    */
   private static final String DEFAULT_COLLECTOR_HOSTNAME = "localhost";
+  public static final String HOSTNAME_KEY = "zipkin.collector-hostname";
 
   /**
    * Default collector port.
    */
   private static final int DEFAULT_COLLECTOR_PORT = 9410; // trace collector default port.
+  public static final String PORT_KEY = "zipkin.collector-port";
+
+  /**
+   * Default number of threads to use.
+   */
+  private static final int DEFAULT_NUM_THREAD = 1;
+  public static final String NUM_THREAD_KEY = "zipkin.num-threads";
 
   /**
    * this is used to tell scribe that the entries are for zipkin..
@@ -153,15 +161,13 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   private void configure(HTraceConfiguration conf) {
     this.conf = conf;
 
-    this.collectorHostname = conf.get("zipkin.collector-hostname",
-        DEFAULT_COLLECTOR_HOSTNAME);
-    this.collectorPort = conf.getInt("zipkin.collector-port",
-        DEFAULT_COLLECTOR_PORT);
+    this.collectorHostname = conf.get(HOSTNAME_KEY, DEFAULT_COLLECTOR_HOSTNAME);
+    this.collectorPort = conf.getInt(PORT_KEY, DEFAULT_COLLECTOR_PORT);
 
     // initialize the endpoint. This endpoint is used while writing the Span.
     initConverter();
 
-    int numThreads = conf.getInt("zipkin.num-threads", 1);
+    int numThreads = conf.getInt(NUM_THREAD_KEY, DEFAULT_NUM_THREAD);
 
     // If there are already threads runnnig tear them down.
     if (this.service != null) {
