@@ -164,15 +164,12 @@ language governing permissions and limitations under the License. -->
                 <exclude>style.txt</exclude>
                 <!-- external projects -->
                 <exclude>**/bootstrap-3.3.1/**</exclude>
-                <exclude>**/web/lib/js/**</exclude>
-                <exclude>**/web/lib/css/**</exclude>
-                <exclude>**/web/lib/rome-2.1.0/**</exclude>
+                <exclude>**/web/lib/**</exclude>
                 <exclude>**/*.min.js</exclude>
                 <exclude>**/d3.min.js</exclude>
                 <!-- Pulled down sources -->
-                <exclude>**/gopkg.in/**</exclude>
-                <exclude>**/github.com/**</exclude>
-                <exclude>**/golang.org/**</exclude>
+                <exclude>**/build/src/**</exclude>
+                <exclude>**/build/pkg/**</exclude>
                 <exclude>**/Godeps/**</exclude>
             </excludes>
           </configuration>

@@ -244,38 +244,10 @@ backbone, is a javascript library, that is Copyright (c) 2010-2014
 Jeremy Ashkenas, DocumentCloud. It is MIT licensed:
 https://github.com/jashkenas/backbone/blob/master/LICENSE
 
-backbone-paginator, is a javascript library, that is Copyright (c) 2012-2014
-Jimmy Yuen Ho Wong and contributors. It is MIT licensed:
-https://github.com/backbone-paginator/backbone.paginator/blob/master/LICENSE-MIT
-
-backgrid, is a javascript library, that is Copyright (c) 2013
-Jimmy Yuen Ho Wong. It is MIT licensed:
-https://github.com/wyuenho/backgrid/blob/master/LICENSE-MIT
-
-backgrid-paginator, is a javascript library, that is Copyright (c) 2013
-Jimmy Yuen Ho Wong. It is MIT licensed:
-https://github.com/wyuenho/backgrid-paginator/blob/master/LICENSE-MIT
-
 moment.js is a front end time conversion project.
 It is (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
 and shared under the MIT license:
 https://github.com/moment/moment/blob/develop/LICENSE
-
-rome.js is a customizable date (and time) picker.
-It is Copyright © 2014 Nicolas Bevacqua
-https://github.com/bevacqua/rome
-
-Backbone.Wreqr is a message passing system for Backbone.js.
-It is (c) 2012 Derick Bailey, Muted Solutions, LLC and MIT licensed:
-https://github.com/marionettejs/backbone.wreqr/blob/v1.3.1/LICENSE.md
-
-Backbone.Babysitter manages child views for Backbone.js.
-It is (c) 2013 Derick Bailey, Muted Solutions, LLC and MIT licensed:
-https://github.com/marionettejs/backbone.babysitter/blob/v0.1.6/LICENSE.md
-
-Backbone.Marionette is a composite application library for Backbone.js.
-It is MIT licensed:
-https://github.com/marionettejs/backbone.marionette/blob/v2.4.1/license.txt
 
 CMP is an implementation of the MessagePack serialization format in
 C.  It is licensed under the MIT license:

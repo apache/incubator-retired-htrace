@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -17,13 +17,23 @@
  * under the License.
  */
 
-package common
+var htrace = htrace || {};
 
-// Info returned by /server/info
-type ServerInfo struct {
-	// The server release version.
-	ReleaseVersion string
+htrace.SpanDetailsView = Backbone.View.extend({
+  initialize: function(options) {
+    this.el = options.el;
+    this.model = options.model;
+  }
 
-	// The git hash that this software was built with.
-	GitVersion string
-}
+  render: function() {
+    this.$el.html(_.template($("#about-view-template").html())
+      ({ model : this.model }));
+    console.log("AboutView#render");
+    return this;
+  },
+
+  close: function() {
+    console.log("AboutView#close")
+    this.undelegateEvents();
+  }
+});

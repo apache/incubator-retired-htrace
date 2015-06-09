@@ -17,29 +17,17 @@
  * under the License.
  */
 
-ul.spans {
-  margin: 0px;
-  padding: 0px;
-}
+var htrace = htrace || {};
+htrace.AboutView = Backbone.View.extend({
+  render: function() {
+    this.$el.html(_.template($("#about-view-template").html())
+      ({ model : this.model }));
+    console.log("AboutView#render");
+    return this;
+  },
 
-li.span {
-  margin: 0px;
-  list-style: none;
-}
-
-/* Graph */
-svg .node circle {
-  stroke: #000000;
-  stroke-width: 3;
-  fill: #D8BFD8;
-}
-
-svg .selected circle {
-  stroke-width: 3;
-  fill: #DA70D6;
-}
-
-svg .link {
-  stroke: black;
-  stroke-width: 3;
-}
+  close: function() {
+    console.log("AboutView#close")
+    this.undelegateEvents();
+  }
+});

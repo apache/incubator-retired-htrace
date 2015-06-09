@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -17,13 +17,9 @@
  * under the License.
  */
 
-package common
+var htrace = htrace || {};
 
-// Info returned by /server/info
-type ServerInfo struct {
-	// The server release version.
-	ReleaseVersion string
-
-	// The git hash that this software was built with.
-	GitVersion string
-}
+htrace.SearchResults = Backbone.Collection.extend({
+  // The search results are spans. 
+  model: htrace.Span
+});

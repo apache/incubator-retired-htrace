@@ -17,184 +17,208 @@
 -->
 <html lang="en-US">
   <head>
-    <meta charset="utf-8">
     <title>HTrace</title>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- TODO: Add Favicon -->
-    <link rel="icon" href="//favicon.ico" type="image/x-icon" sizes="16x16">
-    <link href="lib/bootstrap-3.3.1/css/bootstrap.css" rel="stylesheet">
-    <link href="lib/css/backgrid-0.3.5.min.css" rel="stylesheet">
-    <link href="lib/css/backgrid-paginator-0.3.5.min.css" rel="stylesheet">
-    <link href="lib/rome-2.1.0/rome.min.css" rel="stylesheet">
-    <link href="lib/css/main.css" rel="stylesheet">
-
-    <!-- TODO: Remove shiv -->
-    <!--[if lt IE 9]>
-      <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.6.2/html5shiv.js"></script>
-    <![endif]-->
+    <meta charset="utf-8" name="viewport"
+      content="width=device-width, initial-scale=1.0">
+    <link href="lib/bootstrap-3.3.1/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="custom.css" rel="stylesheet" type="text/css">
   </head>
   <body>
     <header id="header" role="banner">
       <nav class="navbar navbar-default navbar-static-top" role="navigation">
         <div class="collapse navbar-collapse">
           <a class="navbar-brand" href="#">HTrace</a>
-
           <ul class="nav navbar-nav">
-            <li class="active"><a href="/">Search</a></li>
+            <li id="about"><a href="#about">About</a></li>
+            <li id="search"><a href="#search">Search</a></li>
           </ul>
         </div>
       </nav>
     </header>
-
     <div id="app" class="container-fluid" role="application"></div>
-
+    <div id="modal" class="modal fade"></div>
     <footer></footer>
 
-    <script id="search-layout-template" type="text/html">
-    <div class="container-fluid" id="list" role="application">
+    <script id="about-view-template" type="text/template">
       <div class="row">
-        <div class="col-md-4" role="form"></div>
-        <div class="col-md-8">
-          <div class="row">
-            <div class="col-md-12" role="main"></div>
-          </div>
-          <div class="row">
-            <div class="col-md-12" role="complementary"></div>
-          </div>
+        <div class="col-md-1">
+        </div>
+        <div class="col-md-10">
+          <h1>Welcome to HTrace</h1>
+          <img src="image/owl.png" width="15%">
+          <h2>Server Version</h2>
+          <%= model.get("ReleaseVersion") %>
+          <h2>Server Git Hash</h2>
+          <%= model.get("GitVersion") %>
+        </div>
+        <div class="col-md-1">
         </div>
       </div>
-    </div>
     </script>
 
-    <script id="search-controls-template" type="text/html">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h3 class="panel-title">Controls</h3>
-      </div>
-      <div class="panel-body">
-        <form class="form-horizontal">
-          <div class="search-fields"></div>
-          <div class="form-group">
-            <div class="col-sm-12">
-              <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                  Add Field <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                  <li><a href="javascript:void(0)" class="add-field" data-field="begin">Start Date/Time</a></li>
-                  <li><a href="javascript:void(0)" class="add-field" data-field="end">End Date/Time</a></li>
-                  <li><a href="javascript:void(0)" class="add-field" data-field="duration">Duration</a></li>
-                </ul>
+    <script id="search-view-template" type="text/template">
+      <div class="row" id="searchView">
+        <div class="col-md-3" role="form">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h1 class="panel-title">Search</h1>
+            </div style="border: 1px solid #000000;">
+            <div class="panel-body">
+              <form>
+                <div id="predicates">
+                </div>
+                <div class="form-group">
+                  <div class="btn-group">
+                    <button type="button" data-toggle="dropdown"
+                          aria-expanded="false"
+                          class="btn btn-default dropdown-toggle">
+                      Add Predicate<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Began after</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Began at or before</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Ended after</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Ended at or before</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Description contains</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Description is exactly</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Duration is longer than</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Duration is at most</a></li>
+                      <li><a href="javascript:void(0)" 
+                        class="add-field">Span ID is</a></li>
+                    </ul>
+                  </div>
+                  <button type="submit" class="btn btn-primary" id="searchButton">
+                    Search</button>
+                </div>
+                <div class="form-group">
+                  <button type="button" class="btn btn btn-danger" id="clearButton">
+                    Clear</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h1 class="panel-title">Timeline</h1>
+            </div style="border: 1px solid #000000;">
+            <div class="panel-body">
+              <div class="form-horizontal">
+                <div class="form-group">
+                  <label class="col-sm-2 control-label">Begin</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" id="begin" value="1970-01-01T00:00:00,000"/>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-2 control-label">End</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" id="end" value="1970-01-01T00:00:00,100"/>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-2 control-label">Cur</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" id="selectedTime" value=""/>
+                  </div>
+                </div>
+                <div class="form-horizontal">
+                  <button type="button" class="btn btn btn-warning"
+                      id="zoomButton">Zoom</button>
+                </div>
               </div>
             </div>
           </div>
-          <div class="form-group">
-            <div class="col-sm-12">
-              <button type="button" class="search btn btn-default">Search</button>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h1 class="panel-title">Span Details</h1>
+            </div style="border: 1px solid #000000;">
+            <div class="panel-body">
+              <div id="spanDetails" ></div>
             </div>
           </div>
-        </form>
-      </div>
-    </div>
-    </script>
-
-    <script id='search-field-template' type='text/html'>
-      <div class='form-group search-field start-end-date-time'>
-        <label for="start-end-date-time" class="start-end-date-time control-label col-sm-3">Date</label>
-        <div class="col-sm-3">
-          <select class='op form-control'>
-            <option selected value='ge'>After</option>
-            <option value='le'>Before</option>
-          </select>
         </div>
-        <div class='col-sm-5'>
-          <input placeholder="Date/Time" id="start-end-date-time" class="start-end-date-time date form-control value" />
-        </div>
-        <button class="btn btn-link remove-field" type="button">x</button>
-      </div>
-      <div class='form-group search-field duration'>
-        <label for="duration" class="duration control-label col-sm-3">Duration</label>
-        <div class='col-sm-8'>
-          <input type="text" class="duration form-control value" placeholder="Duration" />
-        </div>
-        <button class="btn btn-link remove-field" type="button">x</button>
-      </div>
-      <div class='form-group search-field description'>
-        <label for="description" class="description control-label col-sm-3">Description</label>
-        <div class='col-sm-8'>
-        <input type="search" id="description" class="description value form-control" placeholder="Search description" />
+        <div class="col-md-9" id="resultsView">
+          <div id="results">
+            <h3>...</h3>
+          </div>
         </div>
       </div>
     </script>
 
-    <script id="details-layout-template" type="text/html">
-    <div class="container-fluid" id="list" role="application">
-      <div class="row">
-        <div class="col-md-12" role="main"></div>
-      </div>
-
-      <hr>
-
-      <div class="row">
-        <div class="col-md-12" role="complementary"></div>
-      </div>
-    </div>
+    <script id="predicate-template" type="text/template">
+      <form class="form-horizontal">
+        <div class="form-group"> 
+          <%= desc %>
+          <button type="button" class="btn pull-right btn-link btn-sm closeButton"
+              >X</button><br/>
+          <input type="text" class="form-control"/>
+        </div>
+      </form>
     </script>
 
-    <script id="span-details-template" type="text/html">
-    <table class="table table-condensed">
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th>Span ID</th>
-          <th>Process ID</th>
-          <th>Start time</th>
-          <th>End time</th>
-          <th>Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><%- span.description %></td>
-          <td><%- span.spanId %></td>
-          <td><%- span.processId %></td>
-          <td><%- span.beginTime %></td>
-          <td><%- span.stopTime %></td>
-          <td><%- span.duration %></td>
-        </tr>
-      </tbody>
-    </table>
-    </script>
-
-    <script id="swimlane-layout-template" type="text/html">
-    <div class="container-fluid" id="list" role="application">
-      <div class="row">
-        <div class="col-md-12" role="main"></div>
+    <script id="search-results-view-template" type="text/template">
+      <div id="resultsDiv" class="htrace-canvas-container">
+        <canvas id="resultsCanvas" class="htrace-canvas">
+          <h2>Sorry, your browser does not support the HTML5 canvas element.  Please
+          upgrade to a newer browser.</h2>
+        </canvas>
       </div>
-    </div>
     </script>
 
-    <script src="lib/js/jquery-2.1.3.min.js" type="text/javascript"></script>
-    <script src="lib/js/d3-3.5.5.js" type="text/javascript"></script>
+    <script id="modal-warning-template" type="text/template">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"
+                  aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"><%= title %></h4>
+          </div>
+          <div class="modal-body">
+            <%= body %><p/>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <script src="lib/jquery-2.1.4.js" type="text/javascript"></script>
     <script src="lib/bootstrap-3.3.1/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="lib/js/underscore-1.7.0.js" type="text/javascript"></script>
-    <script src="lib/js/backbone-1.1.2.js" type="text/javascript"></script>
-    <script src="lib/js/backbone.marionette-2.4.1.min.js" type="text/javascript"></script>
-    <script src="lib/js/backbone.paginator-2.0.2.js" type="text/javascript"></script>
-    <script src="lib/js/backgrid-0.3.5.js" type="text/javascript"></script>
-    <script src="lib/js/backgrid-paginator-0.3.5.js" type="text/javascript"></script>
-    <script src="lib/js/moment-2.9.0.min.js" type="text/javascript"></script>
-    <script src="lib/rome-2.1.0/rome.standalone.min.js" type="text/javascript"></script>
+    <script src="lib/underscore-1.7.0.js" type="text/javascript"></script>
+    <script src="lib/backbone-1.1.2.js" type="text/javascript"></script>
+    <script src="lib/moment-2.10.3.js" type="text/javascript"></script>
 
-    <script src="app/app.js" type="text/javascript"></script>
-    <script src="app/models/span.js" type="text/javascript"></script>
-    <script src="app/views/graph/graph.js" type="text/javascript"></script>
-    <script src="app/views/search/field.js" type="text/javascript"></script>
-    <script src="app/views/search/search.js" type="text/javascript"></script>
-    <script src="app/views/details/details.js" type="text/javascript"></script>
-    <script src="app/views/swimlane/swimlane.js" type="text/javascript"></script>
-    <script src="app/setup.js" type="text/javascript"></script>
+    <script src="app/string.js" type="text/javascript"></script>
+    <script src="app/time_cursor.js" type="text/javascript"></script>
+
+    <script src="app/widget_manager.js" type="text/javascript"></script>
+    <script src="app/triangle_button.js" type="text/javascript"></script>
+
+    <script src="app/span.js" type="text/javascript"></script>
+
+    <script src="app/span_widget.js" type="text/javascript"></script>
+    <script src="app/search_results.js" type="text/javascript"></script>
+    <script src="app/about_view.js" type="text/javascript"></script>
+    <script src="app/modal.js" type="text/javascript"></script>
+    <script src="app/predicate.js" type="text/javascript"></script>
+    <script src="app/predicate_view.js" type="text/javascript"></script>
+    <script src="app/query_results.js" type="text/javascript"></script>
+    <script src="app/search_results_view.js" type="text/javascript"></script>
+    <script src="app/search_view.js" type="text/javascript"></script>
+    <script src="app/server_info.js" type="text/javascript"></script>
+
+    <script src="app/router.js" type="text/javascript"></script>
   </body>
 </html>
+

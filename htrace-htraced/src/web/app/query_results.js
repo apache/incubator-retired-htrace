@@ -17,4 +17,29 @@
  * under the License.
  */
 
-window.app = new Marionette.Application();
+var htrace = htrace || {};
+
+htrace.QueryResults = Backbone.Collection.extend({
+  // The query results are spans. 
+  model: htrace.Span,
+
+  initialize: function(options) {
+    this.queryJson = options.queryJson;
+  },
+
+  url: function() {
+    return "query?query=" + this.queryString();
+  },
+
+  parse: function(response, xhr) {
+    return response;
+  },
+
+  prettyQueryString: function() {
+    return JSON.stringify(this.queryJson, null, 2);
+  },
+
+  queryString: function() {
+    return JSON.stringify(this.queryJson);
+  }
+});

@@ -17,31 +17,18 @@
  * under the License.
  */
 
-app.DetailsView = Backbone.Marionette.LayoutView.extend({
-  "template": "#details-layout-template",
-  "regions": {
-    "span": "div[role='complementary']",
-    "content": "div[role='main']"
-  }
-});
+var htrace = htrace || {};
 
-app.SpanDetailsView = Backbone.Marionette.ItemView.extend({
-  "className": "span",
-  "template": "#span-details-template",
+// Show a modal dialog box with a warning message.
+htrace.showModalWarning = function(title, body) {
+  var html = _.template($("#modal-warning-template").html())
+      ({ title: title, body: body });
+  htrace.showModal(html);
+}
 
-  "serializeData": function() {
-    var context = {
-      "span": this.model.toJSON()
-    };
-    context["span"]["duration"] = this.model.duration();
-    return context;
-  },
-  
-  "events": {
-    "click": "swimlane"
-  },
-  "swimlane": function() {
-    Backbone.history.navigate("!/swimlane/" + this.model.get("spanId"),
-                              {"trigger": true});
-  }
-});
+// Show a modal dialog box.
+htrace.showModal = function(html) {
+  var el = $("#modal");
+  el.html(html);
+  el.modal();
+}

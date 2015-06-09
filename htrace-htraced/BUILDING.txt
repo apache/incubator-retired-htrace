@@ -7,7 +7,7 @@ The htrace go code consists of 4 main parts:
 * The "htrace" command-line program which can query the server
     This is a simple command-line program which can query the htrace server.
 
-* The htraced Javascript Web UI (not yet implemented)
+* The htraced Javascript Web UI
 
 * The htrace go client library (not yet implemented)
     This is the equivalent of the Java HTrace client library, but written in Go.
