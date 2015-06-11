@@ -66,8 +66,20 @@ language governing permissions and limitations under the License. -->
                   <shadedPattern>org.apache.htrace.thrift</shadedPattern>
                 </relocation>
                 <relocation>
+                  <pattern>org.slf4j</pattern>
+                  <shadedPattern>org.apache.htrace.slf4j</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>org.apache.commons.codec</pattern>
                   <shadedPattern>org.apache.htrace.commons.codec</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons.lang</pattern>
+                  <shadedPattern>org.apache.htrace.commons.lang</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.http</pattern>
+                  <shadedPattern>org.apache.htrace.http</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -115,6 +127,11 @@ language governing permissions and limitations under the License. -->
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
       <version>0.9.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-nop</artifactId>
+      <version>1.5.8</version>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
