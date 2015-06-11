@@ -157,6 +157,11 @@ language governing permissions and limitations under the License. -->
           </filesets>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>rpm-maven-plugin</artifactId>
+        <version>2.1.1</version>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -205,4 +210,65 @@ language governing permissions and limitations under the License. -->
       <version>9.2.6.v20141205</version>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <id>rpm</id>
+      <activation><property><name>rpm</name></property></activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>rpm-maven-plugin</artifactId>
+            <version>2.1.1</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>generate-rpm</id>
+                <goals><goal>rpm</goal></goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <group>Application</group>
+              <needarch>true</needarch>
+              <release>3.3.0</release>
+              <defaultDirmode>755</defaultDirmode>
+              <defaultFilemode>644</defaultFilemode>
+              <defaultUsername>root</defaultUsername>
+              <mappings>
+                <mapping>
+                  <directory>/usr/local/htraced/web</directory>
+                  <sources>
+                    <source>
+                      <location>src/web</location>
+                    </source>
+                  </sources>
+                </mapping>
+                <mapping>
+                  <directory>/usr/local/htraced/bin</directory>
+                  <filemode>755</filemode>
+                  <sources>
+                    <source>
+                      <location>src/go/build/htrace</location>
+                    </source>
+                    <source>
+                      <location>src/go/build/htraced</location>
+                    </source>
+                  </sources>
+                </mapping>
+                <mapping>
+                  <directory>/usr/local/htraced/java</directory>
+                  <sources>
+                    <source>
+                      <location>target/htrace-htraced-3.3.0-incubating-SNAPSHOT.jar</location>
+                    </source>
+                  </sources>
+                </mapping>
+              </mappings>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
