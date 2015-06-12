@@ -27,7 +27,7 @@ import org.apache.commons.logging.LogFactory;
  * method constructs an instance of that class, initialized with the same configuration.
  */
 public class SpanReceiverBuilder {
-  static final Log LOG = LogFactory.getLog(SpanReceiverBuilder.class);
+  private static final Log LOG = LogFactory.getLog(SpanReceiverBuilder.class);
 
   public final static String SPAN_RECEIVER_CONF_KEY = "span.receiver";
   private final static String DEFAULT_PACKAGE = "org.apache.htrace.impl";

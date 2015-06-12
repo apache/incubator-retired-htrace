@@ -53,7 +53,7 @@ import java.util.TreeSet;
  * preceding backslash.
  */
 public final class ProcessId {
-  public static final Log LOG = LogFactory.getLog(ProcessId.class);
+  private static final Log LOG = LogFactory.getLog(ProcessId.class);
 
   /**
    * The configuration key to use for process id

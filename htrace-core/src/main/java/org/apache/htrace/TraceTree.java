@@ -36,7 +36,7 @@ import java.util.TreeSet;
  * Used to create the graph formed by spans.
  */
 public class TraceTree {
-  public static final Log LOG = LogFactory.getLog(Tracer.class);
+  private static final Log LOG = LogFactory.getLog(Tracer.class);
 
 
   public static class SpansByParent {

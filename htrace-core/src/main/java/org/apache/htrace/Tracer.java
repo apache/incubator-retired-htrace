@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * within a process.
  */
 public class Tracer {
-  public static final Log LOG = LogFactory.getLog(Tracer.class);
+  private static final Log LOG = LogFactory.getLog(Tracer.class);
 
   static long nonZeroRandom64() {
     long id;

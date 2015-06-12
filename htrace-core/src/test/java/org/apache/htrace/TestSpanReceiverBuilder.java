@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class TestSpanReceiverBuilder {
-  public static final Log LOG =
+  private static final Log LOG =
       LogFactory.getLog(TestSpanReceiverBuilder.class);
 
   /**
