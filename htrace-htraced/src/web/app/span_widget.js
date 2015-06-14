@@ -21,50 +21,16 @@ var htrace = htrace || {};
 
 // Widget containing the trace span displayed on the canvas.
 htrace.SpanWidget = function(params) {
-  for (var k in params) {
-    this[k]=params[k];
-  }
-
-  this.selected = false;
-  this.widgetManagerFocused = false;
-  this.xSize = this.xF - this.x0;
-  this.ySize = this.yF - this.y0;
-  this.xDB = this.xD - this.xB;
-
-  var widgets = [];
-  this.upWidget = new htrace.TriangleButton({
-    ctx: this.ctx,
-    direction: "up",
-    x0: this.xB + 2,
-    xF: this.xB + (this.xDB / 2) - 2,
-    y0: this.y0 + 2,
-    yF: this.yF - 2,
-  });
-  widgets.push(this.upWidget);
-  this.downWidget = new htrace.TriangleButton({
-    ctx: this.ctx,
-    direction: "down",
-    x0: this.xB + (this.xDB / 2) + 2,
-    xF: this.xD - 2,
-    y0: this.y0 + 2,
-    yF: this.yF - 2,
-  });
-  widgets.push(this.downWidget);
-  this.widgetManager = new htrace.WidgetManager({
-    widgets: widgets,
-  });
-
   this.draw = function() {
     this.drawBackground();
     this.drawProcessId();
     this.drawDescription();
-    this.widgetManager.draw();
   };
 
   // Draw the background of this span widget.
   this.drawBackground = function() {
     this.ctx.save();
-    if (this.selected) {
+    if (this.span.get("selected")) {
       this.ctx.fillStyle="#ffccff";
     } else {
       this.ctx.fillStyle="#ffffff";
@@ -133,7 +99,9 @@ htrace.SpanWidget = function(params) {
     // Draw description text
     this.ctx.fillStyle="#000000";
     this.ctx.font = (this.ySize - gapY) + "px sans-serif";
-    this.ctx.fillText(this.span.get('description'), this.xD, this.yF - gapY - 2);
+    this.ctx.fillText(this.span.get('description'),
+        this.xD + this.xT,
+        this.yF - gapY - 2);
 
     this.ctx.restore();
   };
@@ -145,42 +113,11 @@ htrace.SpanWidget = function(params) {
         (this.end - this.begin));
   };
 
-  this.inBoundingBox = function(x, y) {
-    return ((x >= this.x0) && (x <= this.xF) && (y >= this.y0) && (y <= this.yF));
-  };
-
-  this.handleMouseDown = function(x, y) {
-    if (!this.inBoundingBox(x, y)) {
-      return false;
-    }
-    if (this.widgetManager.handleMouseDown(x, y)) {
-      this.widgetManagerFocused = true;
-      return true;
-    }
-    this.selected = !this.selected;
-    this.fillSpanDetailsView();
-    return true;
-  };
-
-  this.handleMouseUp = function(x, y) {
-    if (this.widgetManagerFocused) {
-      this.widgetManager.handleMouseUp(x, y);
-      this.widgetManagerFocused = false;
-    }
-  };
-
-  this.handleMouseMove = function(x, y) {
-    if (!this.widgetManagerFocused) {
-      return false;
-    }
-    return this.widgetManager.handleMouseUp(x, y);
-  };
-
   this.fillSpanDetailsView = function() {
     var info = {
       spanID: this.span.get("spanID"),
       begin: htrace.dateToString(parseInt(this.span.get("begin"), 10)),
-      end: htrace.dateToString(parseInt(this.span.get("end"), 10))
+      end: htrace.dateToString(parseInt(this.span.get("end"), 10)),
     };
     var explicitOrder = {
       spanId: -3,
@@ -189,6 +126,12 @@ htrace.SpanWidget = function(params) {
     };
     keys = [];
     for(k in this.span.attributes) {
+      if (k == "reifiedChildren") {
+        continue;
+      }
+      if (k == "reifiedParents") {
+        continue;
+      }
       keys.push(k);
       if (info[k] == null) {
         info[k] = this.span.get(k);
@@ -225,5 +168,70 @@ htrace.SpanWidget = function(params) {
     $("#spanDetails").html(h);
   };
 
+  this.handle = function(e) {
+    switch (e.type) {
+      case "mouseDown":
+        if (!htrace.inBoundingBox(e.x, e.y,
+              this.x0, this.xF, this.y0, this.yF)) {
+          return true;
+        }
+        this.manager.searchResultsView.applyToAllSpans(function(span) {
+            if (span.get("selected") == true) {
+              span.set("selected", false);
+            }
+          });
+        this.span.set("selected", true);
+        this.fillSpanDetailsView();
+        return true;
+      case "draw":
+        this.draw();
+        return true;
+    }
+  };
+
+  for (var k in params) {
+    this[k]=params[k];
+  }
+  this.xSize = this.xF - this.x0;
+  this.ySize = this.yF - this.y0;
+  this.xDB = this.xD - this.xB;
+  this.manager.register("draw", this);
+
+  var widget = this;
+  if ((this.span.get("reifiedParents") == null) && (this.allowUpButton)) {
+    new htrace.TriangleButton({
+      ctx: this.ctx,
+      manager: this.manager,
+      direction: "up",
+      x0: this.xB + 2,
+      xF: this.xB + (this.xDB / 2) - 2,
+      y0: this.y0 + 2,
+      yF: this.yF - 2,
+      callback: function() {
+        $.when(widget.span.reifyParents()).done(function (result) {
+          console.log("reifyParents: result was '" + result + "'");
+          widget.manager.searchResultsView.render();
+        });
+      },
+    });
+  }
+  if ((this.span.get("reifiedChildren") == null) && (this.allowDownButton)) {
+    new htrace.TriangleButton({
+      ctx: this.ctx,
+      manager: this.manager,
+      direction: "down",
+      x0: this.xB + (this.xDB / 2) + 2,
+      xF: this.xD - 2,
+      y0: this.y0 + 2,
+      yF: this.yF - 2,
+      callback: function() {
+        $.when(widget.span.reifyChildren()).done(function (result) {
+          console.log("reifyChildren: result was '" + result + "'");
+          widget.manager.searchResultsView.render();
+        });
+      },
+    });
+  }
+  this.manager.register("mouseDown", this);
   return this;
 };

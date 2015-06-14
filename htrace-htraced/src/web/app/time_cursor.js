@@ -21,11 +21,6 @@ var htrace = htrace || {};
 
 // Draws a vertical bar selecting a time.
 htrace.TimeCursor = function(params) {
-  this.selectedTime = -1;
-  for (var k in params) {
-    this[k]=params[k];
-  }
-
   this.positionToTime = function(x) {
     if ((x < this.x0) || (x > this.xF)) {
       return -1;
@@ -56,19 +51,31 @@ htrace.TimeCursor = function(params) {
     }
   };
 
-  this.handleMouseMove = function(x, y) {
-    if ((y >= this.y0) && (y <= this.yF) &&
-        (x >= this.x0) && (x <= this.xF)) {
-      this.selectedTime = this.positionToTime(x);
-      if (this.selectedTime < 0) {
-        $(this.el).val("");
-      } else {
-        $(this.el).val(htrace.dateToString(this.selectedTime));
-      }
-      return true;
+  this.handle = function(e) {
+    switch (e.type) {
+      case "mouseMove":
+        if (htrace.inBoundingBox(e.x, e.y,
+              this.x0, this.xF, this.y0, this.yF)) {
+          this.selectedTime = this.positionToTime(e.x);
+          if (this.selectedTime < 0) {
+            $(this.el).val("");
+          } else {
+            $(this.el).val(htrace.dateToString(this.selectedTime));
+          }
+          return true;
+        }
+        return true;
+      case "draw":
+        this.draw();
+        return true;
     }
-    return false;
   };
 
+  this.selectedTime = -1;
+  for (var k in params) {
+    this[k]=params[k];
+  }
+  this.manager.register("mouseMove", this);
+  this.manager.register("draw", this);
   return this;
 };

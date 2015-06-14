@@ -20,7 +20,7 @@
 var htrace = htrace || {};
 
 htrace.QueryResults = Backbone.Collection.extend({
-  // The query results are spans. 
+  // The query results are spans.
   model: htrace.Span,
 
   initialize: function(options) {

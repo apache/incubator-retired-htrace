@@ -60,44 +60,49 @@ htrace.TriangleButton = function(params) {
     } else {
       console.log("TriangleButton: unknown direction " + this.direction);
     }
-    this.ctx.closePath(); 
+    this.ctx.closePath();
     this.ctx.fill();
     this.ctx.restore();
   };
 
-  this.inBoundingBox = function(x, y) {
-    return ((x >= this.x0) && (x <= this.xF) && (y >= this.y0) && (y <= this.yF));
-  }
-
-  this.handleMouseDown = function(x, y) {
-//    console.log("TriangleButton#handleMouseDown(x=" + x + ", y=" + y +
-//        ", x0=" + this.x0 + ", y0="+ this.y0 +
-//        ", xF=" + this.xF + ", yF=" + this.yF);
-    if (this.inBoundingBox(x,y)) {
-      this.selected = true;
-      return true;
+  this.handle = function(e) {
+    switch (e.type) {
+      case "mouseDown":
+        if (!htrace.inBoundingBox(e.x, e.y,
+              this.x0, this.xF, this.y0, this.yF)) {
+          return true;
+        }
+        this.manager.register("mouseUp", this);
+        this.manager.register("mouseMove", this);
+        this.manager.register("mouseOut", this);
+        this.selected = true;
+        return false;
+      case "mouseUp":
+        if (this.selected) {
+          this.callback();
+          this.selected = false;
+        }
+        this.manager.unregister("mouseUp", this);
+        this.manager.unregister("mouseMove", this);
+        this.manager.unregister("mouseOut", this);
+        return true;
+      case "mouseMove":
+        this.selected = htrace.inBoundingBox(e.x, e.y,
+                this.x0, this.xF, this.y0, this.yF);
+        return true;
+      case "mouseOut":
+        this.selected = false;
+        return true;
+      case "draw":
+        this.draw();
+        return true;
     }
-    return false;
-  }
-
-  this.handleMouseUp = function(x, y) {
-    if (this.selected) {
-      console.log("executing callback");
-    }
-    this.selected = false;
-  }
-
-  this.handleMouseMove = function(x, y) {
-    var selected = this.inBoundingBox(x,y);
-    if (this.selected != selected) {
-      this.selected = selected;
-      return true;
-    }
-    return false;
-  }
+  };
 
   for (var k in params) {
     this[k]=params[k];
   }
+  this.manager.register("mouseDown", this);
+  this.manager.register("draw", this);
   return this;
 };

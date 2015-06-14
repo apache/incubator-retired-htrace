@@ -27,12 +27,10 @@ htrace.SearchResultsView = Backbone.View.extend({
 
   end: this.MINIMUM_TIME_SPAN,
 
-  focused: false,
-
   initialize: function(options) {
-    this.model = options.searchResults;
+    this.searchResults = options.searchResults;
     this.el = options.el;
-    this.listenTo(this.model, 'add remove change reset', this.render);
+    this.listenTo(this.searchResults, 'add remove change reset', this.render);
 
     // Re-render the canvas when the window size changes.
     // Add a debouncer delay to avoid spamming render requests.
@@ -56,50 +54,40 @@ htrace.SearchResultsView = Backbone.View.extend({
 
   handleMouseDown: function(e) {
     e.preventDefault();
-    var x = this.getCanvasX(e);
-    var y = this.getCanvasY(e);
-    var focused = this.widgetManager.handleMouseDown(x, y);
-    if (focused != this.focused) {
-      this.draw();
-      this.focused = focused;
-    }
+    this.widgetManager.handle({
+      type: "mouseDown",
+      x: this.getCanvasX(e),
+      y: this.getCanvasY(e)
+    });
+    this.draw();
   },
 
   handleMouseUp: function(e) {
     e.preventDefault();
-    var x = this.getCanvasX(e);
-    var y = this.getCanvasY(e);
-    this.widgetManager.handleMouseUp(x, y);
-    this.focused = false;
+    this.widgetManager.handle({
+      type: "mouseUp",
+      x: this.getCanvasX(e),
+      y: this.getCanvasY(e)
+    });
     this.draw();
   },
 
-  // When the mouse leaves the canvas, treat it like a mouse up event at -1, -1
-  // if something is focused.
   handleMouseOut: function(e) {
-    if (this.focused) {
-      this.widgetManager.handleMouseUp(-1, -1);
-      this.focused = false;
-      this.draw();
-    }
+    e.preventDefault();
+    this.widgetManager.handle({
+      type: "mouseOut"
+    });
+    this.draw();
   },
 
   handleMouseMove: function(e) {
     e.preventDefault();
-    var x = this.getCanvasX(e);
-    var y = this.getCanvasY(e);
-    if (this.focused) {
-      var mustDraw = false;
-      if (this.widgetManager.handleMouseMove(x, y)) {
-        mustDraw = true;
-      }
-    }
-    if (this.timeCursor.handleMouseMove(x, y)) {
-      mustDraw = true;
-    }
-    if (mustDraw) {
-      this.draw();
-    }
+    this.widgetManager.handle({
+      type: "mouseMove",
+      x: this.getCanvasX(e),
+      y: this.getCanvasY(e)
+    });
+    this.draw();
   },
 
   render: function() {
@@ -110,7 +98,6 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.ctx = this.canvas.get(0).getContext("2d");
     this.scaleCanvas();
     this.setupCoordinates();
-    this.setupTimeCursor();
     this.setupWidgets();
     this.draw();
     this.attachEvents();
@@ -160,66 +147,59 @@ htrace.SearchResultsView = Backbone.View.extend({
   //
   // Set up the screen coordinates.
   //
-  //  0              buttonX    descX                scrollX    maxX
+  //  0              xB         xD                   xS         maxX
   //  +--------------+----------+--------------------+-----------+
   //  |ProcessId     | Buttons  | Span Description   | Scrollbar |
   //  +--------------+----------+--------------------+-----------+
   //
   setupCoordinates: function() {
-    this.buttonX = Math.min(300, Math.floor(this.maxX / 5));
-    this.descX = this.buttonX + Math.min(75, Math.floor(this.maxX / 20));
+    this.xB = Math.min(300, Math.floor(this.maxX / 5));
+    this.xD = this.xB + Math.min(75, Math.floor(this.maxX / 20));
     var scrollBarWidth = Math.min(50, Math.floor(this.maxX / 10));
-    this.scrollX = this.maxX - scrollBarWidth;
-  },
-
-  setupTimeCursor: function() {
-    var selectedTime;
-    if (this.timeCursor != null) {
-      selectedTime = this.timeCursor.selectedTime;
-      console.log("setupTimeCursor: selectedTime = (prev) " + selectedTime);
-    } else {
-      selectedTime = this.begin;
-      console.log("setupTimeCursor: selectedTime = (begin) " + selectedTime);
-    }
-    this.timeCursor = new htrace.TimeCursor({
-      ctx: this.ctx,
-      x0: this.descX,
-      xF: this.scrollX,
-      el: "#selectedTime",
-      y0: 0,
-      yF: this.maxY,
-      begin: this.begin,
-      end: this.end,
-      selectedTime: selectedTime
-    });
+    this.xS = this.maxX - scrollBarWidth;
   },
 
   setupWidgets: function() {
-    var widgets = [];
-    var spanWidgetHeight = Math.min(25, Math.floor(this.maxY / 32));
+    this.widgetManager = new htrace.WidgetManager({searchResultsView: this});
 
     // Create a SpanWidget for each span we know about
-    var numSpans = this.model.size();
-    for (var i = 0; i < numSpans; i++) {
-      var spanWidget = new htrace.SpanWidget({
+    var spanWidgetHeight = Math.min(25, Math.floor(this.maxY / 32));
+    var numResults = this.searchResults.size();
+    var groupY = 0;
+    for (var i = 0; i < numResults; i++) {
+      var widget = new htrace.SpanGroupWidget({
+        manager: this.widgetManager,
         ctx: this.ctx,
-        span: this.model.at(i),
+        span: this.searchResults.at(i),
         x0: 0,
-        xB: this.buttonX,
-        xD: this.descX,
-        xF: this.scrollX,
-        y0: i * spanWidgetHeight,
-        yF: (i * spanWidgetHeight) + (spanWidgetHeight - 1),
+        xB: this.xB,
+        xD: this.xD,
+        xF: this.xS,
+        y0: groupY,
         begin: this.begin,
-        end: this.end
+        end: this.end,
+        spanWidgetHeight: spanWidgetHeight
       });
-      widgets.push(spanWidget);
+      groupY = widget.yF;
     }
 
-    // Create a new root-leve WidgetManager
-    this.widgetManager = new htrace.WidgetManager({
-      widgets: widgets
+    // Create the time cursor widget.
+    var selectedTime = this.begin;
+    if (this.timeCursor != null) {
+      selectedTime = this.timeCursor.selectedTime;
+    }
+    this.timeCursor = new htrace.TimeCursor({
+      manager: this.widgetManager,
+      selectedTime: selectedTime,
+      el: "#selectedTime"
     });
+    this.timeCursor.ctx = this.ctx;
+    this.timeCursor.x0 = this.xD;
+    this.timeCursor.xF = this.xS;
+    this.timeCursor.y0 = 0;
+    this.timeCursor.yF = this.maxY;
+    this.timeCursor.begin = this.begin;
+    this.timeCursor.end = this.end;
   },
 
   draw: function() {
@@ -227,7 +207,7 @@ htrace.SearchResultsView = Backbone.View.extend({
       return;
     }
 
-    // Set the background to white. 
+    // Set the background to white.
     this.ctx.save();
     this.ctx.fillStyle="#ffffff";
     this.ctx.strokeStyle="#000000";
@@ -235,8 +215,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.ctx.restore();
 
     // Draw all the widgets.
-    this.widgetManager.draw();
-    this.timeCursor.draw();
+    this.widgetManager.handle({type: "draw"});
   },
 
   checkCanvasTooSmall: function() {
@@ -268,10 +247,6 @@ htrace.SearchResultsView = Backbone.View.extend({
     $("#resultsCanvas").on("mouseout", function(e) {
       view.handleMouseOut(e);
     });
-    $(window).off("mouseup");
-    $(window).on("mouseup"), function(e) {
-      view.handleGlobalMouseUp(e);
-    }
     $("#resultsCanvas").off("mousemove");
     $("#resultsCanvas").on("mousemove", function(e) {
       view.handleMouseMove(e);
@@ -342,24 +317,45 @@ htrace.SearchResultsView = Backbone.View.extend({
   },
 
   zoomFitAll: function() {
-    var numSpans = this.model.size();
-    if (numSpans == 0) {
+    var numResults = this.searchResults.size();
+    if (numResults == 0) {
       this.setBegin(0);
       this.setEnd(this.MINIMUM_TIME_SPAN);
       return;
     }
     var minStart = 4503599627370496;
     var maxEnd = 0;
-    for (var i = 0; i < numSpans; i++) {
-      var span = this.model.at(i);
-      if (span.get('begin') < minStart) {
-        minStart = span.get('begin');
+    for (var i = 0; i < numResults; i++) {
+      var span = this.searchResults.at(i);
+      var begin = span.getEarliestBegin();
+      if (begin < minStart) {
+        minStart = begin;
       }
-      if (span.get('end') > maxEnd) {
-        maxEnd = span.get('end');
+      var end = span.getLatestEnd();
+      if (end > minStart) {
+        maxEnd = end;
       }
     }
     this.setBegin(minStart);
     this.setEnd(maxEnd);
+  },
+
+  // Apply a function to all spans
+  applyToAllSpans: function(cb) {
+    for (var i = 0; i < this.searchResults.length; i++) {
+      htrace.treeTraverseDepthFirstPre(this.searchResults.at(i),
+        htrace.getReifiedChildren, 0,
+          function(node, depth) {
+            console.log("node = " + node + ", node.constructor.name = " + node.constructor.name);
+            cb(node);
+          });
+      htrace.treeTraverseDepthFirstPre(this.searchResults.at(i),
+        htrace.getReifiedParents, 0,
+          function(node, depth) {
+            if (depth > 0) {
+              cb(node);
+            }
+          });
+    }
   }
 });

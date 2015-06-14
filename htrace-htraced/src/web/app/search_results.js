@@ -20,6 +20,6 @@
 var htrace = htrace || {};
 
 htrace.SearchResults = Backbone.Collection.extend({
-  // The search results are spans. 
-  model: htrace.Span
+  // The search results are span trees.
+  model: htrace.SpanTreeNode
 });

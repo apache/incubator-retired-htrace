@@ -19,43 +19,39 @@
 
 var htrace = htrace || {};
 
+// Check if a point is inside a bounding box.
+htrace.inBoundingBox = function(x, y, x0, xF, y0, yF) {
+    return ((x >= x0) && (x <= xF) && (y >= y0) && (y <= yF));
+  }
+
 // Manages a set of widgets on the canvas.
 // Buttons and sliders are both widgets.
 htrace.WidgetManager = function(params) {
-  this.widgets = [];
-  this.focusedWidget = null;
+  this.listeners = {
+    "mouseDown": [],
+    "mouseUp": [],
+    "mouseMove": [],
+    "mouseOut": [],
+    "draw": [],
+  };
 
-  this.handleMouseDown = function(x, y) {
-    if (this.focusedWidget != null) {
-      this.focusedWidget = null;
-    }
-    var numWidgets = this.widgets.length;
-    console.log("WidgetManager looking through " + numWidgets + " widgets.");
-    for (var i = 0; i < numWidgets; i++) {
-      if (this.widgets[i].handleMouseDown(x, y)) {
-        this.focusedWidget = this.widgets[i];
+  this.register = function(type, widget) {
+    this.listeners[type].push(widget);
+  }
+
+  this.unregister = function(type, widget) {
+    this.listeners[type] = _.without(this.listeners[type], widget);
+  }
+
+  this.handle = function(e) {
+    // Make a copy of the listeners, in case the handling functions change the
+    // array.
+    var listeners = this.listeners[e.type].slice();
+    var len = listeners.length;
+    for (var i = 0; i < len; i++) {
+      if (!listeners[i].handle(e)) {
         break;
       }
-    }
-    return (this.focusedWidget != null);
-  };
-
-  this.handleMouseUp = function(x, y) {
-    if (this.focusedWidget != null) {
-      this.focusedWidget.handleMouseUp(x, y);
-      this.focusedWidget = null;
-    }
-  };
-
-  this.handleMouseMove = function(x, y) {
-    return this.focusedWidget != null ?
-      this.focusedWidget.handleMouseMove(x, y) : false;
-  };
-
-  this.draw = function() {
-    var numWidgets = this.widgets.length;
-    for (var i = 0; i < numWidgets; i++) {
-      this.widgets[i].draw();
     }
   };
 
