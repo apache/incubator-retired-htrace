@@ -54,6 +54,18 @@ htrace.parseMultiSpanAjaxQueryResults = function(ajaxCalls) {
   return parsedSpans;
 };
 
+htrace.sortSpansByBeginTime = function(spans) {
+  return spans.sort(function(a, b) {
+      if (a.get("begin") < b.get("begin")) {
+        return -1;
+      } else if (a.get("begin") > b.get("begin")) {
+        return 1;
+      } else {
+        return 0;
+      }
+    });
+};
+
 htrace.getReifiedParents = function(span) {
   return span.get("reifiedParents") || [];
 };
@@ -169,6 +181,7 @@ htrace.Span = Backbone.Model.extend({
             span.get("spanId") + ": " + e);
         return;
       }
+      reifiedParents = htrace.sortSpansByBeginTime(reifiedParents);
       // The current span is a child of the reified parents.  There may be other
       // children of those parents, but we are ignoring that here.  By making
       // this non-null, the "expand children" button will not appear for these
@@ -219,6 +232,7 @@ htrace.Span = Backbone.Model.extend({
                 "for " + span.get("spanId") + ": " + e);
             return;
           }
+          reifiedChildren = htrace.sortSpansByBeginTime(reifiedChildren);
           // The current span is a parent of the new child.
           // There may be other parents, but we are ignoring that here.
           // By making this non-null, the "expand parents" button will not
