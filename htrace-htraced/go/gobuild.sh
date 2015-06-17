@@ -22,9 +22,9 @@
 #
 # Builds the HTrace server code.
 #
-# ./build.sh                Builds the code.
-# ./build.sh test           Builds and runs all unit tests.
-# ./build.sh bench          Builds and runs all benchmarks
+# ./gobuild.sh                Builds the code.
+# ./gobuild.sh test           Builds and runs all unit tests.
+# ./gobuild.sh bench          Builds and runs all benchmarks
 #
 
 die() {
@@ -106,6 +106,9 @@ install)
     # Inject the release and git version into the htraced ldflags.
     FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
     go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
+    # Make a symlink to web src dir so can do development in-situ out
+    # of build dir. This is ugly but blame go build.
+    ln -fs "../src/web" "${GOBIN}/../"
     ;;
 bench)
     go test org/apache/htrace/... ${TAGS} -test.bench=. "$@"

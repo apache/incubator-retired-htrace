@@ -109,9 +109,9 @@ language governing permissions and limitations under the License. -->
             <goals><goal>run</goal></goals>
             <configuration>
               <tasks>
-                <exec executable="./gobuild.sh" 
-                      dir="${basedir}/src/go/"
-                      failonerror="true"> 
+                <exec executable="./gobuild.sh"
+                      dir="${basedir}//go/"
+                      failonerror="true">
                   <env key="RELEASE_VERSION" value="${project.version}"/>
                 </exec>
               </tasks>
@@ -123,7 +123,7 @@ language governing permissions and limitations under the License. -->
             <goals><goal>run</goal></goals>
             <configuration>
               <tasks>
-                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                <exec executable="bash" failonerror="true" dir="${basedir}/go">
                   <arg value="-c"/>
                   <arg value="[ x$SKIPTESTS = xtrue ] || ./gobuild.sh test"/>
                   <env key="SKIPTESTS" value="${skipTests}"/>
@@ -137,7 +137,7 @@ language governing permissions and limitations under the License. -->
             <goals><goal>run</goal></goals>
             <configuration>
               <tasks>
-                <exec executable="bash" failonerror="true" dir="${basedir}/src/go">
+                <exec executable="bash" failonerror="true" dir="${basedir}/go">
                   <arg value="-c"/>
                   <arg value="./gobuild.sh clean"/>
                 </exec>
@@ -203,7 +203,7 @@ language governing permissions and limitations under the License. -->
      This is new-style jetty client, jetty9 and jdk7 required.
      It can do async but we will use it synchronously at first.
      Has nice tutorial: http://www.eclipse.org/jetty/documentation/9.1.5.v20140505/http-client-api.html
-     --> 
+     -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-client</artifactId>
@@ -249,10 +249,10 @@ language governing permissions and limitations under the License. -->
                   <filemode>755</filemode>
                   <sources>
                     <source>
-                      <location>src/go/build/htrace</location>
+                      <location>go/build/htrace</location>
                     </source>
                     <source>
-                      <location>src/go/build/htraced</location>
+                      <location>go/build/htraced</location>
                     </source>
                   </sources>
                 </mapping>

@@ -159,8 +159,8 @@ language governing permissions and limitations under the License. -->
                 <exclude>*/generated/*</exclude>
                 <exclude>.git/**</exclude>
                 <exclue>**/README.md</exclue>
-                <exclude>**/src/go/bin/*</exclude>
-                <exclude>**/src/go/pkg/*</exclude>
+                <exclude>**/go/bin/*</exclude>
+                <exclude>**/go/pkg/*</exclude>
                 <exclude>style.txt</exclude>
                 <!-- external projects -->
                 <exclude>**/bootstrap-3.3.1/**</exclude>

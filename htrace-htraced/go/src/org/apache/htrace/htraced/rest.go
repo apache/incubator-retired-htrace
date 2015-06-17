@@ -279,7 +279,7 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	// Default Handler. This will serve requests for static requests.
 	webdir := os.Getenv("HTRACED_WEB_DIR")
 	if webdir == "" {
-		webdir, err = filepath.Abs(filepath.Join(filepath.Dir(os.Args[0]), "..", "..", "web"))
+		webdir, err = filepath.Abs(filepath.Join(filepath.Dir(os.Args[0]), "..", "web"))
 
 		if err != nil {
 			return nil, err
