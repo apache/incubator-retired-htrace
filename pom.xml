@@ -30,6 +30,7 @@ language governing permissions and limitations under the License. -->
   <modules>
     <module>htrace-c</module>
     <module>htrace-core</module>
+    <module>htrace-webapp</module>
     <module>htrace-zipkin</module>
     <module>htrace-hbase</module>
     <module>htrace-flume</module>
@@ -167,6 +168,10 @@ language governing permissions and limitations under the License. -->
                 <exclude>**/web/lib/**</exclude>
                 <exclude>**/*.min.js</exclude>
                 <exclude>**/d3.min.js</exclude>
+                <exclude>**/backbone-*.js</exclude>
+                <exclude>**/jquery-*.js</exclude>
+                <exclude>**/moment-*.js</exclude>
+                <exclude>**/underscore-*.js</exclude>
                 <!-- Pulled down sources -->
                 <exclude>**/build/src/**</exclude>
                 <exclude>**/build/pkg/**</exclude>

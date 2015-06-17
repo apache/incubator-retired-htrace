@@ -108,7 +108,7 @@ install)
     go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
     # Make a symlink to web src dir so can do development in-situ out
     # of build dir. This is ugly but blame go build.
-    ln -fs "../src/web" "${GOBIN}/../"
+    ln -fs "../../htrace-webapp/src/main/web" "${GOBIN}/../"
     ;;
 bench)
     go test org/apache/htrace/... ${TAGS} -test.bench=. "$@"

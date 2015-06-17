@@ -179,6 +179,13 @@ language governing permissions and limitations under the License. -->
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-webapp</artifactId>
+      <version>${project.version}</version>
+      <type>war</type>
+      <scope>provided</scope>
+    </dependency>
     <!-- Global deps. -->
     <dependency>
       <groupId>commons-logging</groupId>
