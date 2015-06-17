@@ -239,7 +239,11 @@ htrace.SpanWidget = function(params) {
       callback: function() {
         $.when(widget.span.reifyParents()).done(function (result) {
           console.log("reifyParents: result was '" + result + "'");
-          widget.manager.searchResultsView.render();
+          if (result != "") {
+            alert(result);
+          } else {
+            widget.manager.searchResultsView.render();
+          }
         });
       },
     });
@@ -256,7 +260,11 @@ htrace.SpanWidget = function(params) {
       callback: function() {
         $.when(widget.span.reifyChildren()).done(function (result) {
           console.log("reifyChildren: result was '" + result + "'");
-          widget.manager.searchResultsView.render();
+          if (result != "") {
+            alert(result);
+          } else {
+            widget.manager.searchResultsView.render();
+          }
         });
       },
     });

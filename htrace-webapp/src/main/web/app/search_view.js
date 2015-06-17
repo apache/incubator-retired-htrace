@@ -126,9 +126,9 @@ htrace.SearchView = Backbone.View.extend({
         }
       },
       error: function(model, response, options){
-        this.searchResults.clear();
-        var err = "Error " + JSON.stringify(response) +
-          " on span query " + query.url();
+        searchView.searchResults.reset();
+        var err = "Error " + JSON.stringify(response, null, 2) +
+          " on span query " + queryResults.url();
         console.log(err);
         alert(err);
         searchView.searchInProgress = false;
