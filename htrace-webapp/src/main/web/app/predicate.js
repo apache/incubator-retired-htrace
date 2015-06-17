@@ -61,6 +61,9 @@ htrace.PType = Backbone.Model.extend({
       return val;
     case "spanid":
       return htrace.normalizeSpanId(val);
+    case "processid":
+      htrace.checkStringIsNotEmpty(val);
+      return val;
     default:
       return "Normalization not implemented for field '" + this.field + "'";
     }
@@ -77,6 +80,8 @@ htrace.PType = Backbone.Model.extend({
     case "duration":
       return "0";
     case "spanid":
+      return "";
+    case "processid":
       return "";
     default:
       return "(unknown)";
@@ -104,6 +109,10 @@ htrace.parsePType = function(name) {
       return new htrace.PType({name: name, field:"duration", op:"le"});
     case "Span ID is":
       return new htrace.PType({name: name, field:"spanid", op:"eq"});
+    case "ProcessId contains":
+      return new htrace.PType({name: name, field:"processid", op:"cn"});
+    case "ProcessId is exactly":
+      return new htrace.PType({name: name, field:"processid", op:"eq"});
     default:
       return null
   }
