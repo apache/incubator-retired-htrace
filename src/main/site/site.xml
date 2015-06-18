@@ -57,7 +57,7 @@
       <theme>bootswatch-flatly</theme>
       <toc>top</toc>
       <highlightJs>true</highlightJs>
-      <slogan position="bannerRight">A tracing framework for use with distributed systems written in java</slogan>
+      <slogan position="bannerRight">A tracing framework for use with distributed systems</slogan>
     </reflowSkin>
  </custom>
     <skin>
