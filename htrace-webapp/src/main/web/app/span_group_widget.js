@@ -80,7 +80,6 @@ htrace.SpanGroupWidget = function(params) {
   var parentTreeHeight =
       htrace.treeHeight(this.span, htrace.getReifiedParents);
 
-  console.log("parentTreeHeight = " + parentTreeHeight);
   // Traverse the parents tree upwards.
   var thisWidget = this;
   htrace.treeTraverseDepthFirstPost(this.span, htrace.getReifiedParents, 0,
@@ -100,11 +99,5 @@ htrace.SpanGroupWidget = function(params) {
         }
       });
   this.yF = this.spanY + 4;
-  console.log("SpanGroupWidget(this.span=" +
-      JSON.stringify(this.span.unparse()) +
-      ", x0=" + this.x0 + ", xB=" + this.xB +
-      ", xD=" + this.xD + ", xF=" + this.xF +
-      ", y0=" + this.y0 + ", yF=" + this.yF +
-      ")");
   return this;
 };

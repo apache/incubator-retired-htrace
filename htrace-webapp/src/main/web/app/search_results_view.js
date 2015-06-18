@@ -30,11 +30,14 @@ htrace.SearchResultsView = Backbone.View.extend({
   initialize: function(options) {
     this.searchResults = options.searchResults;
     this.el = options.el;
-    this.listenTo(this.searchResults, 'add remove change reset', this.render);
+    var view = this;
+    this.listenTo(this.searchResults, 'add remove change reset',
+      _.debounce(function()  {
+      view.render();
+    }, 10));
 
     // Re-render the canvas when the window size changes.
     // Add a debouncer delay to avoid spamming render requests.
-    var view = this;
     $(window).on("resize", _.debounce(function()  {
       view.render();
     }, 250));
