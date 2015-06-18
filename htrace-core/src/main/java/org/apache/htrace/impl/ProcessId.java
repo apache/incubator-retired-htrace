@@ -58,7 +58,7 @@ public final class ProcessId {
   /**
    * The configuration key to use for process id
    */
-  static final String PROCESS_ID_KEY = "process.id";
+  public static final String PROCESS_ID_KEY = "process.id";
 
   /**
    * The default process ID to use if no other ID is configured.
