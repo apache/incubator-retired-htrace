@@ -76,7 +76,21 @@ htrace.Span = Backbone.Model.extend({
     this.set("description", response.d ? response.d : "");
     this.set("begin", response.b ? parseInt(response.b, 10) : 0);
     this.set("end", response.e ? parseInt(response.e, 10) : 0);
-
+    if (response.t) {
+      var t = response.t.sort(function(a, b) {
+          if (a.t < b.t) {
+            return -1;
+          } else if (a.t > b.t) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+      this.set("timeAnnotations", t);
+    } else {
+      this.set("timeAnnotations", []);
+    }
+    this.set("infoAnnotations", response.n ? response.n : {});
     this.set("selected", false);
 
     // reifiedChildren starts off as null and will be filled in as needed.
@@ -113,6 +127,12 @@ htrace.Span = Backbone.Model.extend({
     }
     if (this.get("end") > 0) {
       obj.e = this.get("end");
+    }
+    if (this.get("timeAnnotations").length > 0) {
+      obj.t = this.get("timeAnnotations");
+    }
+    if (_.size(this.get("infoAnnotations")) > 0) {
+      obj.n = this.get("infoAnnotations");
     }
     return obj;
   },

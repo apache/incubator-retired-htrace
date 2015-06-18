@@ -116,20 +116,49 @@ htrace.SpanWidget = function(params) {
   this.fillSpanDetailsView = function() {
     var info = {
       spanID: this.span.get("spanID"),
-      begin: htrace.dateToString(parseInt(this.span.get("begin"), 10)),
-      end: htrace.dateToString(parseInt(this.span.get("end"), 10)),
+      begin: htrace.dateToString(this.span.get("begin"), 10),
+      end: htrace.dateToString(this.span.get("end"), 10),
+      duration: ((this.span.get("end") - this.span.get("begin")) + " ms")
     };
     var explicitOrder = {
-      spanId: -3,
-      begin: -2,
-      end: -1
+      spanId: 1,
+      begin: 2,
+      end: 3,
+      duration: 4
     };
-    keys = [];
+    keys = ["duration"];
     for(k in this.span.attributes) {
       if (k == "reifiedChildren") {
         continue;
       }
       if (k == "reifiedParents") {
+        continue;
+      }
+      if (k == "selected") {
+        continue;
+      }
+      if (k == "timeAnnotations") {
+        // For timeline annotations, make the times into top-level keys.
+        var timeAnnotations = this.span.get("timeAnnotations");
+        for (var i = 0; i < timeAnnotations.length; i++) {
+          var key = htrace.dateToString(timeAnnotations[i].t);
+          keys.push(key);
+          info[key] = timeAnnotations[i].m;
+          explicitOrder[key] = 200;
+        }
+        continue;
+      }
+      if (k == "infoAnnotations") {
+        // For info annotations, move the keys to the top level.
+        // Surround them in brackets to make it clear that they are
+        // user-defined.
+        var infoAnnotations = this.span.get("infoAnnotations");
+        _.each(infoAnnotations, function(value, key) {
+          key = "[" + key + "]";
+          keys.push(key);
+          info[key] = value;
+          explicitOrder[key] = 200;
+        });
         continue;
       }
       keys.push(k);
@@ -140,8 +169,8 @@ htrace.SpanWidget = function(params) {
     // We sort the keys so that the stuff we want at the top appears at the top,
     // and everything else is in alphabetical order.
     keys = keys.sort(function(a, b) {
-        var oa = explicitOrder[a] || 0;
-        var ob = explicitOrder[b] || 0;
+        var oa = explicitOrder[a] || 100;
+        var ob = explicitOrder[b] || 100;
         if (oa < ob) {
           return -1;
         } else if (oa > ob) {
