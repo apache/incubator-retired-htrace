@@ -99,9 +99,9 @@ htrace.SearchResultsView = Backbone.View.extend({
     $('#selectedTime').attr('readonly', 'readonly');
     this.canvas = $("#resultsCanvas");
     this.ctx = this.canvas.get(0).getContext("2d");
-    this.scaleCanvas();
     this.setupCoordinates();
     this.setupWidgets();
+    this.scaleCanvas();
     this.draw();
     this.attachEvents();
     return this;
@@ -127,46 +127,45 @@ htrace.SearchResultsView = Backbone.View.extend({
 
   // Sets up the canvas size and scaling.
   scaleCanvas: function() {
-    var cssX = this.canvas.parent().innerWidth();
-    var cssY = $(window).innerHeight() - $("#header").innerHeight() - 50;
     var ratio = this.computeScaleFactor();
-    console.log("scaleCanvas: cssX=" + cssX + ", cssY=" + cssY + ", ratio=" + ratio);
-    this.maxX = cssX;
-    this.maxY = cssY;
-    $('#searchView').css('height', cssY + "px");
-    $('#results').css('width', cssX + "px");
-    $('#results').css('height', cssY + "px");
-    $('#resultsView').css('width', cssX + "px");
-    $('#resultsView').css('height', cssY + "px");
-    $('#resultsDiv').css('width', cssX + "px");
-    $('#resultsDiv').css('height', cssY + "px");
-    $('#resultsCanvas').css('width', cssX + "px");
-    $('#resultsCanvas').css('height', cssY + "px");
-    this.ctx.canvas.width = cssX * ratio;
-    this.ctx.canvas.height = cssY * ratio;
+    //console.log("scaleCanvas: cssX=" + cssX + ", cssY=" + cssY + ", ratio=" + ratio);
+    $('#searchView').css('height', this.canvasY + "px");
+    $('#results').css('width', this.viewX + "px");
+    $('#results').css('height', this.canvasY + "px");
+    $('#resultsView').css('width', this.viewX + "px");
+    $('#resultsView').css('height', this.canvasY + "px");
+    $('#resultsDiv').css('width', this.viewX + "px");
+    $('#resultsDiv').css('height', this.canvasY + "px");
+    $('#resultsCanvas').css('width', this.viewX + "px");
+    $('#resultsCanvas').css('height', this.canvasY + "px");
+    this.ctx.canvas.width = this.viewX * ratio;
+    this.ctx.canvas.height = this.canvasY * ratio;
     this.ctx.scale(ratio, ratio);
   },
 
   //
   // Set up the screen coordinates.
   //
-  //  0              xB         xD                   xS         maxX
+  //  0              xB         xD                   xS         viewX
   //  +--------------+----------+--------------------+-----------+
   //  |ProcessId     | Buttons  | Span Description   | Scrollbar |
   //  +--------------+----------+--------------------+-----------+
   //
   setupCoordinates: function() {
-    this.xB = Math.min(300, Math.floor(this.maxX / 5));
-    this.xD = this.xB + Math.min(75, Math.floor(this.maxX / 20));
-    var scrollBarWidth = Math.min(50, Math.floor(this.maxX / 10));
-    this.xS = this.maxX - scrollBarWidth;
+    this.viewX = this.canvas.parent().innerWidth();
+    this.viewY = $(window).innerHeight() - $("#header").innerHeight() - 50;
+    this.xB = Math.min(300, Math.floor(this.viewX / 5));
+    this.xD = this.xB + Math.min(75, Math.floor(this.viewX / 20));
+    var scrollBarWidth = Math.min(50, Math.floor(this.viewX / 10));
+    this.xS = this.viewX - scrollBarWidth;
+    this.canvasY = this.viewY;
   },
 
   setupWidgets: function() {
     this.widgetManager = new htrace.WidgetManager({searchResultsView: this});
 
     // Create a SpanWidget for each span we know about
-    var spanWidgetHeight = Math.min(25, Math.floor(this.maxY / 32));
+    var spanWidgetHeight = Math.min(25, Math.floor(this.viewY / 32));
     var numResults = this.searchResults.size();
     var groupY = 0;
     for (var i = 0; i < numResults; i++) {
@@ -185,6 +184,9 @@ htrace.SearchResultsView = Backbone.View.extend({
       });
       groupY = widget.yF;
     }
+    if (this.canvasY < groupY) {
+      this.canvasY = groupY;
+    }
 
     // Create the time cursor widget.
     var selectedTime = this.begin;
@@ -200,7 +202,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.timeCursor.x0 = this.xD;
     this.timeCursor.xF = this.xS;
     this.timeCursor.y0 = 0;
-    this.timeCursor.yF = this.maxY;
+    this.timeCursor.yF = this.canvasY;
     this.timeCursor.begin = this.begin;
     this.timeCursor.end = this.end;
   },
@@ -214,7 +216,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.ctx.save();
     this.ctx.fillStyle="#ffffff";
     this.ctx.strokeStyle="#000000";
-    this.ctx.fillRect(0, 0, this.maxX, this.maxY);
+    this.ctx.fillRect(0, 0, this.viewX, this.canvasY);
     this.ctx.restore();
 
     // Draw all the widgets.
@@ -222,10 +224,10 @@ htrace.SearchResultsView = Backbone.View.extend({
   },
 
   checkCanvasTooSmall: function() {
-    if ((this.maxX < 200) || (this.maxY < 200)) {
+    if ((this.viewX < 200) || (this.viewY < 200)) {
       this.ctx.fillStyle="#cccccc";
       this.ctx.strokeStyle="#000000";
-      this.ctx.fillRect(0, 0, this.maxX, this.maxY);
+      this.ctx.fillRect(0, 0, this.viewX, this.viewY);
       this.ctx.font = "24px serif";
       this.ctx.fillStyle="#000000";
       this.ctx.fillText("Canvas too small!", 0, 24);
