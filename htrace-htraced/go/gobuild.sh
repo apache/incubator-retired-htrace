@@ -32,6 +32,18 @@ die() {
     exit 1
 }
 
+set_rpath() {
+    WHAT=$1
+    which patchelf &> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "You must install the patchelf command to set RPATH."
+    else
+        if ! patchelf --set-rpath '$ORIGIN/' "${WHAT}"; then
+            echo "patchelf failed for ${WHAT}"
+        fi
+    fi
+}
+
 ACTION=install
 if [ $# -gt 0 ]; then
     ACTION="${1}"
@@ -109,6 +121,8 @@ install)
     # Make a symlink to web src dir so can do development in-situ out
     # of build dir. This is ugly but blame go build.
     ln -fs "../../htrace-webapp/src/main/web" "${GOBIN}/../"
+    # Set the RPATH to make bundling leveldb and snappy easier.
+    set_rpath "${GOBIN}/htraced"
     ;;
 bench)
     go test org/apache/htrace/... ${TAGS} -test.bench=. "$@"
