@@ -60,7 +60,8 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.widgetManager.handle({
       type: "mouseDown",
       x: this.getCanvasX(e),
-      y: this.getCanvasY(e)
+      y: this.getCanvasY(e),
+      raw: e
     });
     this.draw();
   },
@@ -70,7 +71,8 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.widgetManager.handle({
       type: "mouseUp",
       x: this.getCanvasX(e),
-      y: this.getCanvasY(e)
+      y: this.getCanvasY(e),
+      raw: e
     });
     this.draw();
   },
@@ -88,7 +90,8 @@ htrace.SearchResultsView = Backbone.View.extend({
     this.widgetManager.handle({
       type: "mouseMove",
       x: this.getCanvasX(e),
-      y: this.getCanvasY(e)
+      y: this.getCanvasY(e),
+      raw: e
     });
     this.draw();
   },
@@ -256,6 +259,10 @@ htrace.SearchResultsView = Backbone.View.extend({
     $("#resultsCanvas").on("mousemove", function(e) {
       view.handleMouseMove(e);
     });
+    $("#resultsCanvas").off("contextmenu");
+    $("#resultsCanvas").on("contextmenu", function(e) {
+      return false;
+    });
   },
 
   remove: function() {
@@ -281,68 +288,117 @@ htrace.SearchResultsView = Backbone.View.extend({
       return null;
     }
     if (type === "begin") {
-      this.setBegin(d.valueOf());
+      this.setTimes({begin: d.valueOf()});
     } else if (type === "end") {
-      this.setEnd(d.valueOf());
+      this.setTimes({end: d.valueOf()});
     } else {
       throw "invalid type for handleBeginOrEndChange: expected begin or end.";
     }
-  },
-
-  setBegin: function(val) {
-    if (this.end < val + this.MINIMUM_TIME_SPAN) {
-      this.begin = val;
-      this.end = val + this.MINIMUM_TIME_SPAN;
-      console.log("SearchResultsView#setBegin(begin=" + this.begin +
-            ", end=" + this.end + ")");
-      $("#begin").val(htrace.dateToString(this.begin));
-      $("#end").val(htrace.dateToString(this.end));
-    } else {
-      this.begin = val;
-      console.log("SearchResultsView#setBegin(begin=" + this.begin + ")");
-      $("#begin").val(htrace.dateToString(this.begin));
-    }
     this.render();
   },
 
-  setEnd: function(val) {
-    if (this.begin + this.MINIMUM_TIME_SPAN > val) {
-      this.begin = val;
-      this.end = this.begin + this.MINIMUM_TIME_SPAN;
-      console.log("SearchResultsView#setEnd(begin=" + this.begin +
-            ", end=" + this.end + ")");
-      $("#begin").val(htrace.dateToString(this.begin));
-      $("#end").val(htrace.dateToString(this.end));
-    } else {
-      this.end = val;
-      console.log("SearchResultsView#setEnd(end=" + this.end + ")");
-      $("#end").val(htrace.dateToString(this.end));
+  setTimes: function(params) {
+    if (params["begin"]) {
+      this.begin = params["begin"];
     }
-    this.render();
+    if (params["end"]) {
+      this.end = params["end"];
+    }
+    if (this.end < this.begin) {
+      var b = this.begin;
+      this.begin = this.end;
+      this.end = b;
+    }
+    var delta = this.end - this.begin;
+    if (delta < this.MINIMUM_TIME_SPAN) {
+      var needed = this.MINIMUM_TIME_SPAN - delta;
+      this.begin -= (needed / 2);
+      this.end += (needed / 2);
+    }
+    $("#begin").val(htrace.dateToString(this.begin));
+    $("#end").val(htrace.dateToString(this.end));
+    // caller should invoke render()
   },
 
-  zoomFitAll: function() {
-    var numResults = this.searchResults.size();
+  clearHandler: function() {
+    console.log("invoking clearHandler.");
+    var toDelete = []
+    var noneSelected = true;
+    for (var i = 0; i < this.searchResults.length; i++) {
+      var resultSelected = false;
+      var model = this.searchResults.at(i);
+      htrace.treeTraverseDepthFirstPre(model,
+        htrace.getReifiedChildren, 0,
+          function(node, depth) {
+            if (noneSelected) {
+              if (node.get("selected")) {
+                resultSelected = true;
+              }
+            }
+          });
+      htrace.treeTraverseDepthFirstPre(model,
+        htrace.getReifiedParents, 0,
+          function(node, depth) {
+            if (node.get("selected")) {
+              resultSelected = true;
+            }
+          });
+      if (resultSelected) {
+        if (noneSelected) {
+          toDelete = [];
+          noneSelected = false;
+        }
+        toDelete.push(model);
+      } else if (noneSelected) {
+        toDelete.push(model);
+      }
+    }
+    this.render();
+    console.log("clearHandler: removing " + JSON.stringify(toDelete));
+    this.searchResults.remove(toDelete);
+  },
+
+  getSelectedSpansOrAllSpans: function() {
+    // Get the list of selected spans.
+    // If there are no spans selected, we return all spans.
+    var ret = [];
+    var noneSelected = true;
+    this.applyToAllSpans(function(span) {
+        if (span.get("selected")) {
+          if (noneSelected) {
+            ret = [];
+            noneSelected = false;
+          }
+          ret.push(span);
+        } else if (noneSelected) {
+          ret.push(span);
+        }
+      });
+    return ret;
+  },
+
+  zoomHandler: function() {
+    var zoomSpans = this.getSelectedSpansOrAllSpans();
+    var numResults = zoomSpans.length;
     if (numResults == 0) {
-      this.setBegin(0);
-      this.setEnd(this.MINIMUM_TIME_SPAN);
+      this.setTimes({begin:0, end:this.MINIMUM_TIME_SPAN});
+      this.render();
       return;
     }
     var minStart = 4503599627370496;
     var maxEnd = 0;
     for (var i = 0; i < numResults; i++) {
-      var span = this.searchResults.at(i);
-      var begin = span.getEarliestBegin();
+      var begin = zoomSpans[i].getEarliestBegin();
       if (begin < minStart) {
         minStart = begin;
       }
-      var end = span.getLatestEnd();
-      if (end > minStart) {
+      var end = zoomSpans[i].getLatestEnd();
+      if (end > maxEnd) {
         maxEnd = end;
       }
     }
-    this.setBegin(minStart);
-    this.setEnd(maxEnd);
+    this.setTimes({begin: minStart, end: maxEnd});
+    this.render();
   },
 
   // Apply a function to all spans
@@ -351,7 +407,6 @@ htrace.SearchResultsView = Backbone.View.extend({
       htrace.treeTraverseDepthFirstPre(this.searchResults.at(i),
         htrace.getReifiedChildren, 0,
           function(node, depth) {
-            console.log("node = " + node + ", node.constructor.name = " + node.constructor.name);
             cb(node);
           });
       htrace.treeTraverseDepthFirstPre(this.searchResults.at(i),

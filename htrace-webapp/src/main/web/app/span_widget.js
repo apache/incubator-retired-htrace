@@ -19,6 +19,94 @@
 
 var htrace = htrace || {};
 
+htrace.fillSpanDetailsView = function(span) {
+  var info = {
+    spanID: span.get("spanID"),
+    begin: htrace.dateToString(span.get("begin"), 10),
+    end: htrace.dateToString(span.get("end"), 10),
+    duration: ((span.get("end") - span.get("begin")) + " ms")
+  };
+  var explicitOrder = {
+    spanId: 1,
+    begin: 2,
+    end: 3,
+    duration: 4
+  };
+  keys = ["duration"];
+  for(k in span.attributes) {
+    if (k == "reifiedChildren") {
+      continue;
+    }
+    if (k == "reifiedParents") {
+      continue;
+    }
+    if (k == "selected") {
+      continue;
+    }
+    if (k == "timeAnnotations") {
+      // For timeline annotations, make the times into top-level keys.
+      var timeAnnotations = span.get("timeAnnotations");
+      for (var i = 0; i < timeAnnotations.length; i++) {
+        var key = htrace.dateToString(timeAnnotations[i].t);
+        keys.push(key);
+        info[key] = timeAnnotations[i].m;
+        explicitOrder[key] = 200;
+      }
+      continue;
+    }
+    if (k == "infoAnnotations") {
+      // For info annotations, move the keys to the top level.
+      // Surround them in brackets to make it clear that they are
+      // user-defined.
+      var infoAnnotations = span.get("infoAnnotations");
+      _.each(infoAnnotations, function(value, key) {
+        key = "[" + key + "]";
+        keys.push(key);
+        info[key] = value;
+        explicitOrder[key] = 200;
+      });
+      continue;
+    }
+    keys.push(k);
+    if (info[k] == null) {
+      info[k] = span.get(k);
+    }
+  }
+  // We sort the keys so that the stuff we want at the top appears at the top,
+  // and everything else is in alphabetical order.
+  keys = keys.sort(function(a, b) {
+      var oa = explicitOrder[a] || 100;
+      var ob = explicitOrder[b] || 100;
+      if (oa < ob) {
+        return -1;
+      } else if (oa > ob) {
+        return 1;
+      } else if (a < b) {
+        return -1;
+      } else if (a > b) {
+        return 1;
+      } else {
+        return 0;
+      }
+    });
+  var len = keys.length;
+  var h = '<table style="table-layout:fixed;width:100%;word-wrap:break-word">';
+  for (i = 0; i < len; i++) {
+    // Make every other row grey to improve visibility.
+    var colorString = ((i%2) == 1) ? "#f1f1f1" : "#ffffff";
+    h += _.template('<tr bgcolor="' + colorString + '">' +
+          '<td style="width:30%;word-wrap:break-word"><%- key %></td>' +
+          '<td style="width:70%;word-wrap:break-word"><%- val %></td>' +
+        "</tr>")({key: keys[i], val: info[keys[i]]});
+  }
+  h += '</table>';
+  $("#spanDetails").html(h);
+};
+
+htrace.clearSpanDetailsView = function() {
+  $("#spanDetails").html("");
+};
+
 // Widget containing the trace span displayed on the canvas.
 htrace.SpanWidget = function(params) {
   this.draw = function() {
@@ -113,90 +201,6 @@ htrace.SpanWidget = function(params) {
         (this.end - this.begin));
   };
 
-  this.fillSpanDetailsView = function() {
-    var info = {
-      spanID: this.span.get("spanID"),
-      begin: htrace.dateToString(this.span.get("begin"), 10),
-      end: htrace.dateToString(this.span.get("end"), 10),
-      duration: ((this.span.get("end") - this.span.get("begin")) + " ms")
-    };
-    var explicitOrder = {
-      spanId: 1,
-      begin: 2,
-      end: 3,
-      duration: 4
-    };
-    keys = ["duration"];
-    for(k in this.span.attributes) {
-      if (k == "reifiedChildren") {
-        continue;
-      }
-      if (k == "reifiedParents") {
-        continue;
-      }
-      if (k == "selected") {
-        continue;
-      }
-      if (k == "timeAnnotations") {
-        // For timeline annotations, make the times into top-level keys.
-        var timeAnnotations = this.span.get("timeAnnotations");
-        for (var i = 0; i < timeAnnotations.length; i++) {
-          var key = htrace.dateToString(timeAnnotations[i].t);
-          keys.push(key);
-          info[key] = timeAnnotations[i].m;
-          explicitOrder[key] = 200;
-        }
-        continue;
-      }
-      if (k == "infoAnnotations") {
-        // For info annotations, move the keys to the top level.
-        // Surround them in brackets to make it clear that they are
-        // user-defined.
-        var infoAnnotations = this.span.get("infoAnnotations");
-        _.each(infoAnnotations, function(value, key) {
-          key = "[" + key + "]";
-          keys.push(key);
-          info[key] = value;
-          explicitOrder[key] = 200;
-        });
-        continue;
-      }
-      keys.push(k);
-      if (info[k] == null) {
-        info[k] = this.span.get(k);
-      }
-    }
-    // We sort the keys so that the stuff we want at the top appears at the top,
-    // and everything else is in alphabetical order.
-    keys = keys.sort(function(a, b) {
-        var oa = explicitOrder[a] || 100;
-        var ob = explicitOrder[b] || 100;
-        if (oa < ob) {
-          return -1;
-        } else if (oa > ob) {
-          return 1;
-        } else if (a < b) {
-          return -1;
-        } else if (a > b) {
-          return 1;
-        } else {
-          return 0;
-        }
-      });
-    var len = keys.length;
-    var h = '<table style="table-layout:fixed;width:100%;word-wrap:break-word">';
-    for (i = 0; i < len; i++) {
-      // Make every other row grey to improve visibility.
-      var colorString = ((i%2) == 1) ? "#f1f1f1" : "#ffffff";
-      h += _.template('<tr bgcolor="' + colorString + '">' +
-            '<td style="width:30%;word-wrap:break-word"><%- key %></td>' +
-            '<td style="width:70%;word-wrap:break-word"><%- val %></td>' +
-          "</tr>")({key: keys[i], val: info[keys[i]]});
-    }
-    h += '</table>';
-    $("#spanDetails").html(h);
-  };
-
   this.handle = function(e) {
     switch (e.type) {
       case "mouseDown":
@@ -204,13 +208,42 @@ htrace.SpanWidget = function(params) {
               this.x0, this.xF, this.y0, this.yF)) {
           return true;
         }
-        this.manager.searchResultsView.applyToAllSpans(function(span) {
-            if (span.get("selected") == true) {
-              span.set("selected", false);
-            }
-          });
-        this.span.set("selected", true);
-        this.fillSpanDetailsView();
+        if (e.raw.ctrlKey) {
+          // If the control key is pressed, we can unselect the current
+          // selection, or create multiple selections.
+          if (this.span.get("selected")) {
+            this.span.set("selected", false);
+          } else {
+            this.span.set("selected", true);
+          }
+          var selection = null;
+          var multipleSelections = false;
+          this.manager.searchResultsView.applyToAllSpans(function(span) {
+              if (span.get("selected")) {
+                if (selection == null) {
+                  selection = span;
+                } else {
+                  multipleSelections = true;
+                }
+              }
+            });
+          if (multipleSelections) {
+            selection = null;
+          }
+          if (selection == null) {
+            htrace.clearSpanDetailsView();
+          } else {
+            htrace.fillSpanDetailsView(selection);
+          }
+        } else {
+          this.manager.searchResultsView.applyToAllSpans(function(span) {
+              if (span.get("selected")) {
+                span.set("selected", false);
+              }
+            });
+          this.span.set("selected", true);
+          htrace.fillSpanDetailsView(this.span);
+        }
         return true;
       case "draw":
         this.draw();

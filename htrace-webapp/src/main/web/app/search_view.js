@@ -36,21 +36,19 @@ htrace.SearchView = Backbone.View.extend({
     "click .add-field": "dropdownHandler",
     "blur #begin": "blurBeginHandler",
     "blur #end": "blurEndHandler",
-    "click #zoomButton": "zoomFitAllHandler"
+    "click #zoomButton": "zoomHandler"
   },
 
   searchHandler: function(e){
     e.preventDefault();
 
-    // Do a new search.
     this.doSearch(e.ctrlKey);
   },
 
   clearHandler: function(e){
     e.preventDefault();
 
-    // Clear existing search results.
-    this.searchResults.reset();
+    this.resultsView.clearHandler();
   },
 
   doSearch: function(showDebug){
@@ -105,7 +103,7 @@ htrace.SearchView = Backbone.View.extend({
         if (firstResults) {
           // After the initial search, zoom to fit everything.
           // On subsequent searches, we leave the viewport alone.
-          searchView.resultsView.zoomFitAll();
+          searchView.resultsView.zoomHandler();
         }
         searchView.searchInProgress = false;
         if (showDebug) {
@@ -168,9 +166,9 @@ htrace.SearchView = Backbone.View.extend({
     return this.resultsView.handleBeginOrEndChange(e, "end");
   },
 
-  zoomFitAllHandler: function(e) {
+  zoomHandler: function(e) {
     e.preventDefault();
-    this.resultsView.zoomFitAll();
+    this.resultsView.zoomHandler();
   },
 
   removePredicateView: function(predicateView) {
