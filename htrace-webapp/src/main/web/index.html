@@ -92,14 +92,6 @@
           </div>
           <div class="panel panel-default">
             <div class="panel-heading">
-              <h1 class="panel-title">Span Details</h1>
-            </div style="border: 1px solid #000000;">
-            <div class="panel-body">
-              <div id="spanDetails" ></div>
-            </div>
-          </div>
-          <div class="panel panel-default">
-            <div class="panel-heading">
               <h1 class="panel-title">Search</h1>
             </div style="border: 1px solid #000000;">
             <div class="panel-body">
@@ -195,6 +187,33 @@
           </div>
         </div>
       </div>
+    </script>
+
+    <script id="modal-table-template" type="text/template">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"
+                  aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"><%= title %></h4>
+          </div>
+          <div class="modal-body">
+            <%= body %><p/>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <script id="table-row-template" type="text/template">
+      <tr bgcolor="<%= bgcolor %>">
+        <td style="width:30%;word-wrap:break-word"><%- key %></td>
+        <td style="width:70%;word-wrap:break-word"><%- val %></td>
+      </tr>
     </script>
 
     <script src="lib/jquery-2.1.4.js" type="text/javascript"></script>

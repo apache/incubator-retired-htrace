@@ -19,7 +19,7 @@
 
 var htrace = htrace || {};
 
-htrace.fillSpanDetailsView = function(span) {
+htrace.showSpanDetails = function(span) {
   var info = {
     spanID: span.get("spanID"),
     begin: htrace.dateToString(span.get("begin"), 10),
@@ -94,17 +94,12 @@ htrace.fillSpanDetailsView = function(span) {
   for (i = 0; i < len; i++) {
     // Make every other row grey to improve visibility.
     var colorString = ((i%2) == 1) ? "#f1f1f1" : "#ffffff";
-    h += _.template('<tr bgcolor="' + colorString + '">' +
-          '<td style="width:30%;word-wrap:break-word"><%- key %></td>' +
-          '<td style="width:70%;word-wrap:break-word"><%- val %></td>' +
-        "</tr>")({key: keys[i], val: info[keys[i]]});
+    h += _.template($("#table-row-template").html())(
+        {bgcolor: colorString, key: keys[i], val: info[keys[i]]});
   }
   h += '</table>';
-  $("#spanDetails").html(h);
-};
-
-htrace.clearSpanDetailsView = function() {
-  $("#spanDetails").html("");
+  htrace.showModal(_.template($("#modal-table-template").html())(
+      {title: "Span Details", body: h}));
 };
 
 // Widget containing the trace span displayed on the canvas.
@@ -182,6 +177,17 @@ htrace.SpanWidget = function(params) {
 //          ", begin=" + this.span.get('begin') + ", end=" + this.span.get('end'));
       this.ctx.fillRect(beginX, this.y0 + gapY, endX - beginX,
           this.ySize - (gapY * 2));
+
+      // Draw a dots showing time points where annotations are.
+      var annotations = this.span.get('timeAnnotations');
+      var annotationY = this.y0 + gapY;
+      var annotationW = 4;
+      var annotationH = (this.ySize - (gapY * 2)) / 2;
+      this.ctx.fillStyle="#419641";
+      for (var i = 0; i < annotations.length; i++) {
+        this.ctx.fillRect(this.timeToPosition(annotations[i].t), annotationY,
+            annotationW, annotationH);
+      }
     }
 
     // Draw description text
@@ -209,44 +215,39 @@ htrace.SpanWidget = function(params) {
           return true;
         }
         if (e.raw.ctrlKey) {
-          // If the control key is pressed, we can unselect the current
-          // selection, or create multiple selections.
+          // If the control key is pressed, we toggle the current selection.
+          // The user can create multiple selections this way.
           if (this.span.get("selected")) {
             this.span.set("selected", false);
           } else {
             this.span.set("selected", true);
           }
-          var selection = null;
-          var multipleSelections = false;
-          this.manager.searchResultsView.applyToAllSpans(function(span) {
-              if (span.get("selected")) {
-                if (selection == null) {
-                  selection = span;
-                } else {
-                  multipleSelections = true;
-                }
-              }
-            });
-          if (multipleSelections) {
-            selection = null;
-          }
-          if (selection == null) {
-            htrace.clearSpanDetailsView();
-          } else {
-            htrace.fillSpanDetailsView(selection);
-          }
         } else {
+          var that = this;
           this.manager.searchResultsView.applyToAllSpans(function(span) {
-              if (span.get("selected")) {
+              // Note: we don't want to set the selection state unless we need
+              // to.  Setting the state (even to the same thing it already is)
+              // triggers a full re-render, if the span is one in the results
+              // collection.  A full re-render slows us down and disrupts events
+              // like double-clicking.
+              if (that.span === span) {
+                if (!span.get("selected")) {
+                  span.set("selected", true);
+                }
+              } else if (span.get("selected")) {
                 span.set("selected", false);
               }
             });
-          this.span.set("selected", true);
-          htrace.fillSpanDetailsView(this.span);
         }
         return true;
       case "draw":
         this.draw();
+        return true;
+      case "dblclick":
+        if (htrace.inBoundingBox(e.x, e.y,
+            this.x0, this.xF, this.y0, this.yF)) {
+          htrace.showSpanDetails(this.span);
+        }
         return true;
     }
   };
@@ -303,5 +304,6 @@ htrace.SpanWidget = function(params) {
     });
   }
   this.manager.register("mouseDown", this);
+  this.manager.register("dblclick", this);
   return this;
 };

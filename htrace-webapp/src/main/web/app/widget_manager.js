@@ -32,6 +32,7 @@ htrace.WidgetManager = function(params) {
     "mouseUp": [],
     "mouseMove": [],
     "mouseOut": [],
+    "dblclick": [],
     "draw": [],
   };
 
