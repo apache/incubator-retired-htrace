@@ -40,6 +40,6 @@ htrace.QueryResults = Backbone.Collection.extend({
   },
 
   queryString: function() {
-    return JSON.stringify(this.queryJson);
+    return encodeURIComponent(JSON.stringify(this.queryJson));
   }
 });

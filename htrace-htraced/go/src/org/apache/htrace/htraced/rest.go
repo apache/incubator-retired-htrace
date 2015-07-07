@@ -207,7 +207,7 @@ func (hand *queryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	err := dec.Decode(&query)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusBadRequest,
-			fmt.Sprintf("Error parsing query: %s", err.Error()))
+			fmt.Sprintf("Error parsing query '%s': %s", queryString, err.Error()))
 		return
 	}
 	var results []*common.Span
