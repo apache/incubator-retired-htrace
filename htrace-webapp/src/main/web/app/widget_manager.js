@@ -40,6 +40,10 @@ htrace.WidgetManager = function(params) {
     this.listeners[type].push(widget);
   }
 
+  this.registerHighPriority = function(type, widget) {
+    this.listeners[type].unshift(widget);
+  }
+
   this.unregister = function(type, widget) {
     this.listeners[type] = _.without(this.listeners[type], widget);
   }

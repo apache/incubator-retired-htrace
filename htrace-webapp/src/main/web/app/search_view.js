@@ -122,6 +122,7 @@ htrace.SearchView = Backbone.View.extend({
               "No additional results were found for your query.<p/>");
           }
         }
+        searchView.resultsView.render();
       },
       error: function(model, response, options){
         searchView.searchResults.reset();
