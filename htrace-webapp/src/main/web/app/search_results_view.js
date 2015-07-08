@@ -372,7 +372,11 @@ htrace.SearchResultsView = Backbone.View.extend({
       }
     }
     this.render();
-    console.log("clearHandler: removing " + JSON.stringify(toDelete));
+    ids = [];
+    for (var i = 0; i < toDelete.length; i++) {
+      ids.push(toDelete[i].get("spanId"));
+    }
+    console.log("clearHandler: removing " + JSON.stringify(ids));
     this.searchResults.remove(toDelete);
   },
 
