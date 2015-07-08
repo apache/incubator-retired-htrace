@@ -30,5 +30,13 @@ htrace.showModalWarning = function(title, body) {
 htrace.showModal = function(html) {
   var el = $("#modal");
   el.html(html);
+  // Dismiss the modal dialog box when enter is pressed.
+  $(document).on("keypress", function(e) {
+    if (e.which === 13) {
+      $(document).off('keypress');
+      $('#modal button:first', $(this)).click();
+      return false;
+    }
+  });
   el.modal();
-}
+};
