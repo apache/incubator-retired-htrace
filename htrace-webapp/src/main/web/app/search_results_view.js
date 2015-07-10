@@ -142,13 +142,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     var ratio = this.computeScaleFactor();
     //console.log("scaleCanvas: cssX=" + cssX + ", cssY=" + cssY + ", ratio=" + ratio);
     $('#searchView').css('height', this.canvasY + "px");
-    $('#results').css('width', this.viewX + "px");
-    $('#results').css('height', this.canvasY + "px");
-    $('#resultsView').css('width', this.viewX + "px");
     $('#resultsView').css('height', this.canvasY + "px");
-    $('#resultsDiv').css('width', this.viewX + "px");
-    $('#resultsDiv').css('height', this.canvasY + "px");
-    $('#resultsCanvas').css('width', this.viewX + "px");
     $('#resultsCanvas').css('height', this.canvasY + "px");
     this.ctx.canvas.width = this.viewX * ratio;
     this.ctx.canvas.height = this.canvasY * ratio;

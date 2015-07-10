@@ -26,7 +26,7 @@ htrace.SearchView = Backbone.View.extend({
     this.searchResults = new htrace.SearchResults();
     this.resultsView = new htrace.SearchResultsView({
         searchResults: this.searchResults,
-        el: "#results"
+        el: "#resultsView"
     });
   },
 
