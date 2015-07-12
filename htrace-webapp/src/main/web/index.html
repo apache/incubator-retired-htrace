@@ -158,7 +158,8 @@
     </script>
 
     <script id="search-results-view-template" type="text/template">
-      <canvas id="resultsCanvas" class="htrace-canvas">
+      <!-- tabindex=1 is needed or else the canvas can never gain mouse focus on Chrome. -->
+      <canvas id="resultsCanvas" class="htrace-canvas" tabindex="1">
         <h2>Sorry, your browser does not support the HTML5 canvas element.  Please
         upgrade to a newer browser.</h2>
       </canvas>

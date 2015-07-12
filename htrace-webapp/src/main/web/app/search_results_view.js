@@ -271,6 +271,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     var view = this;
     $("#resultsCanvas").off("mousedown");
     $("#resultsCanvas").on("mousedown", function(e) {
+      $("#resultsCanvas").focus();
       view.handleMouseDown(e);
     });
     $("#resultsCanvas").off("mouseup");
@@ -289,6 +290,21 @@ htrace.SearchResultsView = Backbone.View.extend({
     $("#resultsCanvas").on("dblclick", function(e) {
       view.handleDblclick(e);
     });
+    // Keyboard events.  These events only fire if the canvas has focus.  So if
+    // you press delete when entering a time in the time dialog box, this will
+    // not fire.  Etc.
+    $("#resultsCanvas").off("keyup");
+    $("#resultsCanvas").on("keyup", function(e) {
+      if (e.keyCode == 46) { // delete key
+        view.clearHandler(false);
+        return false;
+      } else if (e.keyCode == 90) { // z key
+        view.zoomHandler();
+        return false;
+      } else {
+        return true;
+      }
+    });
     $("#resultsCanvas").off("contextmenu");
     $("#resultsCanvas").on("contextmenu", function(e) {
       return false;
@@ -302,6 +318,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     $("#resultsCanvas").off("mouseout");
     $("#resultsCanvas").off("mousemove");
     $("#resultsCanvas").off("dblclick");
+    $("#resultsCanvas").off("keyup");
     $("#resultsCanvas").off("contextmenu");
     Backbone.View.prototype.remove.apply(this, arguments);
   },
@@ -353,7 +370,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     // caller should invoke render()
   },
 
-  clearHandler: function() {
+  clearHandler: function(clearAllIfNoneSelected) {
     console.log("invoking clearHandler.");
     var toDelete = []
     var noneSelected = true;
@@ -385,6 +402,9 @@ htrace.SearchResultsView = Backbone.View.extend({
       } else if (noneSelected) {
         toDelete.push(model);
       }
+    }
+    if (noneSelected && (!clearAllIfNoneSelected)) {
+      return;
     }
     ids = [];
     for (var i = 0; i < toDelete.length; i++) {

@@ -48,7 +48,7 @@ htrace.SearchView = Backbone.View.extend({
   clearHandler: function(e){
     e.preventDefault();
 
-    this.resultsView.clearHandler();
+    this.resultsView.clearHandler(true);
   },
 
   doSearch: function(showDebug){
