@@ -19,7 +19,6 @@ package org.apache.htrace;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.MilliSpan;
-import org.apache.htrace.impl.TrueIfTracingSampler;
 import org.apache.htrace.wrappers.TraceCallable;
 import org.apache.htrace.wrappers.TraceRunnable;
 
@@ -72,7 +71,7 @@ public class Trace {
    * @param description   The description field for the new span to create.
    */
   public static TraceScope startSpan(String description) {
-    return startSpan(description, TrueIfTracingSampler.INSTANCE);
+    return startSpan(description, NeverSampler.INSTANCE);
   }
 
   public static TraceScope startSpan(String description, TraceInfo tinfo) {
