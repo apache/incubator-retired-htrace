@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.htrace;
+package org.apache.htrace.zipkin;
 
 import com.twitter.zipkin.gen.zipkinCoreConstants;
 
+import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.impl.MilliSpan;
@@ -57,7 +58,7 @@ public class TestHTraceSpanToZipkinSpan {
     Span innerTwo = innerOne.child("Some more good work");
     innerTwo.stop();
     innerOne.stop();
-    rootSpan.addKVAnnotation("foo".getBytes(), "bar".getBytes());
+    rootSpan.addKVAnnotation("foo", "bar");
     rootSpan.addTimelineAnnotation("timeline");
     rootSpan.stop();
 

@@ -16,45 +16,50 @@
  */
 package org.apache.htrace;
 
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
+
 import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
-import org.apache.htrace.Sampler;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceInfo;
-import org.apache.htrace.TraceScope;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Does some stuff and traces it.
  */
-public class TraceCreator {
+public class TraceCreator implements TestRule {
+  private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
 
   public static final String RPC_TRACE_ROOT = "createSampleRpcTrace";
   public static final String THREADED_TRACE_ROOT = "createThreadedTrace";
   public static final String SIMPLE_TRACE_ROOT = "createSimpleTrace";
 
-  /**
-   * Takes as input the SpanReceiver that should used as the sink for Spans when
-   * createDemoTrace() is called.
-   *
-   * @param receiver
-   */
-  public TraceCreator(SpanReceiver receiver) {
+  public TraceCreator addReceiver(SpanReceiver receiver) {
     Trace.addReceiver(receiver);
+    this.receivers.add(receiver);
+    return this;
   }
 
-  /**
-   * Takes as input the SpanReceivers that should used as the sink for Spans
-   * when createDemoTrace() is called.
-   *
-   * @param receivers
-   */
-  public TraceCreator(Collection<SpanReceiver> receivers) {
-    for (SpanReceiver receiver : receivers) {
-      Trace.addReceiver(receiver);
-    }
+  @Override
+  public Statement apply(final Statement base, Description description) {
+    return new Statement() {
+      @Override
+      public void evaluate() throws Throwable {
+        try {
+          base.evaluate();
+          for (SpanReceiver receiver : receivers) {
+            receiver.close();
+          }
+        } finally {
+          for (SpanReceiver receiver : receivers) {
+            Trace.removeReceiver(receiver);
+          }
+        }
+      }
+    };
   }
 
   public void createSampleRpcTrace() {

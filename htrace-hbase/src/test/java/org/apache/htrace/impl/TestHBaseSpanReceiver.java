@@ -69,7 +69,7 @@ public class TestHBaseSpanReceiver {
   public void testHBaseSpanReceiver() {
     Table htable = HBaseTestUtil.createTable(UTIL);
     SpanReceiver receiver = HBaseTestUtil.startReceiver(UTIL);
-    TraceCreator tc = new TraceCreator(receiver);
+    TraceCreator tc = new TraceCreator().addReceiver(receiver);
     tc.createThreadedTrace();
     tc.createSimpleTrace();
     tc.createSampleRpcTrace();

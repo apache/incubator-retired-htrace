@@ -16,24 +16,23 @@
  */
 package org.apache.htrace;
 
-import org.apache.htrace.HTraceConfiguration;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.TraceTree;
 import org.apache.htrace.TraceTree.SpansByParent;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.apache.htrace.impl.POJOSpanReceiver;
 import org.apache.htrace.impl.StandardOutSpanReceiver;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 public class TestHTrace {
+
+  @Rule
+  public TraceCreator traceCreator = new TraceCreator();
 
   public static final String SPAN_FILE_FLAG = "spanFile";
 
@@ -46,8 +45,6 @@ public class TestHTrace {
   public void testHtrace() throws Exception {
     final int numTraces = 3;
     String fileName = System.getProperty(SPAN_FILE_FLAG);
-
-    Collection<SpanReceiver> rcvrs = new HashSet<SpanReceiver>();
 
     // writes spans to a file if one is provided to maven with
     // -DspanFile="FILENAME", otherwise writes to standard out.
@@ -62,58 +59,52 @@ public class TestHTrace {
       conf.put("local-file-span-receiver.path", fileName);
       LocalFileSpanReceiver receiver =
           new LocalFileSpanReceiver(HTraceConfiguration.fromMap(conf));
-      rcvrs.add(receiver);
+      traceCreator.addReceiver(receiver);
     } else {
-      rcvrs.add(new StandardOutSpanReceiver(HTraceConfiguration.EMPTY));
+      traceCreator.addReceiver(new StandardOutSpanReceiver(HTraceConfiguration.EMPTY));
     }
 
-    POJOSpanReceiver psr = new POJOSpanReceiver(HTraceConfiguration.EMPTY);
-    rcvrs.add(psr);
-    runTraceCreatorTraces(new TraceCreator(rcvrs));
+    traceCreator.addReceiver(new POJOSpanReceiver(HTraceConfiguration.EMPTY){
+      @Override
+      public void close() {
+        TraceTree traceTree = new TraceTree(getSpans());
+        Collection<Span> roots = traceTree.getSpansByParent().find(0);
+        Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
+        Assert.assertEquals(numTraces, roots.size());
 
-    for (SpanReceiver receiver : rcvrs) {
-      receiver.close();
-    }
+        Map<String, Span> descriptionToRootSpan = new HashMap<String, Span>();
+        for (Span root : roots) {
+          descriptionToRootSpan.put(root.getDescription(), root);
+        }
 
-    Collection<Span> spans = psr.getSpans();
-    TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getSpansByParent().find(0);
-    Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
-    Assert.assertEquals(numTraces, roots.size());
+        Assert.assertTrue(descriptionToRootSpan.keySet().contains(
+            TraceCreator.RPC_TRACE_ROOT));
+        Assert.assertTrue(descriptionToRootSpan.keySet().contains(
+            TraceCreator.SIMPLE_TRACE_ROOT));
+        Assert.assertTrue(descriptionToRootSpan.keySet().contains(
+            TraceCreator.THREADED_TRACE_ROOT));
 
-    Map<String, Span> descriptionToRootSpan = new HashMap<String, Span>();
-    for (Span root : roots) {
-      descriptionToRootSpan.put(root.getDescription(), root);
-    }
+        SpansByParent spansByParentId = traceTree.getSpansByParent();
+        Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
+        Assert.assertEquals(1, spansByParentId.find(rpcTraceRoot.getSpanId()).size());
 
-    Assert.assertTrue(descriptionToRootSpan.keySet().contains(
-        TraceCreator.RPC_TRACE_ROOT));
-    Assert.assertTrue(descriptionToRootSpan.keySet().contains(
-        TraceCreator.SIMPLE_TRACE_ROOT));
-    Assert.assertTrue(descriptionToRootSpan.keySet().contains(
-        TraceCreator.THREADED_TRACE_ROOT));
+        Span rpcTraceChild1 = spansByParentId.find(rpcTraceRoot.getSpanId())
+            .iterator().next();
+        Assert.assertEquals(1, spansByParentId.find(rpcTraceChild1.getSpanId()).size());
 
-    SpansByParent spansByParentId = traceTree.getSpansByParent();
-    Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
-    Assert.assertEquals(1, spansByParentId.find(rpcTraceRoot.getSpanId()).size());
+        Span rpcTraceChild2 = spansByParentId.find(rpcTraceChild1.getSpanId())
+            .iterator().next();
+        Assert.assertEquals(1, spansByParentId.find(rpcTraceChild2.getSpanId()).size());
 
-    Span rpcTraceChild1 = spansByParentId.find(rpcTraceRoot.getSpanId())
-        .iterator().next();
-    Assert.assertEquals(1, spansByParentId.find(rpcTraceChild1.getSpanId()).size());
+        Span rpcTraceChild3 = spansByParentId.find(rpcTraceChild2.getSpanId())
+            .iterator().next();
+        Assert.assertEquals(0, spansByParentId.find(rpcTraceChild3.getSpanId()).size());
+      }
+    });
 
-    Span rpcTraceChild2 = spansByParentId.find(rpcTraceChild1.getSpanId())
-        .iterator().next();
-    Assert.assertEquals(1, spansByParentId.find(rpcTraceChild2.getSpanId()).size());
-
-    Span rpcTraceChild3 = spansByParentId.find(rpcTraceChild2.getSpanId())
-        .iterator().next();
-    Assert.assertEquals(0, spansByParentId.find(rpcTraceChild3.getSpanId()).size());
-  }
-
-  private void runTraceCreatorTraces(TraceCreator tc) {
-    tc.createThreadedTrace();
-    tc.createSimpleTrace();
-    tc.createSampleRpcTrace();
+    traceCreator.createThreadedTrace();
+    traceCreator.createSimpleTrace();
+    traceCreator.createSampleRpcTrace();
   }
 
   @Test(timeout=60000)

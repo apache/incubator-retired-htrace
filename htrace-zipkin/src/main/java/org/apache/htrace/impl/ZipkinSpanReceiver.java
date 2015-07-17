@@ -208,7 +208,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     /**
      * scribe client to push zipkin spans
      */
-    private Scribe.Client scribeClient = null;
+    private Scribe.Iface scribe = null;
     private final ByteArrayOutputStream baos;
     private final TProtocol streamProtocol;
 
@@ -260,7 +260,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
         if (dequeuedSpans.isEmpty()) continue;
 
         // If this is the first time through or there was an error re-connect
-        if (scribeClient == null) {
+        if (scribe == null) {
           startClient();
         }
         // Create a new list every time through so that the list doesn't change underneath
@@ -283,7 +283,7 @@ public class ZipkinSpanReceiver implements SpanReceiver {
           }
 
           // Send the entries
-          scribeClient.Log(entries);
+          scribe.Log(entries);
           // clear the list for the next time through.
           dequeuedSpans.clear();
           // reset the error counter.
@@ -320,9 +320,9 @@ public class ZipkinSpanReceiver implements SpanReceiver {
      */
     private void closeClient() {
       // close out the transport.
-      if (scribeClient != null) {
-        scribeClient.getInputProtocol().getTransport().close();
-        scribeClient = null;
+      if (scribe != null && scribe instanceof Scribe.Client) {
+        ((Scribe.Client) scribe).getInputProtocol().getTransport().close();
+        scribe = null;
       }
     }
 
@@ -330,17 +330,22 @@ public class ZipkinSpanReceiver implements SpanReceiver {
      * Re-connect to Zipkin.
      */
     private void startClient() {
-      if (this.scribeClient == null) {
-        TTransport transport = new TFramedTransport(new TSocket(collectorHostname, collectorPort));
-        try {
-          transport.open();
-        } catch (TTransportException e) {
-          e.printStackTrace();
-        }
-        TProtocol protocol = protocolFactory.getProtocol(transport);
-        this.scribeClient = new Scribe.Client(protocol);
+      if (this.scribe == null) {
+        this.scribe = newScribe();
       }
     }
+  }
+
+  // Override for testing
+  Scribe.Iface newScribe() {
+    TTransport transport = new TFramedTransport(new TSocket(collectorHostname, collectorPort));
+    try {
+      transport.open();
+    } catch (TTransportException e) {
+      e.printStackTrace();
+    }
+    TProtocol protocol = protocolFactory.getProtocol(transport);
+    return new Scribe.Client(protocol);
   }
 
   /**

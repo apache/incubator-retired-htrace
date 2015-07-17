@@ -47,7 +47,7 @@ public abstract class HTraceConfiguration {
     return new MapConf(conf);
   }
 
-  static HTraceConfiguration fromKeyValuePairs(String... pairs) {
+  public static HTraceConfiguration fromKeyValuePairs(String... pairs) {
     if ((pairs.length % 2) != 0) {
       throw new RuntimeException("You must specify an equal number of keys " +
           "and values.");
