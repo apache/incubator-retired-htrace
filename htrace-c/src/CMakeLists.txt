@@ -44,8 +44,8 @@ INCLUDE(CheckCSourceCompiles)
 CHECK_C_SOURCE_COMPILES("int main(void) { static __thread int i = 0; return 0; }" HAVE_IMPROVED_TLS)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/util/build.h.cmake ${CMAKE_BINARY_DIR}/util/build.h)
 
-get_filename_component(HTRACE_ABSPATH "../../htrace-htraced/src/go/build/htrace" ABSOLUTE)
-get_filename_component(HTRACED_ABSPATH "../../htrace-htraced/src/go/build/htraced" ABSOLUTE)
+get_filename_component(HTRACE_ABSPATH "../../htrace-htraced/go/build/htrace" ABSOLUTE)
+get_filename_component(HTRACED_ABSPATH "../../htrace-htraced/go/build/htraced" ABSOLUTE)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/test/test_config.h.cmake ${CMAKE_BINARY_DIR}/test/test_config.h)
 
 find_package(PkgConfig)
