@@ -19,6 +19,7 @@ package org.apache.htrace;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.impl.MilliSpan;
+import org.apache.htrace.impl.NeverSampler;
 import org.apache.htrace.wrappers.TraceCallable;
 import org.apache.htrace.wrappers.TraceRunnable;
 
