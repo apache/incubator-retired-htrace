@@ -158,17 +158,6 @@ public class Trace {
   }
 
   /**
-   * Adds a data annotation to the current span if tracing is currently on.
-   */
-  @Deprecated
-  public static void addKVAnnotation(byte[] key, byte[] value) {
-    Span s = currentSpan();
-    if (s != null) {
-      s.addKVAnnotation(key, value);
-    }
-  }
-
-  /**
    * Annotate the current span with the given message.
    */
   public static void addTimelineAnnotation(String msg) {

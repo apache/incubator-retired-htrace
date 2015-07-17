@@ -111,12 +111,6 @@ public interface Span {
   void addKVAnnotation(String key, String value);
 
   /**
-   * Add a data annotation associated with this span
-   */
-  @Deprecated
-  void addKVAnnotation(byte[] key, byte[] value);
-
-  /**
    * Add a timeline annotation associated with this span
    */
   void addTimelineAnnotation(String msg);

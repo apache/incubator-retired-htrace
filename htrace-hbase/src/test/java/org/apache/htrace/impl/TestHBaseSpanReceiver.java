@@ -208,9 +208,6 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public void addKVAnnotation(byte[] key, byte[] value) {}
-
-    @Override
     public void addKVAnnotation(String key, String value) {}
 
     @Override

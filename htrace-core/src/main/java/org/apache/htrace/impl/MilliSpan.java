@@ -257,16 +257,6 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public void addKVAnnotation(byte[] key, byte[] value)  {
-    // TODO: remove this method
-    try {
-      addKVAnnotation(new String(key, "UTF-8"), new String(value, "UTF-8"));
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   public void addKVAnnotation(String key, String value) {
     if (traceInfo == null)
       traceInfo = new HashMap<String, String>();
