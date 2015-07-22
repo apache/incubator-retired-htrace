@@ -60,7 +60,8 @@ ELSE(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
 ENDIF(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
 
 include_directories(${CMAKE_BINARY_DIR}
-                    ${CMAKE_SOURCE_DIR})
+                    ${CMAKE_SOURCE_DIR}
+                    ${JSON_C_INCLUDE_DIR})
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(RAND_SRC "util/rand_linux.c")
@@ -94,6 +95,9 @@ set(SRC_ALL
 )
 
 set(DEPS_ALL pthread)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  set(DEPS_ALL ${DEPS_ALL} rt)
+ENDIF()
 
 # The unit test version of the library, which exposes all symbols.
 add_library(htrace_test STATIC

@@ -22,8 +22,8 @@
 #include "util/log.h"
 
 #include <errno.h>
-#include <json/json_object.h>
-#include <json/json_tokener.h>
+#include <json_object.h>
+#include <json_tokener.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

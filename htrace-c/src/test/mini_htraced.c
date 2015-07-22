@@ -28,8 +28,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <json/json_object.h>
-#include <json/json_tokener.h>
+#include <json_object.h>
+#include <json_tokener.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
