@@ -78,19 +78,25 @@ exit 1
 fi
 
 # Check for libleveldb.so
-if [ -x "/sbin/ldconfig" ]; then
-    # Suse requires ldconfig to be run via the absolute path
-    ldconfig=/sbin/ldconfig
+if [ -n "$LEVELDB_PREFIX" ]; then
+    echo "using LEVELDB_PREFIX=$LEVELDB_PREFIX"
+    export CGO_CFLAGS="-I${LEVELDB_PREFIX}/include"
+    export CGO_LDFLAGS="-L${LEVELDB_PREFIX}"
 else
-    which ldconfig &> /dev/null
-    [ $? -eq 0 ] && ldconfig=ldconfig
-fi
-if [ -n "${ldconfig}" ]; then
-    if "${ldconfig}" -p | grep -q libleveldb; then
-        :
+    if [ -x "/sbin/ldconfig" ]; then
+        # Suse requires ldconfig to be run via the absolute path
+        ldconfig=/sbin/ldconfig
     else
-        echo "You must install the leveldb-devel package (or distro-specific equivalent.)"
-        exit 1
+        which ldconfig &> /dev/null
+        [ $? -eq 0 ] && ldconfig=ldconfig
+    fi
+    if [ -n "${ldconfig}" ]; then
+        if "${ldconfig}" -p | grep -q libleveldb; then
+            :
+        else
+            echo "You must install the leveldb-devel package (or distro-specific equivalent.)"
+            exit 1
+        fi
     fi
 fi
 

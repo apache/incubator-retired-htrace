@@ -51,9 +51,9 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/test/test_config.h.cmake ${CMAKE_BINARY_DIR}/
 find_package(PkgConfig)
 pkg_check_modules(PC_JSON-C QUIET json-c)
 find_path(JSON_C_INCLUDE_DIR "json.h"
-    HINTS ${PC_JSON-C_INCLUDEDIR} ${PC_JSON-C_INCLUDE_DIRS} PATH_SUFFIXES json-c json)
+    HINTS ${JSON_C_PREFIX} ${PC_JSON-C_INCLUDEDIR} ${PC_JSON-C_INCLUDE_DIRS} PATH_SUFFIXES json-c json)
 find_library(JSON_C_LIBRARY NAMES json-c json libjson
-    HINTS ${PC_JSON-C_LIBDIR} ${PC_JSON-C_LIBRARY_DIRS})
+    HINTS ${JSON_C_PREFIX}${PC_JSON-C_LIBDIR} ${PC_JSON-C_LIBRARY_DIRS})
 IF(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
 ELSE(JSON_C_INCLUDE_DIR AND JSON_C_LIBRARY)
     MESSAGE(FATAL_ERROR "Failed to find libjson-c. Try installing libjson-c with apt-get or yum, or install it manually from http://oss.metaparadigm.com/json-c/")
