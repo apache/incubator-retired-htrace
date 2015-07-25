@@ -22,7 +22,7 @@ import org.apache.htrace.Sampler;
 /**
  * A Sampler that never returns true.
  */
-public final class NeverSampler implements Sampler<Object> {
+public final class NeverSampler implements Sampler {
 
   public static final NeverSampler INSTANCE = new NeverSampler(null);
 
@@ -30,7 +30,7 @@ public final class NeverSampler implements Sampler<Object> {
   }
 
   @Override
-  public boolean next(Object info) {
+  public boolean next() {
     return false;
   }
 

@@ -28,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Sampler that returns true a certain percentage of the time. Specify the frequency interval by
  * configuring a {@code double} value for {@link #SAMPLER_FRACTION_CONF_KEY}.
  */
-public class ProbabilitySampler implements Sampler<Object> {
+public class ProbabilitySampler implements Sampler {
   private static final Log LOG = LogFactory.getLog(ProbabilitySampler.class);
   public final double threshold;
   public final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";
@@ -42,7 +42,7 @@ public class ProbabilitySampler implements Sampler<Object> {
   }
 
   @Override
-  public boolean next(Object info) {
+  public boolean next() {
     return ThreadLocalRandom.current().nextDouble() < threshold;
   }
 }

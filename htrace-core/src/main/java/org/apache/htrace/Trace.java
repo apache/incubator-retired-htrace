@@ -111,13 +111,9 @@ public class Trace {
     return continueSpan(parent.child(description));
   }
 
-  public static <T> TraceScope startSpan(String description, Sampler<T> s) {
-    return startSpan(description, s, null);
-  }
-
-  public static <T> TraceScope startSpan(String description, Sampler<T> s, T info) {
+  public static <T> TraceScope startSpan(String description, Sampler s) {
     Span span = null;
-    if (isTracing() || s.next(info)) {
+    if (isTracing() || s.next()) {
       span = Tracer.getInstance().createNew(description);
     }
     return continueSpan(span);

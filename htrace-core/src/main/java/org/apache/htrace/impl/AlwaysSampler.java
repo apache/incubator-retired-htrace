@@ -22,7 +22,7 @@ import org.apache.htrace.Sampler;
 /**
  * A Sampler that always returns true.
  */
-public final class AlwaysSampler implements Sampler<Object> {
+public final class AlwaysSampler implements Sampler {
 
   public static final AlwaysSampler INSTANCE = new AlwaysSampler(null);
 
@@ -30,7 +30,7 @@ public final class AlwaysSampler implements Sampler<Object> {
   }
 
   @Override
-  public boolean next(Object info) {
+  public boolean next() {
     return true;
   }
 }

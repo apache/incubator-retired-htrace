@@ -36,12 +36,12 @@ public class TraceProxy {
    * Returns an object that will trace all calls to itself.
    */
   @SuppressWarnings("unchecked")
-  public static <T, V> T trace(final T instance, final Sampler<V> sampler) {
+  public static <T, V> T trace(final T instance, final Sampler sampler) {
     InvocationHandler handler = new InvocationHandler() {
       @Override
       public Object invoke(Object obj, Method method, Object[] args)
           throws Throwable {
-        if (!sampler.next(null)) {
+        if (!sampler.next()) {
           return method.invoke(instance, args);
         }
 
