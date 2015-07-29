@@ -68,8 +68,8 @@ fi
 # Check for libleveldb.so
 if [ -n "$LEVELDB_PREFIX" ]; then
     echo "using LEVELDB_PREFIX=$LEVELDB_PREFIX"
-    export CGO_CFLAGS="-I${LEVELDB_PREFIX}/include"
-    export CGO_LDFLAGS="-L${LEVELDB_PREFIX}"
+    export CGO_CFLAGS="-I${LEVELDB_PREFIX} -I${LEVELDB_PREFIX}/include"
+    export CGO_LDFLAGS="-L${LEVELDB_PREFIX} -L${LEVELDB_PREFIX}/lib"
 else
     if [ -x "/sbin/ldconfig" ]; then
         # Suse requires ldconfig to be run via the absolute path
@@ -111,7 +111,8 @@ install)
 
     # Inject the release and git version into the htraced ldflags.
     FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
-    go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@"
+    go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@" \
+        || die "go install failed."
     # Make a symlink to web src dir so can do development in-situ out
     # of build dir. This is ugly but blame go build.
     ln -fs "../../htrace-webapp/src/main/web" "${GOBIN}/../"
