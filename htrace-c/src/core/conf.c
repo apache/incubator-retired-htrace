@@ -178,11 +178,12 @@ static int convert_double(struct htrace_log *log, const char *key,
         if (c == '\0') {
             break;
         }
-        if ((c != ' ') || (c != '\t')) {
+        if (!((c == ' ') || (c == '\t'))) {
             htrace_log(log, "error parsing %s for %s: garbage at end "
                        "of string.\n", in, key);
             return 0;
         }
+        endptr++;
     }
     *out = ret;
     return 1;
@@ -229,11 +230,12 @@ static int convert_u64(struct htrace_log *log, const char *key,
         if (c == '\0') {
             break;
         }
-        if ((c != ' ') || (c != '\t')) {
+        if (!((c == ' ') || (c == '\t'))) {
             htrace_log(log, "error parsing %s for %s: garbage at end "
                        "of string.\n", in, key);
             return 0;
         }
+        endptr++;
     }
     *out = ret;
     return 1;

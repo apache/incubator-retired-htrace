@@ -29,7 +29,9 @@ static int test_simple_conf(void)
 {
     struct htrace_conf *conf;
     struct htrace_log *lg;
-    conf = htrace_conf_from_strs("foo=bar;foo2=baz;foo3=quux;foo5=123",
+    conf = htrace_conf_from_strs("foo=bar;foo2=baz;foo3=quux;foo5=123;"
+                                 "garbage.at.end=1234garbage;"
+                                 "whitespace.at.end=123\t \t",
                                  "foo3=default3;foo4=default4");
     lg = htrace_log_alloc(conf);
     EXPECT_NONNULL(conf);
@@ -39,6 +41,8 @@ static int test_simple_conf(void)
     EXPECT_UINT64_EQ((uint64_t)123, htrace_conf_get_u64(lg, conf, "foo5"));
     EXPECT_UINT64_EQ((uint64_t)123, htrace_conf_get_u64(lg, conf, "foo5"));
     EXPECT_NULL(htrace_conf_get(conf, "unknown"));
+    EXPECT_UINT64_EQ((uint64_t)0, htrace_conf_get_u64(lg, conf, "garbage.at.end"));
+    EXPECT_UINT64_EQ((uint64_t)123, htrace_conf_get_u64(lg, conf, "whitespace.at.end"));
 
     htrace_log_free(lg);
     htrace_conf_free(conf);
@@ -51,7 +55,9 @@ static int test_double_conf(void)
     struct htrace_log *lg;
     double d;
 
-    conf = htrace_conf_from_strs("my.double=5.4;bozo=wakkawakkaa",
+    conf = htrace_conf_from_strs("my.double=5.4;bozo=wakkawakkaa;"
+                                 "garbage.at.end=1.0garbage;"
+                                 "tabs.at.end=5.0\t\t",
                                  "my.double=1.1;bozo=2.0");
     EXPECT_NONNULL(conf);
     lg = htrace_log_alloc(conf);
@@ -75,6 +81,18 @@ static int test_double_conf(void)
     d = htrace_conf_get_double(lg, conf, "unknown");
     if ((d > 0.001) || (d < -0.001)) {
         htrace_log(lg, "failed to parse unknown... expected 0.0, "
+                   "got %g\n", d);
+        return EXIT_FAILURE;
+    }
+    d = htrace_conf_get_double(lg, conf, "garbage.at.end");
+    if ((d > 0.001) || (d < -0.001)) {
+        htrace_log(lg, "failed to parse garbage.at.end... expected 0.0, "
+                   "got %g\n", d);
+        return EXIT_FAILURE;
+    }
+    d = htrace_conf_get_double(lg, conf, "tabs.at.end");
+    if ((d > 5.001) || (d < 4.990)) {
+        htrace_log(lg, "failed to parse tabs.at.end... expected 5.0, "
                    "got %g\n", d);
         return EXIT_FAILURE;
     }
