@@ -39,7 +39,7 @@ public class TestMilliSpan {
     assertEquals(expected.getDescription(), got.getDescription());
     assertEquals(expected.getTraceId(), got.getTraceId());
     assertEquals(expected.getSpanId(), got.getSpanId());
-    assertEquals(expected.getProcessId(), got.getProcessId());
+    assertEquals(expected.getTracerId(), got.getTracerId());
     assertTrue(Arrays.equals(expected.getParents(), got.getParents()));
     Map<String, String> expectedT = expected.getKVAnnotations();
     Map<String, String> gotT = got.getKVAnnotations();
@@ -75,7 +75,7 @@ public class TestMilliSpan {
         begin(123L).
         end(456L).
         parents(new long[] { 7L }).
-        processId("b2404.halxg.com:8080").
+        tracerId("b2404.halxg.com:8080").
         spanId(989L).
         traceId(444).build();
     String json = span.toJson();
@@ -90,7 +90,7 @@ public class TestMilliSpan {
         begin(-1L).
         end(-1L).
         parents(new long[] { -1L }).
-        processId("b2404.halxg.com:8080").
+        tracerId("b2404.halxg.com:8080").
         spanId(-1L).
         traceId(-1L).build();
     String json = span.toJson();
@@ -106,7 +106,7 @@ public class TestMilliSpan {
         begin(random.nextLong()).
         end(random.nextLong()).
         parents(new long[] { random.nextLong() }).
-        processId("b2404.halxg.com:8080").
+        tracerId("b2404.halxg.com:8080").
         spanId(random.nextLong()).
         traceId(random.nextLong()).build();
     String json = span.toJson();
@@ -121,7 +121,7 @@ public class TestMilliSpan {
         begin(300).
         end(400).
         parents(new long[] { }).
-        processId("b2408.halxg.com:8080").
+        tracerId("b2408.halxg.com:8080").
         spanId(111111111L).
         traceId(4443);
     Map<String, String> traceInfo = new HashMap<String, String>();

@@ -106,7 +106,7 @@ public class HTraceToZipkinConverter {
    */
   public Span convert(org.apache.htrace.Span hTraceSpan) {
     Span zipkinSpan = new Span();
-    String serviceName = hTraceSpan.getProcessId().toLowerCase();
+    String serviceName = hTraceSpan.getTracerId().toLowerCase();
     Endpoint ep = new Endpoint(ipv4Address, (short) getPort(serviceName), serviceName);
     List<Annotation> annotationList = createZipkinAnnotations(hTraceSpan, ep);
     List<BinaryAnnotation> binaryAnnotationList = createZipkinBinaryAnnotations(hTraceSpan, ep);

@@ -54,7 +54,7 @@ struct htrace_span *htrace_span_alloc(const char *desc,
     span->begin_ms = begin_ms;
     span->end_ms = 0;
     span->span_id = span_id;
-    span->prid = NULL;
+    span->trid = NULL;
     span->num_parents = 0;
     span->parent.single = 0;
     span->parent.list = NULL;
@@ -67,7 +67,7 @@ void htrace_span_free(struct htrace_span *span)
         return;
     }
     free(span->desc);
-    free(span->prid);
+    free(span->trid);
     if (span->num_parents > 1) {
         free(span->parent.list);
     }
@@ -152,8 +152,8 @@ static int span_json_sprintf_impl(const struct htrace_span *span,
     if (span->desc[0]) {
         ret += fwdprintf(&buf, &max, "\"d\":\"%s\",", span->desc);
     }
-    if (span->prid) {
-        ret += fwdprintf(&buf, &max, "\"r\":\"%s\",", span->prid);
+    if (span->trid) {
+        ret += fwdprintf(&buf, &max, "\"r\":\"%s\",", span->trid);
     }
     num_parents = span->num_parents;
     if (num_parents == 0) {
@@ -196,7 +196,7 @@ int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
         1; // span_id
 
     num_parents = span->num_parents;
-    if (span->prid) {
+    if (span->trid) {
         map_size++;
     }
     if (num_parents > 0) {
@@ -229,11 +229,11 @@ int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
     if (!cmp_write_u64(ctx, span->span_id)) {
         return 0;
     }
-    if (span->prid) {
+    if (span->trid) {
         if (!cmp_write_fixstr(ctx, "r", 1)) {
             return 0;
         }
-        if (!cmp_write_str16(ctx, span->prid, strlen(span->prid))) {
+        if (!cmp_write_str16(ctx, span->trid, strlen(span->trid))) {
             return 0;
         }
     }

@@ -20,28 +20,28 @@ import java.io.IOException;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
-public class TestProcessId {
-  private void testProcessIdImpl(String expected, String fmt) {
-    assertEquals(expected, new ProcessId(fmt).get());
+public class TestTracerId {
+  private void testTracerIdImpl(String expected, String fmt) {
+    assertEquals(expected, new TracerId(fmt).get());
   }
 
   @Test
-  public void testSimpleProcessIds() {
-    testProcessIdImpl("abc", "abc");
-    testProcessIdImpl("abc", "a\\bc");
-    testProcessIdImpl("abc", "ab\\c");
-    testProcessIdImpl("abc", "\\a\\b\\c");
-    testProcessIdImpl("a\\bc", "a\\\\bc");
+  public void testSimpleTracerIds() {
+    testTracerIdImpl("abc", "abc");
+    testTracerIdImpl("abc", "a\\bc");
+    testTracerIdImpl("abc", "ab\\c");
+    testTracerIdImpl("abc", "\\a\\b\\c");
+    testTracerIdImpl("a\\bc", "a\\\\bc");
   }
 
   @Test
   public void testSubstitutionVariables() throws IOException {
-    testProcessIdImpl(ProcessId.getProcessName(), "${pname}");
-    testProcessIdImpl("my." + ProcessId.getProcessName(), "my.${pname}");
-    testProcessIdImpl(ProcessId.getBestIpString() + ".str", "${ip}.str");
-    testProcessIdImpl("${pname}", "\\${pname}");
-    testProcessIdImpl("$cash$money{}", "$cash$money{}");
-    testProcessIdImpl("Foo." + Long.valueOf(ProcessId.getOsPid()).toString(),
+    testTracerIdImpl(TracerId.getProcessName(), "${pname}");
+    testTracerIdImpl("my." + TracerId.getProcessName(), "my.${pname}");
+    testTracerIdImpl(TracerId.getBestIpString() + ".str", "${ip}.str");
+    testTracerIdImpl("${pname}", "\\${pname}");
+    testTracerIdImpl("$cash$money{}", "$cash$money{}");
+    testTracerIdImpl("Foo." + Long.valueOf(TracerId.getOsPid()).toString(),
         "Foo.${pid}");
   }
 }

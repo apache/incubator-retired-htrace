@@ -176,12 +176,12 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public String getProcessId() {
+    public String getTracerId() {
       return span.getProcessId();
     }
 
     @Override
-    public void setProcessId(String processId) {
+    public void setTracerId(String tracerId) {
       throw new UnsupportedOperationException();
     }
 
@@ -192,9 +192,9 @@ public class TestHBaseSpanReceiver {
 
     @Override
     public String toString() {
-      return String.format("Span{Id:0x%16x,parentId:0x%16x,pid:%s,desc:%s}",
+      return String.format("Span{Id:0x%16x,parentId:0x%16x,trid:%s,desc:%s}",
                            getSpanId(), span.getParentId(),
-                           getProcessId(), getDescription());
+                           getTracerId(), getDescription());
     }
 
     @Override

@@ -57,7 +57,7 @@ public class TestLocalFileSpanReceiver {
     confMap.put(LocalFileSpanReceiver.PATH_KEY, traceFileName);
     confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
                 LocalFileSpanReceiver.class.getName());
-    confMap.put(ProcessId.PROCESS_ID_KEY, "testPid");
+    confMap.put(TracerId.TRACER_ID_KEY, "testTrid");
     SpanReceiver rcvr =
         new SpanReceiverBuilder(HTraceConfiguration.fromMap(confMap))
             .logErrors(false).build();
@@ -70,6 +70,6 @@ public class TestLocalFileSpanReceiver {
     ObjectMapper mapper = new ObjectMapper();
     MilliSpan span = mapper.readValue(new File(traceFileName), MilliSpan.class);
     assertEquals("testWriteToLocalFile", span.getDescription());
-    assertEquals("testPid", span.getProcessId());
+    assertEquals("testTrid", span.getTracerId());
   }
 }

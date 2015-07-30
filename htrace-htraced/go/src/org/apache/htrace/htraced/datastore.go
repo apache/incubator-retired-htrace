@@ -573,8 +573,8 @@ func loadPredicateData(pred *common.Predicate) (*predicateData, error) {
 		}
 		p.uintKey = s2u64(v)
 		break
-	case common.PROCESS_ID:
-		// Any string is valid for a process ID.
+	case common.TRACER_ID:
+		// Any string is valid for a tracer ID.
 		p.strKey = pred.Val
 		break
 	default:
@@ -638,8 +638,8 @@ func (pred *predicateData) extractRelevantSpanData(span *common.Span) (uint64, s
 		return s2u64(span.End), ""
 	case common.DURATION:
 		return s2u64(span.Duration()), ""
-	case common.PROCESS_ID:
-		return 0, span.ProcessId
+	case common.TRACER_ID:
+		return 0, span.TracerId
 	default:
 		panic(fmt.Sprintf("Field type %s isn't a 64-bit integer.", pred.Field))
 	}

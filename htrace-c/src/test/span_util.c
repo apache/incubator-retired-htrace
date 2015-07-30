@@ -150,11 +150,11 @@ static void span_json_parse_impl(struct json_object *root,
         }
     }
     if (json_object_object_get_ex(root, "r", &r)) {
-        span->prid = strdup(json_object_get_string(r));
+        span->trid = strdup(json_object_get_string(r));
     } else {
-        span->prid = strdup("");
+        span->trid = strdup("");
     }
-    if (!span->prid) {
+    if (!span->trid) {
         snprintf(err, err_len, "out of memory allocating process id");
         return;
     }
@@ -285,7 +285,7 @@ int span_compare(struct htrace_span *a, struct htrace_span *b)
     if (c) {
         return c;
     }
-    c = strcmp_handle_null(a->prid, b->prid);
+    c = strcmp_handle_null(a->trid, b->trid);
     if (c) {
         return c;
     }
@@ -444,10 +444,10 @@ struct htrace_span *span_read_msgpack(struct cmp_ctx_s *ctx,
             }
             break;
         case 'r':
-            if (span->prid) {
-                free(span->prid);
+            if (span->trid) {
+                free(span->trid);
             }
-            span->prid = cmp_read_malloced_string(ctx, "process_id",
+            span->trid = cmp_read_malloced_string(ctx, "tracer_id",
                                                   err, err_len);
             if (err[0]) {
                 goto error;

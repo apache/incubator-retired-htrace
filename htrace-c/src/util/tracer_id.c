@@ -17,7 +17,7 @@
  */
 
 #include "util/log.h"
-#include "util/process_id.h"
+#include "util/tracer_id.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -31,7 +31,7 @@
 #include <unistd.h>
 
 /**
- * @file process_id.c
+ * @file tracer_id.c
  *
  * Implements process IDs for the HTrace C client.
  */
@@ -71,7 +71,7 @@ static int append_char(char **out, int *j, char c)
     return 1;
 }
 
-char *calculate_process_id(struct htrace_log *lg, const char *fmt,
+char *calculate_tracer_id(struct htrace_log *lg, const char *fmt,
                            const char *tname)
 {
     int i = 0, j = 0, escaping = 0, v = 0;
@@ -146,7 +146,7 @@ char *calculate_process_id(struct htrace_log *lg, const char *fmt,
     }
     out[j] = '\0';
     if (v > 0) {
-      htrace_log(lg, "calculate_process_id(%s): unterminated process ID "
+      htrace_log(lg, "calculate_tracer_id(%s): unterminated process ID "
                  "substitution variable at the end of the format string.",
                  fmt);
     }
@@ -154,7 +154,7 @@ char *calculate_process_id(struct htrace_log *lg, const char *fmt,
     return out;
 
 oom:
-    htrace_log(lg, "calculate_process_id(tname=%s): OOM\n", tname);
+    htrace_log(lg, "calculate_tracer_id(tname=%s): OOM\n", tname);
     free(out);
     free(var);
     return NULL;

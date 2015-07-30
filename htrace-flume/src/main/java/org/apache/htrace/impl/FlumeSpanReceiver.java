@@ -89,12 +89,12 @@ public class FlumeSpanReceiver implements SpanReceiver {
   private int maxSpanBatchSize;
   private String flumeHostName;
   private int flumePort;
-  private final ProcessId processId;
+  private final TracerId tracerId;
 
   public FlumeSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.tf = new SimpleThreadFactory();
-    this.processId = new ProcessId(conf);
+    this.tracerId = new TracerId(conf);
     configure(conf);
   }
 
@@ -175,7 +175,7 @@ public class FlumeSpanReceiver implements SpanReceiver {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("TraceId",      Long.toString(span.getTraceId()));
             headers.put("SpanId",       Long.toString(span.getSpanId()));
-            headers.put("ProcessId",    span.getProcessId());
+            headers.put("TracerId",    span.getTracerId());
             headers.put("Description",  span.getDescription());
 
             String body = span.toJson();
@@ -274,8 +274,8 @@ public class FlumeSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
-        if (span.getProcessId().isEmpty()) {
-          span.setProcessId(processId.get());
+        if (span.getTracerId().isEmpty()) {
+          span.setTracerId(tracerId.get());
         }
         this.queue.add(span);
       } catch (IllegalStateException e) {

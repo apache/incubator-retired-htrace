@@ -32,10 +32,10 @@ func TestSpanToJson(t *testing.T) {
 			Description: "getFileDescriptors",
 			TraceId:     999,
 			Parents:     []SpanId{},
-			ProcessId:   "testProcessId",
+			TracerId:    "testTracerId",
 		}}
 	ExpectStrEqual(t,
-		`{"s":"2000000000000000","b":123,"e":456,"d":"getFileDescriptors","i":"00000000000003e7","p":[],"r":"testProcessId"}`,
+		`{"s":"2000000000000000","b":123,"e":456,"d":"getFileDescriptors","i":"00000000000003e7","p":[],"r":"testTracerId"}`,
 		string(span.ToJson()))
 }
 
@@ -48,7 +48,7 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			Description: "getFileDescriptors2",
 			TraceId:     999,
 			Parents:     []SpanId{},
-			ProcessId:   "testAnnotatedProcessId",
+			TracerId:    "testAnnotatedTracerId",
 			TimelineAnnotations: []TimelineAnnotation{
 				TimelineAnnotation{
 					Time: 7777,
@@ -61,6 +61,6 @@ func TestAnnotatedSpanToJson(t *testing.T) {
 			},
 		}}
 	ExpectStrEqual(t,
-		`{"s":"121f2e036d442000","b":1234,"e":4567,"d":"getFileDescriptors2","i":"00000000000003e7","p":[],"r":"testAnnotatedProcessId","t":[{"t":7777,"m":"contactedServer"},{"t":8888,"m":"passedFd"}]}`,
+		`{"s":"121f2e036d442000","b":1234,"e":4567,"d":"getFileDescriptors2","i":"00000000000003e7","p":[],"r":"testAnnotatedTracerId","t":[{"t":7777,"m":"contactedServer"},{"t":8888,"m":"passedFd"}]}`,
 		string(span.ToJson()))
 }

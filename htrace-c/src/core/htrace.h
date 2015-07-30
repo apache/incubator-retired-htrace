@@ -150,7 +150,7 @@ extern  "C" {
  *
  * Defaults to %{tname}/%{ip}
  */
-#define HTRACE_PROCESS_ID "process.id"
+#define HTRACE_TRACER_ID "tracer.id"
 
 /**
  * The sampler to use.

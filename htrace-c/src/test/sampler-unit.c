@@ -115,7 +115,7 @@ static int test_prob_sampler(double target, double slop)
 
 int main(void)
 {
-    g_test_conf = htrace_conf_from_strs("", HTRACE_PROCESS_ID"=sampler-unit");
+    g_test_conf = htrace_conf_from_strs("", HTRACE_TRACER_ID"=sampler-unit");
     EXPECT_NONNULL(g_test_conf);
     g_test_lg = htrace_log_alloc(g_test_conf);
     EXPECT_NONNULL(g_test_lg);

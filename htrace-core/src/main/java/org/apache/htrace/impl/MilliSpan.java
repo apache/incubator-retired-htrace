@@ -62,7 +62,7 @@ public class MilliSpan implements Span {
   private long parents[];
   private final long spanId;
   private Map<String, String> traceInfo = null;
-  private String processId;
+  private String tracerId;
   private List<TimelineAnnotation> timeline = null;
 
   private static long nonZeroRandom64() {
@@ -83,7 +83,7 @@ public class MilliSpan implements Span {
       traceId(traceId).
       parents(new long[] {spanId}).
       spanId(nonZeroRandom64()).
-      processId(processId).
+      tracerId(tracerId).
       build();
   }
 
@@ -98,7 +98,7 @@ public class MilliSpan implements Span {
     private long parents[] = EMPTY_PARENT_ARRAY;
     private long spanId;
     private Map<String, String> traceInfo = null;
-    private String processId = EMPTY_STRING;
+    private String tracerId = EMPTY_STRING;
     private List<TimelineAnnotation> timeline = null;
 
     public Builder() {
@@ -148,8 +148,8 @@ public class MilliSpan implements Span {
       return this;
     }
 
-    public Builder processId(String processId) {
-      this.processId = processId;
+    public Builder tracerId(String tracerId) {
+      this.tracerId = tracerId;
       return this;
     }
 
@@ -171,7 +171,7 @@ public class MilliSpan implements Span {
     this.parents = EMPTY_PARENT_ARRAY;
     this.spanId = 0;
     this.traceInfo = null;
-    this.processId = EMPTY_STRING;
+    this.tracerId = EMPTY_STRING;
     this.timeline = null;
   }
 
@@ -183,7 +183,7 @@ public class MilliSpan implements Span {
     this.parents = builder.parents;
     this.spanId = builder.spanId;
     this.traceInfo = builder.traceInfo;
-    this.processId = builder.processId;
+    this.tracerId = builder.tracerId;
     this.timeline = builder.timeline;
   }
 
@@ -287,13 +287,13 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public String getProcessId() {
-    return processId;
+  public String getTracerId() {
+    return tracerId;
   }
 
   @Override
-  public void setProcessId(String processId) {
-    this.processId = processId;
+  public void setTracerId(String tracerId) {
+    this.tracerId = tracerId;
   }
 
   @Override
@@ -341,7 +341,7 @@ public class MilliSpan implements Span {
       }
       JsonNode rNode = root.get("r");
       if (rNode != null) {
-        builder.processId(rNode.asText());
+        builder.tracerId(rNode.asText());
       }
       JsonNode parentsNode = root.get("p");
       LinkedList<Long> parents = new LinkedList<Long>();

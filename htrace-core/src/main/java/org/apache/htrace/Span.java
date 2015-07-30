@@ -134,12 +134,12 @@ public interface Span {
    *
    * Will never be null.
    */
-  String getProcessId();
+  String getTracerId();
 
   /**
    * Set the process id of a span.
    */
-  void setProcessId(String s);
+  void setTracerId(String s);
 
   /**
    * Serialize to Json
@@ -166,9 +166,9 @@ public interface Span {
       if (!span.getDescription().isEmpty()) {
         jgen.writeStringField("d", span.getDescription());
       }
-      String processId = span.getProcessId();
-      if (!processId.isEmpty()) {
-        jgen.writeStringField("r", processId);
+      String tracerId = span.getTracerId();
+      if (!tracerId.isEmpty()) {
+        jgen.writeStringField("r", tracerId);
       }
       jgen.writeArrayFieldStart("p");
       for (long parent : span.getParents()) {

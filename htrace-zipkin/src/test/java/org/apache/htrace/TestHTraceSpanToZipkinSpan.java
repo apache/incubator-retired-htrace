@@ -51,7 +51,7 @@ public class TestHTraceSpanToZipkinSpan {
             traceId(1).
             parents(new long[] { } ).
             spanId(100).
-            processId("test").
+            tracerId("test").
             begin(System.currentTimeMillis()).
             build();
     Span innerOne = rootSpan.child("Some good work");
@@ -76,7 +76,7 @@ public class TestHTraceSpanToZipkinSpan {
     long startTime = System.currentTimeMillis() * 1000;
     Span ms = new MilliSpan.Builder().
         description(traceName).traceId(1).parents(new long[] { }).
-        spanId(2).processId(traceName).begin(System.currentTimeMillis()).
+        spanId(2).tracerId(traceName).begin(System.currentTimeMillis()).
         build();
 
     Thread.sleep(500);
@@ -118,7 +118,7 @@ public class TestHTraceSpanToZipkinSpan {
   public void testHTraceDefaultPort() throws IOException {
     MilliSpan ms = new MilliSpan.Builder().description("test").
                       traceId(1).parents(new long[] { 2 }).
-                      spanId(3).processId("hmaster").
+                      spanId(3).tracerId("hmaster").
                       begin(System.currentTimeMillis()).build();
     com.twitter.zipkin.gen.Span zs = new HTraceToZipkinConverter(12345, (short) -1).convert(ms);
     for (com.twitter.zipkin.gen.Annotation annotation:zs.getAnnotations()) {
@@ -128,7 +128,7 @@ public class TestHTraceSpanToZipkinSpan {
     // make sure it's all lower cased
     ms = new MilliSpan.Builder().description("test").traceId(1).
                       parents(new long[] {2}).spanId(3).
-                      processId("HregIonServer").
+                      tracerId("HregIonServer").
                       begin(System.currentTimeMillis()).build();
     zs = new HTraceToZipkinConverter(12345, (short) -1).convert(ms);
     for (com.twitter.zipkin.gen.Annotation annotation:zs.getAnnotations()) {

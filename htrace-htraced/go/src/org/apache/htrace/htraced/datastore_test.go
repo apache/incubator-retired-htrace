@@ -52,7 +52,7 @@ var SIMPLE_TEST_SPANS []common.Span = []common.Span{
 			Description: "getFileDescriptors",
 			TraceId:     999,
 			Parents:     []common.SpanId{},
-			ProcessId:   "firstd",
+			TracerId:    "firstd",
 		}},
 	common.Span{Id: 2,
 		SpanData: common.SpanData{
@@ -61,7 +61,7 @@ var SIMPLE_TEST_SPANS []common.Span = []common.Span{
 			Description: "openFd",
 			TraceId:     999,
 			Parents:     []common.SpanId{1},
-			ProcessId:   "secondd",
+			TracerId:    "secondd",
 		}},
 	common.Span{Id: 3,
 		SpanData: common.SpanData{
@@ -70,7 +70,7 @@ var SIMPLE_TEST_SPANS []common.Span = []common.Span{
 			Description: "passFd",
 			TraceId:     999,
 			Parents:     []common.SpanId{1},
-			ProcessId:   "thirdd",
+			TracerId:    "thirdd",
 		}},
 }
 

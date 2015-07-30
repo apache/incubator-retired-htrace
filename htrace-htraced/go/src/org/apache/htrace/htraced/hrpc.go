@@ -190,11 +190,11 @@ func (cdc *HrpcServerCodec) Close() error {
 func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 	resp *common.WriteSpansResp) (err error) {
 	hand.lg.Debugf("hrpc writeSpansHandler: received %d span(s).  "+
-		"defaultPid = %s\n", len(req.Spans), req.DefaultPid)
+		"defaultTrid = %s\n", len(req.Spans), req.DefaultTrid)
 	for i := range req.Spans {
 		span := req.Spans[i]
-		if span.ProcessId == "" {
-			span.ProcessId = req.DefaultPid
+		if span.TracerId == "" {
+			span.TracerId = req.DefaultTrid
 		}
 		if hand.lg.TraceEnabled() {
 			hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())

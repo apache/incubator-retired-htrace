@@ -38,8 +38,8 @@ const MAX_HRPC_BODY_LENGTH = 64 * 1024 * 1024
 
 // A request to write spans to htraced.
 type WriteSpansReq struct {
-	DefaultPid string
-	Spans      []*Span
+	DefaultTrid string
+	Spans       []*Span
 }
 
 // A response to a WriteSpansReq

@@ -83,7 +83,7 @@ htrace.Span = Backbone.Model.extend({
     var span = {};
     this.set("spanId", response.s ? response.s : htrace.INVALID_SPAN_ID);
     this.set("traceId", response.i ? response.i : htrace.INVALID_SPAN_ID);
-    this.set("processId", response.r ? response.r : "");
+    this.set("tracerId", response.r ? response.r : "");
     this.set("parents", response.p ? response.p : []);
     this.set("description", response.d ? response.d : "");
     this.set("begin", response.b ? parseInt(response.b, 10) : 0);
@@ -125,8 +125,8 @@ htrace.Span = Backbone.Model.extend({
     if (!(this.get("traceId") === htrace.INVALID_SPAN_ID)) {
       obj.i = this.get("traceId");
     }
-    if (!(this.get("processId") === "")) {
-      obj.r = this.get("processId");
+    if (!(this.get("tracerId") === "")) {
+      obj.r = this.get("tracerId");
     }
     if (this.get("parents").length > 0) {
       obj.p = this.get("parents");

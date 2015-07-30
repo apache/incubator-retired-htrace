@@ -67,6 +67,6 @@ func NewRandomSpan(rnd *rand.Rand, potentialParents []*common.Span) *common.Span
 			Description: "getFileDescriptors",
 			TraceId:     common.SpanId(NonZeroRand64(rnd)),
 			Parents:     parents,
-			ProcessId:   fmt.Sprintf("process%d", NonZeroRand32(rnd)),
+			TracerId:    fmt.Sprintf("tracer%d", NonZeroRand32(rnd)),
 		}}
 }

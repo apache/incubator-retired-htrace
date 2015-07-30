@@ -44,7 +44,7 @@ public class TestFlumeSpanReceiver {
         description("root").
         traceId(1).
         spanId(100).
-        processId("test").
+        tracerId("test").
         begin(System.currentTimeMillis()).
         build();
     Span innerOne = rootSpan.child("Some good work");

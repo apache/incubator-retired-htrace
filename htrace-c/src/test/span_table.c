@@ -41,7 +41,7 @@ struct span_table *span_table_alloc(void)
 }
 
 int span_table_get(struct span_table *st, struct htrace_span **out,
-                   const char *desc, const char *prid)
+                   const char *desc, const char *trid)
 {
     struct htable *ht = (struct htable *)st;
     struct htrace_span *span;
@@ -51,8 +51,8 @@ int span_table_get(struct span_table *st, struct htrace_span **out,
     EXPECT_STR_EQ(desc, span->desc);
     EXPECT_UINT64_GE(span->begin_ms, span->end_ms);
     EXPECT_UINT64_GT(0L, span->span_id);
-    EXPECT_NONNULL(span->prid);
-    EXPECT_STR_EQ(prid, span->prid);
+    EXPECT_NONNULL(span->trid);
+    EXPECT_STR_EQ(trid, span->trid);
     *out = span;
     return EXIT_SUCCESS;
 }

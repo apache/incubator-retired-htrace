@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#ifndef APACHE_HTRACE_UTIL_PROCESS_ID_H
-#define APACHE_HTRACE_UTIL_PROCESS_ID_H
+#ifndef APACHE_HTRACE_UTIL_TRACER_ID_H
+#define APACHE_HTRACE_UTIL_TRACER_ID_H
 
 #include <unistd.h> /* for size_t */
 
 /**
- * @file process_id.h
+ * @file tracer_id.h
  *
  * Implements process IDs for the HTrace C client.
  *
@@ -32,16 +32,16 @@
 struct htrace_log;
 
 /**
- * Calculate the process ID.
+ * Calculate the tracer ID.
  *
  * @param lg                A log object which will be used to report warnings.
  * @param fmt               The user-provided string to use when calculating the
- *                              process ID.
+ *                              tracer ID.
  * @param tname             The name supplied when creating the htracer.
  *
- * @return                  NULL on OOM; the process ID otherwise.
+ * @return                  NULL on OOM; the tracer ID otherwise.
  */
-char *calculate_process_id(struct htrace_log *lg, const char *fmt,
+char *calculate_tracer_id(struct htrace_log *lg, const char *fmt,
                            const char *tname);
 
 /**

@@ -43,7 +43,7 @@ static struct htracer *g_test_tracer;
 
 static struct htrace_span *create_span(const char *desc,
         uint64_t begin_ms, uint64_t end_ms, uint64_t span_id,
-        const char *prid, ...) __attribute__((sentinel));
+        const char *trid, ...) __attribute__((sentinel));
 
 static int test_span_to_json(const char *expected,
                              struct htrace_span *span)
@@ -83,14 +83,14 @@ static int test_span_to_json(const char *expected,
 
 static struct htrace_span *create_span(const char *desc,
         uint64_t begin_ms, uint64_t end_ms, uint64_t span_id,
-        const char *prid, ...)
+        const char *trid, ...)
 {
     struct htrace_span* span = NULL;
     uint64_t *parents, parent;
     int i, num_parents = 0;
     va_list ap, ap2;
 
-    va_start(ap, prid);
+    va_start(ap, trid);
     va_copy(ap2, ap);
     while (1) {
         parent = va_arg(ap2, uint64_t);
@@ -110,7 +110,7 @@ static struct htrace_span *create_span(const char *desc,
     span = htrace_span_alloc(desc, begin_ms, span_id);
     span->end_ms = end_ms;
     span->span_id = span_id;
-    span->prid = xstrdup(prid);
+    span->trid = xstrdup(trid);
     span->num_parents = num_parents;
     if (num_parents == 1) {
         span->parent.single = parents[0];
@@ -155,7 +155,7 @@ static int test_spans_to_str(void)
 
 int main(void)
 {
-    g_test_conf = htrace_conf_from_strs("", HTRACE_PROCESS_ID"=span-unit");
+    g_test_conf = htrace_conf_from_strs("", HTRACE_TRACER_ID"=span-unit");
     EXPECT_NONNULL(g_test_conf);
     g_test_lg = htrace_log_alloc(g_test_conf);
     EXPECT_NONNULL(g_test_lg);

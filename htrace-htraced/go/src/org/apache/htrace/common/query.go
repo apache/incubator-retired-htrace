@@ -81,7 +81,7 @@ const (
 	BEGIN_TIME  Field = "begin"
 	END_TIME    Field = "end"
 	DURATION    Field = "duration"
-	PROCESS_ID  Field = "processid"
+	TRACER_ID   Field = "tracerid"
 )
 
 func (field Field) IsValid() bool {
@@ -96,7 +96,7 @@ func (field Field) IsValid() bool {
 
 func ValidFields() []Field {
 	return []Field{SPAN_ID, DESCRIPTION, BEGIN_TIME, END_TIME,
-		DURATION, PROCESS_ID}
+		DURATION, TRACER_ID}
 }
 
 type Predicate struct {

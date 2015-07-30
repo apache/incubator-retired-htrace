@@ -23,9 +23,9 @@
 #include "core/span.h"
 #include "receiver/receiver.h"
 #include "util/log.h"
-#include "util/process_id.h"
 #include "util/rand.h"
 #include "util/string.h"
+#include "util/tracer_id.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -67,17 +67,17 @@ struct htracer *htracer_create(const char *tname,
         htracer_free(tracer);
         return NULL;
     }
-    tracer->prid = calculate_process_id(tracer->lg,
-            htrace_conf_get(cnf, HTRACE_PROCESS_ID), tname);
-    if (!tracer->prid) {
+    tracer->trid = calculate_tracer_id(tracer->lg,
+            htrace_conf_get(cnf, HTRACE_TRACER_ID), tname);
+    if (!tracer->trid) {
         htrace_log(tracer->lg, "htracer_create: failed to "
                    "create process id string.\n");
         htracer_free(tracer);
         return NULL;
     }
-    if (!validate_json_string(tracer->lg, tracer->prid)) {
+    if (!validate_json_string(tracer->lg, tracer->trid)) {
         htrace_log(tracer->lg, "htracer_create: process ID string '%s' is "
-                   "problematic.\n", tracer->prid);
+                   "problematic.\n", tracer->trid);
         htracer_free(tracer);
         return NULL;
     }
@@ -117,7 +117,7 @@ void htracer_free(struct htracer *tracer)
     }
     random_src_free(tracer->rnd);
     free(tracer->tname);
-    free(tracer->prid);
+    free(tracer->trid);
     htrace_log_free(tracer->lg);
     free(tracer);
 }

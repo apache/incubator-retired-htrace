@@ -106,7 +106,7 @@ htrace.showSpanDetails = function(span) {
 htrace.SpanWidget = function(params) {
   this.draw = function() {
     this.drawBackground();
-    this.drawProcessId();
+    this.drawTracerId();
     this.drawDescription();
   };
 
@@ -123,14 +123,14 @@ htrace.SpanWidget = function(params) {
   }
 
   // Draw process ID text.
-  this.drawProcessId = function() {
+  this.drawTracerId = function() {
     this.ctx.save();
     this.ctx.fillStyle="#000000";
     this.ctx.font = (this.ySize - 2) + "px sans-serif";
     this.ctx.beginPath();
     this.ctx.rect(this.x0, this.y0, this.xB - this.x0, this.ySize);
     this.ctx.clip();
-    this.ctx.fillText(this.span.get('processId'), this.x0, this.yF - 4);
+    this.ctx.fillText(this.span.get('tracerId'), this.x0, this.yF - 4);
     this.ctx.restore();
   };
 

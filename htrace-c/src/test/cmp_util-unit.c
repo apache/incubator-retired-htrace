@@ -46,7 +46,7 @@ static struct htrace_span **setup_test_spans(void)
     spans[1]->begin_ms = 1950;
     spans[1]->end_ms = 2000;
     spans[1]->span_id = 0xffffffffffffffffULL;
-    spans[1]->prid = xstrdup("SecondSpanProc");
+    spans[1]->trid = xstrdup("SecondSpanProc");
     spans[1]->num_parents = 1;
     spans[1]->parent.single = 1;
 
@@ -55,7 +55,7 @@ static struct htrace_span **setup_test_spans(void)
     spans[2]->begin_ms = 1969;
     spans[2]->end_ms = 1997;
     spans[2]->span_id = 0xcfcfcfcfcfcfcfcfULL;
-    spans[2]->prid = xstrdup("ThirdSpanProc");
+    spans[2]->trid = xstrdup("ThirdSpanProc");
     spans[2]->num_parents = 2;
     spans[2]->parent.list = xcalloc(sizeof(uint64_t) * 2);
     spans[2]->parent.list[0] = 1;

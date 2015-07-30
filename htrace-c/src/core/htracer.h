@@ -50,9 +50,9 @@ struct htracer {
     char *tname;
 
     /**
-     * The process id of this context.
+     * The tracer id of this context.
      */
-    char *prid;
+    char *trid;
 
     /**
      * The random source to use in this context.

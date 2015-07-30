@@ -88,7 +88,7 @@ set(SRC_ALL
     util/cmp_util.c
     util/htable.c
     util/log.c
-    util/process_id.c
+    util/tracer_id.c
     util/string.c
     util/terror.c
     util/time.c
@@ -175,8 +175,8 @@ add_utest(mini_htraced-unit
     test/mini_htraced-unit.c
 )
 
-add_utest(process_id-unit
-    test/process_id-unit.c
+add_utest(tracer_id-unit
+    test/tracer_id-unit.c
 )
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

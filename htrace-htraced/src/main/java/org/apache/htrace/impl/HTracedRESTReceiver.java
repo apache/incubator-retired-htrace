@@ -172,7 +172,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
   /**
    * The process ID to use for all spans.
    */
-  private final ProcessId processId;
+  private final TracerId tracerId;
 
   /**
    * Create an HttpClient instance.
@@ -226,7 +226,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
             capacity + ", url=" + url +  ", periodInMs=" + periodInMs +
             ", maxToSendAtATime=" + maxToSendAtATime);
     }
-    processId = new ProcessId(conf);
+    tracerId = new TracerId(conf);
   }
 
   /**
@@ -322,7 +322,7 @@ public class HTracedRESTReceiver implements SpanReceiver {
       try {
         Request request = httpClient.newRequest(url).method(HttpMethod.POST);
         request.header(HttpHeader.CONTENT_TYPE, "application/json");
-        request.header("htrace-pid", processId.get());
+        request.header("htrace-trid", tracerId.get());
         StringBuilder bld = new StringBuilder();
         for (Span span : spanBuf) {
           bld.append(span.toJson());

@@ -126,7 +126,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
   private final byte[] cf;
   private final byte[] icf;
   private final int maxSpanBatchSize;
-  private final ProcessId processId;
+  private final TracerId tracerId;
 
   public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
@@ -154,7 +154,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
     for (int i = 0; i < numThreads; i++) {
       this.service.submit(new WriteSpanRunnable());
     }
-    this.processId = new ProcessId(conf);
+    this.tracerId = new TracerId(conf);
   }
 
   private class WriteSpanRunnable implements Runnable {
@@ -212,7 +212,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
                     .setStart(span.getStartTimeMillis())
                     .setStop(span.getStopTimeMillis())
                     .setSpanId(span.getSpanId())
-                    .setProcessId(span.getProcessId())
+                    .setProcessId(span.getTracerId())
                     .setDescription(span.getDescription());
 
             if (span.getParents().length == 0) {
@@ -333,8 +333,8 @@ public class HBaseSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
-        if (span.getProcessId().isEmpty()) {
-          span.setProcessId(processId.get());
+        if (span.getTracerId().isEmpty()) {
+          span.setTracerId(tracerId.get());
         }
         this.queue.add(span);
       } catch (IllegalStateException e) {

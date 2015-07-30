@@ -120,8 +120,8 @@ func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {
 		}
 	}
 	customHeaders := make(map[string]string)
-	if req.DefaultPid != "" {
-		customHeaders["htrace-pid"] = req.DefaultPid
+	if req.DefaultTrid != "" {
+		customHeaders["htrace-trid"] = req.DefaultTrid
 	}
 	_, _, err = hcl.makeRestRequest("POST", "writeSpans",
 		&w, customHeaders)

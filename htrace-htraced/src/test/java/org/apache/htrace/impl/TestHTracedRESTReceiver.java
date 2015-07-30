@@ -65,7 +65,7 @@ public class TestHTracedRESTReceiver {
    */
   private final class TestHTraceConfiguration extends HTraceConfiguration {
     private final URL restServerUrl;
-    final static String PROCESS_ID = "TestHTracedRESTReceiver";
+    final static String TRACER_ID = "TestHTracedRESTReceiver";
 
     public TestHTraceConfiguration(final URL restServerUrl) {
       this.restServerUrl = restServerUrl;
@@ -80,8 +80,8 @@ public class TestHTracedRESTReceiver {
     public String get(String key, String defaultValue) {
       if (key.equals(HTracedRESTReceiver.HTRACED_REST_URL_KEY)) {
         return this.restServerUrl.toString();
-      } else if (key.equals(ProcessId.PROCESS_ID_KEY)) {
-        return PROCESS_ID;
+      } else if (key.equals(TracerId.TRACER_ID_KEY)) {
+        return TRACER_ID;
       }
       return defaultValue;
     }
@@ -129,7 +129,7 @@ public class TestHTracedRESTReceiver {
           parents(new long[]{1L}).
           spanId(i);
       if (i == NUM_SPANS - 1) {
-        builder.processId("specialPid");
+        builder.tracerId("specialTrid");
       }
       spans[i] = builder.build();
     }
@@ -161,14 +161,14 @@ public class TestHTracedRESTReceiver {
               LOG.info("Got " + content + " for span " + i);
               MilliSpan dspan = MilliSpan.fromJson(content);
               assertEquals((long)i, dspan.getSpanId());
-              // Every span should have the process ID we set in the
+              // Every span should have the tracer ID we set in the
               // configuration... except for the last span, which had
               // a custom value set.
               if (i == NUM_SPANS - 1) {
-                assertEquals("specialPid", dspan.getProcessId());
+                assertEquals("specialTrid", dspan.getTracerId());
               } else {
-                assertEquals(TestHTraceConfiguration.PROCESS_ID,
-                    dspan.getProcessId());
+                assertEquals(TestHTraceConfiguration.TRACER_ID,
+                    dspan.getTracerId());
               }
             }
             return true;

@@ -99,7 +99,7 @@ public class TraceTree {
     }
   }
 
-  public static class SpansByProcessId {
+  public static class SpansByTracerId {
     /**
      * Compare two spans by process ID, and then by span ID.
      */
@@ -107,7 +107,7 @@ public class TraceTree {
         new Comparator<Span>() {
           @Override
           public int compare(Span a, Span b) {
-            int cmp = a.getProcessId().compareTo(b.getProcessId());
+            int cmp = a.getTracerId().compareTo(b.getTracerId());
             if (cmp != 0) {
               return cmp;
             } else if (a.getSpanId() < b.getSpanId()) {
@@ -122,7 +122,7 @@ public class TraceTree {
 
     private final TreeSet<Span> treeSet;
 
-    SpansByProcessId(Collection<Span> spans) {
+    SpansByTracerId(Collection<Span> spans) {
       TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
       for (Span span : spans) {
         treeSet.add(span);
@@ -130,19 +130,19 @@ public class TraceTree {
       this.treeSet = treeSet;
     }
 
-    public List<Span> find(String processId) {
+    public List<Span> find(String tracerId) {
       List<Span> spans = new ArrayList<Span>();
       Span span = new MilliSpan.Builder().
                     traceId(Long.MIN_VALUE).
                     spanId(Long.MIN_VALUE).
-                    processId(processId).
+                    tracerId(tracerId).
                     build();
       while (true) {
         span = treeSet.higher(span);
         if (span == null) {
           break;
         }
-        if (span.getProcessId().equals(processId)) {
+        if (span.getTracerId().equals(tracerId)) {
           break;
         }
         spans.add(span);
@@ -156,7 +156,7 @@ public class TraceTree {
   }
 
   private final SpansByParent spansByParent;
-  private final SpansByProcessId spansByProcessId;
+  private final SpansByTracerId spansByTracerId;
 
   /**
    * Create a new TraceTree
@@ -166,15 +166,15 @@ public class TraceTree {
    */
   public TraceTree(Collection<Span> spans) {
     this.spansByParent = new SpansByParent(spans);
-    this.spansByProcessId = new SpansByProcessId(spans);
+    this.spansByTracerId = new SpansByTracerId(spans);
   }
 
   public SpansByParent getSpansByParent() {
     return spansByParent;
   }
 
-  public SpansByProcessId getSpansByProcessId() {
-    return spansByProcessId;
+  public SpansByTracerId getSpansByTracerId() {
+    return spansByTracerId;
   }
 
   @Override

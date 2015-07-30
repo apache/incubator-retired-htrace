@@ -45,12 +45,12 @@ struct span_table *span_table_alloc(void);
  * @param out           (out param) the span.  This pointer will be valid until
  *                          the span table is freed.
  * @param desc          The span description to look for.
- * @param prid          The process ID to verify that the span has.
+ * @param trid          The process ID to verify that the span has.
  *
  * @return              0 on success; nonzero otherwise.
  */
 int span_table_get(struct span_table *st, struct htrace_span **out,
-                   const char *desc, const char *prid);
+                   const char *desc, const char *trid);
 
 /**
  * Add a span to the table.

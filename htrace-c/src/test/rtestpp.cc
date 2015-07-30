@@ -48,7 +48,7 @@ class RTestData {
 public:
     RTestData(struct rtest *rt, const char *conf_str)
         : rt_(rt),
-          cnf_(string(HTRACE_PROCESS_ID"=%{tname}/%{pid};sampler=always;") +
+          cnf_(string(HTRACE_TRACER_ID"=%{tname}/%{pid};sampler=always;") +
                string(conf_str).c_str()),
           tracer_(RECEIVER_TEST_TNAME, cnf_),
           always_(&tracer_, cnf_)
@@ -72,9 +72,9 @@ private:
     RTestData& operator=(const RTestData &other); // disallow assignment
 };
 
-static void get_receiver_test_prid(char *prid, size_t prid_len)
+static void get_receiver_test_trid(char *trid, size_t trid_len)
 {
-    snprintf(prid, prid_len, RECEIVER_TEST_TNAME "/%lld", (long long)getpid());
+    snprintf(trid, trid_len, RECEIVER_TEST_TNAME "/%lld", (long long)getpid());
 }
 
 static int rtest_generic_verify(struct rtest *rt, struct span_table *st)
@@ -116,24 +116,24 @@ int rtestpp_simple_verify(struct rtest *rt, struct span_table *st)
 {
     struct htrace_span *span;
     uint64_t doit_id, part2_id;
-    char prid[128];
+    char trid[128];
 
     EXPECT_INT_ZERO(rtest_generic_verify(rt, st));
-    get_receiver_test_prid(prid, sizeof(prid));
-    EXPECT_INT_ZERO(span_table_get(st, &span, "doit", prid));
+    get_receiver_test_trid(trid, sizeof(trid));
+    EXPECT_INT_ZERO(span_table_get(st, &span, "doit", trid));
     doit_id = span->span_id;
     EXPECT_INT_ZERO(span->num_parents);
 
-    EXPECT_INT_ZERO(span_table_get(st, &span, "part1", prid));
+    EXPECT_INT_ZERO(span_table_get(st, &span, "part1", trid));
     EXPECT_INT_EQ(1, span->num_parents);
     EXPECT_UINT64_EQ(doit_id, span->parent.single);
 
-    EXPECT_INT_ZERO(span_table_get(st, &span, "part2", prid));
+    EXPECT_INT_ZERO(span_table_get(st, &span, "part2", trid));
     EXPECT_INT_EQ(1, span->num_parents);
     part2_id = span->span_id;
     EXPECT_UINT64_EQ(doit_id, span->parent.single);
 
-    EXPECT_INT_ZERO(span_table_get(st, &span, "part2.5", prid));
+    EXPECT_INT_ZERO(span_table_get(st, &span, "part2.5", trid));
     EXPECT_INT_EQ(1, span->num_parents);
     EXPECT_UINT64_EQ(part2_id, span->parent.single);
 

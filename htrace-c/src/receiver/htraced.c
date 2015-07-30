@@ -488,8 +488,8 @@ static int should_xmit(struct htraced_rcv *rcv, uint64_t now)
     return 0; // Let's wait.
 }
 
-#define DEFAULT_PID_STR         "DefaultPid"
-#define DEFAULT_PID_STR_LEN     (sizeof(DEFAULT_PID_STR) - 1)
+#define DEFAULT_TRID_STR        "DefaultTrid"
+#define DEFAULT_TRID_STR_LEN    (sizeof(DEFAULT_TRID_STR) - 1)
 #define SPANS_STR               "Spans"
 #define SPANS_STR_LEN           (sizeof(SPANS_STR) - 1)
 
@@ -505,10 +505,10 @@ static int add_writespans_prequel(struct htraced_rcv *rcv,
     if (!cmp_write_fixmap(ctx, 2)) {
         return -1;
     }
-    if (!cmp_write_fixstr(ctx, DEFAULT_PID_STR, DEFAULT_PID_STR_LEN)) {
+    if (!cmp_write_fixstr(ctx, DEFAULT_TRID_STR, DEFAULT_TRID_STR_LEN)) {
         return -1;
     }
-    if (!cmp_write_str(ctx, rcv->tracer->prid, strlen(rcv->tracer->prid))) {
+    if (!cmp_write_str(ctx, rcv->tracer->trid, strlen(rcv->tracer->trid))) {
         return -1;
     }
     if (!cmp_write_fixstr(ctx, SPANS_STR, SPANS_STR_LEN)) {

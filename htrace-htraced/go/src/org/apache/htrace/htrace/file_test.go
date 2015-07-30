@@ -135,7 +135,7 @@ func TestReadSpans(t *testing.T) {
 				Begin:       1424736225037,
 				End:         1424736225901,
 				Description: "ClientNamenodeProtocol#getFileInfo",
-				ProcessId:   "FsShell",
+				TracerId:    "FsShell",
 				Parents:     []common.SpanId{test.SpanId("60538dfb4df91418")},
 			},
 		},
@@ -146,7 +146,7 @@ func TestReadSpans(t *testing.T) {
 				Begin:       1424736224969,
 				End:         1424736225960,
 				Description: "getFileInfo",
-				ProcessId:   "FsShell",
+				TracerId:    "FsShell",
 				Parents:     []common.SpanId{},
 				Info: common.TraceInfoMap{
 					"path": "/",

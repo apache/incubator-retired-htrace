@@ -32,10 +32,10 @@ import java.util.Locale;
 import java.util.TreeSet;
 
 /**
- * The HTrace process ID.<p/>
+ * The HTrace tracer ID.<p/>
  *
- * HTrace process IDs are created from format strings.
- * Format strings contain variables which the ProcessId class will
+ * HTrace tracer IDs are created from format strings.
+ * Format strings contain variables which the TracerId class will
  * replace with the correct values at runtime.<p/>
  *
  * <ul>
@@ -52,22 +52,22 @@ import java.util.TreeSet;
  * string "${ip}", not the IP address.  A backslash itself can be escaped by a
  * preceding backslash.
  */
-public final class ProcessId {
-  private static final Log LOG = LogFactory.getLog(ProcessId.class);
+public final class TracerId {
+  private static final Log LOG = LogFactory.getLog(TracerId.class);
 
   /**
    * The configuration key to use for process id
    */
-  public static final String PROCESS_ID_KEY = "process.id";
+  public static final String TRACER_ID_KEY = "process.id";
 
   /**
    * The default process ID to use if no other ID is configured.
    */
-  private static final String DEFAULT_PROCESS_ID = "${pname}/${ip}";
+  private static final String DEFAULT_TRACER_ID = "${pname}/${ip}";
 
-  private final String processId;
+  private final String tracerId;
 
-  ProcessId(String fmt) {
+  TracerId(String fmt) {
     StringBuilder bld = new StringBuilder();
     StringBuilder varBld = null;
     boolean escaping = false;
@@ -124,15 +124,15 @@ public final class ProcessId {
       LOG.warn("Unterminated process ID substitution variable at the end " +
           "of format string " + fmt);
     }
-    this.processId = bld.toString();
+    this.tracerId = bld.toString();
     if (LOG.isTraceEnabled()) {
       LOG.trace("ProcessID(fmt=" + fmt + "): computed process ID of \"" +
-          this.processId + "\"");
+          this.tracerId + "\"");
     }
   }
 
-  public ProcessId(HTraceConfiguration conf) {
-    this(conf.get(PROCESS_ID_KEY, DEFAULT_PROCESS_ID));
+  public TracerId(HTraceConfiguration conf) {
+    this(conf.get(TRACER_ID_KEY, DEFAULT_TRACER_ID));
   }
 
   private String processShellVar(String var) {
@@ -208,9 +208,9 @@ public final class ProcessId {
    *
    * Unfortunately, there is no simple method to get the process id in Java.
    * The approach we take here is to use the shell method (see
-   * {ProcessId#getOsPidFromShellPpid}) unless we are on Windows, where the
+   * {TracerId#getOsPidFromShellPpid}) unless we are on Windows, where the
    * shell is not available.  On Windows, we use
-   * {ProcessId#getOsPidFromManagementFactory}, which depends on some
+   * {TracerId#getOsPidFromManagementFactory}, which depends on some
    * undocumented features of the JVM, but which doesn't require a shell.
    */
   static long getOsPid() {
@@ -286,6 +286,6 @@ public final class ProcessId {
   }
 
   public String get() {
-    return processId;
+    return tracerId;
   }
 }

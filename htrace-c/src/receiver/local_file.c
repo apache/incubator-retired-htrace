@@ -114,16 +114,16 @@ static void local_file_rcv_add_span(struct htrace_rcv *r,
     char *buf;
     struct local_file_rcv *rcv = (struct local_file_rcv *)r;
 
-    span->prid = rcv->tracer->prid;
+    span->trid = rcv->tracer->trid;
     len = span_json_size(span);
     buf = malloc(len + 1);
     if (!buf) {
-        span->prid = NULL;
+        span->trid = NULL;
         htrace_log(rcv->tracer->lg, "local_file_rcv_add_span: OOM\n");
         return;
     }
     span_json_sprintf(span, len, buf);
-    span->prid = NULL;
+    span->trid = NULL;
     buf[len - 1] = '\n';
     buf[len] = '\0';
     pthread_mutex_lock(&rcv->lock);

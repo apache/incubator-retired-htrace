@@ -55,10 +55,10 @@ struct htrace_span {
     uint64_t span_id;
 
     /**
-     * The process ID of this trace scope.
+     * The tracer ID of this trace scope.
      * Dynamically allocated.  May be null.
      */
-    char *prid;
+    char *trid;
 
     /**
      * The number of parents.

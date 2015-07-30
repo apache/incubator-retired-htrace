@@ -32,7 +32,7 @@
      ";" HTRACED_FLUSH_INTERVAL_MS_KEY "=120000"\
      ";" HTRACED_WRITE_TIMEO_MS_KEY "=60000"\
      ";" HTRACED_READ_TIMEO_MS_KEY "=60000"\
-     ";" HTRACE_PROCESS_ID "=%{tname}/%{ip}"\
+     ";" HTRACE_TRACER_ID "=%{tname}/%{ip}"\
      ";" HTRACED_ADDRESS_KEY "=localhost:9095"\
      ";" HTRACED_BUFFER_SEND_TRIGGER_FRACTION "=0.50"\
     )

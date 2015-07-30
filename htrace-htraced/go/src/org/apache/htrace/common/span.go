@@ -113,7 +113,7 @@ type SpanData struct {
 	TraceId             SpanId               `json:"i"`
 	Parents             []SpanId             `json:"p"`
 	Info                TraceInfoMap         `json:"n,omitempty"`
-	ProcessId           string               `json:"r"`
+	TracerId            string               `json:"r"`
 	TimelineAnnotations []TimelineAnnotation `json:"t,omitempty"`
 }
 
