@@ -178,11 +178,7 @@ func (bld *Builder) Build() (*Config, error) {
 		str := bld.Argv[i]
 		key, val := parseAsConfigFlag(str)
 		if key != "" {
-			if val == "" {
-				cnf.settings[key] = "true"
-			} else {
-				cnf.settings[key] = val
-			}
+			cnf.settings[key] = val
 			bld.Argv = append(bld.Argv[:i], bld.Argv[i+1:]...)
 		} else {
 			i++

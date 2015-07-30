@@ -29,7 +29,7 @@ import (
 // Test that parsing command-line arguments of the form -Dfoo=bar works.
 func TestParseArgV(t *testing.T) {
 	t.Parallel()
-	argv := []string{"-Dfoo=bar", "-Dbaz=123", "-DsillyMode"}
+	argv := []string{"-Dfoo=bar", "-Dbaz=123", "-DsillyMode", "-Dlog.path="}
 	bld := &Builder{Argv: argv}
 	cnf, err := bld.Build()
 	if err != nil {
@@ -45,6 +45,9 @@ func TestParseArgV(t *testing.T) {
 		t.Fatal()
 	}
 	if cnf.GetBool("otherSillyMode") {
+		t.Fatal()
+	}
+	if "" != cnf.Get("log.path") {
 		t.Fatal()
 	}
 }
