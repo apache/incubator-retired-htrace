@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.htrace.Span;
+import org.apache.htrace.SpanId;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.Tracer;
 
@@ -40,8 +41,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Span implementation that stores its information in milliseconds since the
@@ -52,27 +51,17 @@ public class MilliSpan implements Span {
   private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static ObjectReader JSON_READER = OBJECT_MAPPER.reader(MilliSpan.class);
   private static ObjectWriter JSON_WRITER = OBJECT_MAPPER.writer();
-  private static final long EMPTY_PARENT_ARRAY[] = new long[0];
+  private static final SpanId EMPTY_PARENT_ARRAY[] = new SpanId[0];
   private static final String EMPTY_STRING = "";
 
   private long begin;
   private long end;
   private final String description;
-  private final long traceId;
-  private long parents[];
-  private final long spanId;
+  private SpanId parents[];
+  private final SpanId spanId;
   private Map<String, String> traceInfo = null;
   private String tracerId;
   private List<TimelineAnnotation> timeline = null;
-
-  private static long nonZeroRandom64() {
-    long id;
-    Random random = ThreadLocalRandom.current();
-    do {
-      id = random.nextLong();
-    } while (id == 0);
-    return id;
-  }
 
   @Override
   public Span child(String childDescription) {
@@ -80,9 +69,8 @@ public class MilliSpan implements Span {
       begin(System.currentTimeMillis()).
       end(0).
       description(childDescription).
-      traceId(traceId).
-      parents(new long[] {spanId}).
-      spanId(nonZeroRandom64()).
+      parents(new SpanId[] {spanId}).
+      spanId(spanId.newChildId()).
       tracerId(tracerId).
       build();
   }
@@ -94,9 +82,8 @@ public class MilliSpan implements Span {
     private long begin;
     private long end;
     private String description = EMPTY_STRING;
-    private long traceId;
-    private long parents[] = EMPTY_PARENT_ARRAY;
-    private long spanId;
+    private SpanId parents[] = EMPTY_PARENT_ARRAY;
+    private SpanId spanId = SpanId.INVALID;
     private Map<String, String> traceInfo = null;
     private String tracerId = EMPTY_STRING;
     private List<TimelineAnnotation> timeline = null;
@@ -119,26 +106,21 @@ public class MilliSpan implements Span {
       return this;
     }
 
-    public Builder traceId(long traceId) {
-      this.traceId = traceId;
-      return this;
-    }
-
-    public Builder parents(long parents[]) {
+    public Builder parents(SpanId parents[]) {
       this.parents = parents;
       return this;
     }
 
-    public Builder parents(List<Long> parentList) {
-      long[] parents = new long[parentList.size()];
+    public Builder parents(List<SpanId> parentList) {
+      SpanId[] parents = new SpanId[parentList.size()];
       for (int i = 0; i < parentList.size(); i++) {
-        parents[i] = parentList.get(i).longValue();
+        parents[i] = parentList.get(i);
       }
       this.parents = parents;
       return this;
     }
 
-    public Builder spanId(long spanId) {
+    public Builder spanId(SpanId spanId) {
       this.spanId = spanId;
       return this;
     }
@@ -167,9 +149,8 @@ public class MilliSpan implements Span {
     this.begin = 0;
     this.end = 0;
     this.description = EMPTY_STRING;
-    this.traceId = 0;
     this.parents = EMPTY_PARENT_ARRAY;
-    this.spanId = 0;
+    this.spanId = SpanId.INVALID;
     this.traceInfo = null;
     this.tracerId = EMPTY_STRING;
     this.timeline = null;
@@ -179,7 +160,6 @@ public class MilliSpan implements Span {
     this.begin = builder.begin;
     this.end = builder.end;
     this.description = builder.description;
-    this.traceId = builder.traceId;
     this.parents = builder.parents;
     this.spanId = builder.spanId;
     this.traceInfo = builder.traceInfo;
@@ -227,23 +207,18 @@ public class MilliSpan implements Span {
   }
 
   @Override
-  public long getSpanId() {
+  public SpanId getSpanId() {
     return spanId;
   }
 
   @Override
-  public long[] getParents() {
+  public SpanId[] getParents() {
     return parents;
   }
 
   @Override
-  public void setParents(long[] parents) {
+  public void setParents(SpanId[] parents) {
     this.parents = parents;
-  }
-
-  @Override
-  public long getTraceId() {
-    return traceId;
   }
 
   @Override
@@ -308,10 +283,6 @@ public class MilliSpan implements Span {
     return writer.toString();
   }
 
-  private static long parseUnsignedHexLong(String s) {
-    return new BigInteger(s, 16).longValue();
-  }
-
   public static class MilliSpanDeserializer
         extends JsonDeserializer<MilliSpan> {
     @Override
@@ -331,25 +302,21 @@ public class MilliSpan implements Span {
       if (dNode != null) {
         builder.description(dNode.asText());
       }
-      JsonNode iNode = root.get("i");
-      if (iNode != null) {
-        builder.traceId(parseUnsignedHexLong(iNode.asText()));
-      }
-      JsonNode sNode = root.get("s");
+      JsonNode sNode = root.get("a");
       if (sNode != null) {
-        builder.spanId(parseUnsignedHexLong(sNode.asText()));
+        builder.spanId(SpanId.fromString(sNode.asText()));
       }
       JsonNode rNode = root.get("r");
       if (rNode != null) {
         builder.tracerId(rNode.asText());
       }
       JsonNode parentsNode = root.get("p");
-      LinkedList<Long> parents = new LinkedList<Long>();
+      LinkedList<SpanId> parents = new LinkedList<SpanId>();
       if (parentsNode != null) {
         for (Iterator<JsonNode> iter = parentsNode.elements();
              iter.hasNext(); ) {
           JsonNode parentIdNode = iter.next();
-          parents.add(parseUnsignedHexLong(parentIdNode.asText()));
+          parents.add(SpanId.fromString(parentIdNode.asText()));
         }
       }
       builder.parents(parents);

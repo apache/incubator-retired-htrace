@@ -64,32 +64,32 @@ func jsonSpanFileToDotFile(jsonFile string, dotFile string) error {
 // Create output in dotfile format from a set of spans.
 func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 	sort.Sort(spans)
-	idMap := make(map[common.SpanId]*common.Span)
+	idMap := make(map[[16]byte]*common.Span)
 	for i := range spans {
 		span := spans[i]
-		if idMap[span.Id] != nil {
+		if idMap[span.Id.ToArray()] != nil {
 			fmt.Fprintf(os.Stderr, "There were multiple spans listed which "+
 				"had ID %s.\nFirst:%s\nOther:%s\n", span.Id.String(),
-				idMap[span.Id].ToJson(), span.ToJson())
+				idMap[span.Id.ToArray()].ToJson(), span.ToJson())
 		} else {
-			idMap[span.Id] = span
+			idMap[span.Id.ToArray()] = span
 		}
 	}
-	childMap := make(map[common.SpanId]common.SpanSlice)
+	childMap := make(map[[16]byte]common.SpanSlice)
 	for i := range spans {
 		child := spans[i]
 		for j := range child.Parents {
-			parent := idMap[child.Parents[j]]
+			parent := idMap[child.Parents[j].ToArray()]
 			if parent == nil {
 				fmt.Fprintf(os.Stderr, "Can't find parent id %s for %s\n",
 					child.Parents[j].String(), child.ToJson())
 			} else {
-				children := childMap[parent.Id]
+				children := childMap[parent.Id.ToArray()]
 				if children == nil {
 					children = make(common.SpanSlice, 0)
 				}
 				children = append(children, child)
-				childMap[parent.Id] = children
+				childMap[parent.Id.ToArray()] = children
 			}
 		}
 	}
@@ -102,7 +102,7 @@ func spansToDot(spans common.SpanSlice, writer io.Writer) error {
 	}
 	// Write out the edges between nodes... the parent/children relationships
 	for i := range spans {
-		children := childMap[spans[i].Id]
+		children := childMap[spans[i].Id.ToArray()]
 		sort.Sort(children)
 		if children != nil {
 			for c := range children {

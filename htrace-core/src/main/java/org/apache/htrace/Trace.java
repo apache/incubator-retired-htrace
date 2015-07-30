@@ -75,15 +75,16 @@ public class Trace {
     return startSpan(description, NeverSampler.INSTANCE);
   }
 
-  public static TraceScope startSpan(String description, TraceInfo tinfo) {
-    if (tinfo == null) return continueSpan(null);
+  public static TraceScope startSpan(String description, SpanId parentId) {
+    if (parentId == null) {
+      return continueSpan(null);
+    }
     Span newSpan = new MilliSpan.Builder().
         begin(System.currentTimeMillis()).
         end(0).
         description(description).
-        traceId(tinfo.traceId).
-        spanId(Tracer.nonZeroRandom64()).
-        parents(new long[] { tinfo.spanId }).
+        spanId(parentId.newChildId()).
+        parents(new SpanId[] { parentId }).
         build();
     return continueSpan(newSpan);
   }

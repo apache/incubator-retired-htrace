@@ -27,6 +27,8 @@
  * This is an internal header, not intended for external use.
  */
 
+#include "core/span_id.h"
+
 #include <stdint.h>
 
 struct cmp_ctx_s;
@@ -52,7 +54,7 @@ struct htrace_span {
     /**
      * The span id.
      */
-    uint64_t span_id;
+    struct htrace_span_id span_id;
 
     /**
      * The tracer ID of this trace scope.
@@ -69,13 +71,13 @@ struct htrace_span {
         /**
          * If there is 1 parent, this is the parent ID.
          */
-        uint64_t single;
+        struct htrace_span_id single;
 
         /**
          * If there are multiple parents, this is a pointer to a dynamically
          * allocated array of parent IDs.
          */
-        uint64_t *list;
+        struct htrace_span_id *list;
     } parent;
 };
 
@@ -89,7 +91,7 @@ struct htrace_span {
  * @return              NULL on OOM; the span otherwise.
  */
 struct htrace_span *htrace_span_alloc(const char *desc,
-                uint64_t begin_ms, uint64_t span_id);
+                uint64_t begin_ms, struct htrace_span_id *span_id);
 
 /**
  * Free the memory associated with an htrace span.

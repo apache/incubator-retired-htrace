@@ -208,17 +208,17 @@ public class HBaseSpanReceiver implements SpanReceiver {
         try {
           for (Span span : dequeuedSpans) {
             sbuilder.clear()
-                    .setTraceId(span.getTraceId())
+                    .setTraceId(span.getSpanId().getHigh())
                     .setStart(span.getStartTimeMillis())
                     .setStop(span.getStopTimeMillis())
-                    .setSpanId(span.getSpanId())
+                    .setSpanId(span.getSpanId().getLow())
                     .setProcessId(span.getTracerId())
                     .setDescription(span.getDescription());
 
             if (span.getParents().length == 0) {
               sbuilder.setParentId(0);
             } else if (span.getParents().length > 0) {
-              sbuilder.setParentId(span.getParents()[0]);
+              sbuilder.setParentId(span.getParents()[0].getLow());
               if (span.getParents().length > 1) {
                 LOG.error("error: HBaseSpanReceiver does not support spans " +
                     "with multiple parents.  Ignoring multiple parents for " +
@@ -231,7 +231,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
                                             .setMessage(ta.getMessage())
                                             .build());
             }
-            Put put = new Put(Bytes.toBytes(span.getTraceId()));
+            Put put = new Put(Bytes.toBytes(span.getSpanId().getHigh()));
             put.add(HBaseSpanReceiver.this.cf,
                     sbuilder.build().toByteArray(),
                     null);
@@ -360,7 +360,7 @@ public class HBaseSpanReceiver implements SpanReceiver {
     Trace.addReceiver(receiver);
     TraceScope parent = Trace.startSpan("HBaseSpanReceiver.main.parent", Sampler.ALWAYS);
     Thread.sleep(10);
-    long traceid = parent.getSpan().getTraceId();
+    long traceid = parent.getSpan().getSpanId().getHigh();
     TraceScope child1 = Trace.startSpan("HBaseSpanReceiver.main.child.1");
     Thread.sleep(10);
     TraceScope child2 = Trace.startSpan("HBaseSpanReceiver.main.child.2", parent.getSpan());

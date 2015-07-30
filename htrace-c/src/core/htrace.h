@@ -329,16 +329,6 @@ extern  "C" {
                                              struct htrace_span *span);
 
     /**
-     * Get the span id of an HTrace scope.
-     *
-     * @param scope     The trace scope, or NULL.
-     *
-     * @return          The span ID of the trace span, or 0 if there is no trace
-     *                      span inside the scope, or if NULL was passed.
-     */
-    uint64_t htrace_scope_get_span_id(const struct htrace_scope *scope);
-
-    /**
      * Close a trace scope.
      *
      * This must be called from the same thread that the trace scope was created

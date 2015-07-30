@@ -22,16 +22,14 @@ package main
 import (
 	"bytes"
 	"org/apache/htrace/common"
-	"org/apache/htrace/test"
 	"testing"
 )
 
 func TestSpansToDot(t *testing.T) {
 	TEST_SPANS := common.SpanSlice{
 		&common.Span{
-			Id: test.SpanId("6af3cc058e5d829d"),
+			Id: common.TestId("814c8ee0e7984be3a8af00ac64adccb6"),
 			SpanData: common.SpanData{
-				TraceId:     test.SpanId("0e4716fe911244de"),
 				Begin:       1424813349020,
 				End:         1424813349134,
 				Description: "newDFSInputStream",
@@ -43,25 +41,23 @@ func TestSpansToDot(t *testing.T) {
 			},
 		},
 		&common.Span{
-			Id: test.SpanId("75d16cc5b2c07d8a"),
+			Id: common.TestId("cf2d5de696454548bc055d1e6024054c"),
 			SpanData: common.SpanData{
-				TraceId:     test.SpanId("0e4716fe911244de"),
 				Begin:       1424813349025,
 				End:         1424813349133,
 				Description: "getBlockLocations",
 				TracerId:    "FsShell",
-				Parents:     []common.SpanId{test.SpanId("6af3cc058e5d829d")},
+				Parents:     []common.SpanId{common.TestId("814c8ee0e7984be3a8af00ac64adccb6")},
 			},
 		},
 		&common.Span{
-			Id: test.SpanId("e2c7273efb280a8c"),
+			Id: common.TestId("37623806f9c64483b834b8ea5d6b4827"),
 			SpanData: common.SpanData{
-				TraceId:     test.SpanId("0e4716fe911244de"),
 				Begin:       1424813349027,
 				End:         1424813349073,
 				Description: "ClientNamenodeProtocol#getBlockLocations",
 				TracerId:    "FsShell",
-				Parents:     []common.SpanId{test.SpanId("75d16cc5b2c07d8a")},
+				Parents:     []common.SpanId{common.TestId("cf2d5de696454548bc055d1e6024054c")},
 			},
 		},
 	}
@@ -71,11 +67,11 @@ func TestSpansToDot(t *testing.T) {
 		t.Fatalf("spansToDot failed: error %s\n", err.Error())
 	}
 	EXPECTED_STR := `digraph spans {
-  "6af3cc058e5d829d" [label="newDFSInputStream"];
-  "75d16cc5b2c07d8a" [label="getBlockLocations"];
-  "e2c7273efb280a8c" [label="ClientNamenodeProtocol#getBlockLocations"];
-  "6af3cc058e5d829d" -> "75d16cc5b2c07d8a";
-  "75d16cc5b2c07d8a" -> "e2c7273efb280a8c";
+  "37623806f9c64483b834b8ea5d6b4827" [label="ClientNamenodeProtocol#getBlockLocations"];
+  "814c8ee0e7984be3a8af00ac64adccb6" [label="newDFSInputStream"];
+  "cf2d5de696454548bc055d1e6024054c" [label="getBlockLocations"];
+  "814c8ee0e7984be3a8af00ac64adccb6" -> "cf2d5de696454548bc055d1e6024054c";
+  "cf2d5de696454548bc055d1e6024054c" -> "37623806f9c64483b834b8ea5d6b4827";
 }
 `
 	if w.String() != EXPECTED_STR {

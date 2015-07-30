@@ -29,46 +29,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint64_t parse_hex_id(const char *in, char *err, size_t err_len)
-{
-    char *endptr;
-    unsigned long long int ret;
-
-    err[0] = '\0';
-    errno = 0;
-    ret = strtoull(in, &endptr, 16);
-    if (errno) {
-        int e = errno;
-        snprintf(err, err_len, "parse_hex_id(%s) failed: error %s",
-                 in, terror(e));
-        return 0;
-    }
-    if (endptr == in) {
-        snprintf(err, err_len, "parse_hex_id(%s) failed: empty string "
-                 "found.", in);
-        return 0;
-    }
-    while (1) {
-        char c = *endptr++;
-        if (c == '\0') {
-            break;
-        }
-        if ((c != ' ') || (c != '\t')) {
-            snprintf(err, err_len, "parse_hex_id(%s) failed: garbage at end "
-                     "of string.", in);
-            return 0;
-        }
-    }
-    return ret;
-}
-
 static void span_json_parse_parents(struct json_object *root,
                     struct htrace_span *span, char *err, size_t err_len)
 {
     char err2[128];
+    size_t err2_len = sizeof(err2);
     struct json_object *p = NULL, *e = NULL;
     int i, np;
 
+    err2[0] = '\0';
     if (!json_object_object_get_ex(root, "p", &p)) {
         return; // no parents
     }
@@ -80,14 +49,14 @@ static void span_json_parse_parents(struct json_object *root,
     if (np == 1) {
         span->num_parents = 1;
         e = json_object_array_get_idx(p, 0);
-        span->parent.single = parse_hex_id(json_object_get_string(e),
-                                            err2, sizeof(err2));
+        htrace_span_id_parse(&span->parent.single,
+                             json_object_get_string(e), err2, err2_len);
         if (err2[0]) {
             snprintf(err, err_len, "failed to parse parent ID 1/1: %s.", err2);
             return;
         }
     } else if (np > 1) {
-        span->parent.list = malloc(sizeof(uint64_t) * np);
+        span->parent.list = malloc(sizeof(struct htrace_span_id) * np);
         if (!span->parent.list) {
             snprintf(err, err_len, "failed to allocate parent ID array of "
                      "%d elements", np);
@@ -96,8 +65,8 @@ static void span_json_parse_parents(struct json_object *root,
         span->num_parents = np;
         for (i = 0; i < np; i++) {
             e = json_object_array_get_idx(p, i);
-            span->parent.list[i] = parse_hex_id(json_object_get_string(e),
-                                            err2, sizeof(err2));
+            htrace_span_id_parse(span->parent.list + i,
+                                 json_object_get_string(e), err2, err2_len);
             if (err2[0]) {
                 snprintf(err, err_len, "failed to parse parent ID %d/%d: %s",
                          i + 1, np, err2);
@@ -115,6 +84,7 @@ static void span_json_parse_impl(struct json_object *root,
     int res;
 
     err[0] = '\0';
+    err2[0] = '\0';
     if (!json_object_object_get_ex(root, "d", &d)) {
         d = NULL;
     }
@@ -141,8 +111,8 @@ static void span_json_parse_impl(struct json_object *root,
             return;
         }
     }
-    if (json_object_object_get_ex(root, "s", &s)) {
-        span->span_id = parse_hex_id(json_object_get_string(s),
+    if (json_object_object_get_ex(root, "a", &s)) {
+        htrace_span_id_parse(&span->span_id, json_object_get_string(s),
                                      err2, sizeof(err2));
         if (err2[0]) {
             snprintf(err, err_len, "error parsing span_id: %s", err2);
@@ -226,7 +196,7 @@ static int strcmp_handle_null(const char *a, const char *b)
 
 static int compare_parents(struct htrace_span *a, struct htrace_span *b)
 {
-    int na, nb, i;
+    int na, nb, i, cmp;
 
     htrace_span_sort_and_dedupe_parents(a);
     na = a->num_parents;
@@ -234,7 +204,7 @@ static int compare_parents(struct htrace_span *a, struct htrace_span *b)
     nb = b->num_parents;
 
     for (i = 0; ; i++) {
-        uint64_t sa, sb;
+        struct htrace_span_id sa, sb;
 
         if (i >= na) {
             if (i >= nb) {
@@ -246,21 +216,18 @@ static int compare_parents(struct htrace_span *a, struct htrace_span *b)
             return 1;
         }
         if ((i == 0) && (na == 1)) {
-            sa = a->parent.single;
+            htrace_span_id_copy(&sa, &a->parent.single);
         } else {
-            sa = a->parent.list[i];
+            htrace_span_id_copy(&sa, a->parent.list + i);
         }
         if ((i == 0) && (nb == 1)) {
-            sb = b->parent.single;
+            htrace_span_id_copy(&sb, &b->parent.single);
         } else {
-            sb = b->parent.list[i];
+            htrace_span_id_copy(&sb, b->parent.list + i);
         }
-        // Use explicit comparison rather than subtraction to avoid numeric
-        // overflow issues.
-        if (sa < sb) {
-            return -1;
-        } else if (sa > sb) {
-            return 1;
+        cmp = htrace_span_id_compare(&sa, &sb);
+        if (cmp) {
+            return cmp;
         }
     }
 }
@@ -269,7 +236,7 @@ int span_compare(struct htrace_span *a, struct htrace_span *b)
 {
     int c;
 
-    c = uint64_cmp(a->span_id, b->span_id);
+    c = htrace_span_id_compare(&a->span_id, &b->span_id);
     if (c) {
         return c;
     }
@@ -355,7 +322,7 @@ static void span_parse_msgpack_parents(struct cmp_ctx_s *ctx,
         free(span->parent.list);
         span->parent.list = NULL;
     }
-    span->parent.single = 0;
+    htrace_span_id_clear(&span->parent.single);
     span->num_parents = 0;
     if (!cmp_read_array(ctx, &size)) {
         snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_array "
@@ -363,22 +330,22 @@ static void span_parse_msgpack_parents(struct cmp_ctx_s *ctx,
         return;
     }
     if (size == 1) {
-        if (!cmp_read_u64(ctx, &span->parent.single)) {
+        if (!htrace_span_id_read_msgpack(&span->parent.single, ctx)) {
             snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_u64 "
                      "for single child ID failed");
             return;
         }
     } else if (size > 1) {
-        span->parent.list = malloc(sizeof(uint64_t) * size);
+        span->parent.list = malloc(sizeof(struct htrace_span_id) * size);
         if (!span->parent.list) {
             snprintf(err, err_len, "span_parse_msgpack_parents: failed to "
                      "malloc %"PRId32"-entry parent array.", size);
             return;
         }
         for (i = 0; i < size; i++) {
-            if (!cmp_read_u64(ctx, &span->parent.list[i])) {
-                snprintf(err, err_len, "span_parse_msgpack_parents: cmp_read_u64 "
-                         "for child %d ID failed", i);
+            if (!htrace_span_id_read_msgpack(span->parent.list + i, ctx)) {
+                snprintf(err, err_len, "span_parse_msgpack_parents: "
+                    "htrace_span_id_read_msgpack for child %d ID failed", i);
                 free(span->parent.list);
                 span->parent.list = NULL;
                 return;
@@ -412,6 +379,13 @@ struct htrace_span *span_read_msgpack(struct cmp_ctx_s *ctx,
             goto error;
         }
         switch (key[0]) {
+        case 'a':
+            if (!htrace_span_id_read_msgpack(&span->span_id, ctx)) {
+                snprintf(err, err_len, "span_read_msgpack: "
+                    "htrace_span_id_read_msgpack failed for span->span_id");
+                goto error;
+            }
+            break;
         case 'd':
             if (span->desc) {
                 free(span->desc);
@@ -433,13 +407,6 @@ struct htrace_span *span_read_msgpack(struct cmp_ctx_s *ctx,
             if (!cmp_read_u64(ctx, &span->end_ms)) {
                 snprintf(err, err_len, "span_read_msgpack: cmp_read_u64 "
                          "failed for span->end_ms.");
-                goto error;
-            }
-            break;
-        case 's':
-            if (!cmp_read_u64(ctx, &span->span_id)) {
-                snprintf(err, err_len, "span_read_msgpack: cmp_read_u64 "
-                         "failed for span->span_id");
                 goto error;
             }
             break;

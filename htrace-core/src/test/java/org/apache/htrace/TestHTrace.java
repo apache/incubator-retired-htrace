@@ -16,7 +16,7 @@
  */
 package org.apache.htrace;
 
-import org.apache.htrace.TraceTree.SpansByParent;
+import org.apache.htrace.TraceGraph.SpansByParent;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.apache.htrace.impl.POJOSpanReceiver;
 import org.apache.htrace.impl.StandardOutSpanReceiver;
@@ -67,8 +67,8 @@ public class TestHTrace {
     traceCreator.addReceiver(new POJOSpanReceiver(HTraceConfiguration.EMPTY){
       @Override
       public void close() {
-        TraceTree traceTree = new TraceTree(getSpans());
-        Collection<Span> roots = traceTree.getSpansByParent().find(0);
+        TraceGraph traceGraph = new TraceGraph(getSpans());
+        Collection<Span> roots = traceGraph.getSpansByParent().find(SpanId.INVALID);
         Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
         Assert.assertEquals(numTraces, roots.size());
 
@@ -84,7 +84,7 @@ public class TestHTrace {
         Assert.assertTrue(descriptionToRootSpan.keySet().contains(
             TraceCreator.THREADED_TRACE_ROOT));
 
-        SpansByParent spansByParentId = traceTree.getSpansByParent();
+        SpansByParent spansByParentId = traceGraph.getSpansByParent();
         Span rpcTraceRoot = descriptionToRootSpan.get(TraceCreator.RPC_TRACE_ROOT);
         Assert.assertEquals(1, spansByParentId.find(rpcTraceRoot.getSpanId()).size());
 
@@ -109,11 +109,10 @@ public class TestHTrace {
 
   @Test(timeout=60000)
   public void testRootSpansHaveNonZeroSpanId() throws Exception {
-    TraceInfo traceInfo = new TraceInfo(100L, 200L);
-    TraceScope scope = Trace.startSpan("myRootSpan", traceInfo);
+    TraceScope scope = Trace.startSpan("myRootSpan", new SpanId(100L, 200L));
     Assert.assertNotNull(scope);
     Assert.assertEquals("myRootSpan", scope.getSpan().getDescription());
-    Assert.assertEquals(100L, scope.getSpan().getTraceId());
-    Assert.assertTrue(0 != scope.getSpan().getSpanId());
+    Assert.assertEquals(100L, scope.getSpan().getSpanId().getHigh());
+    Assert.assertTrue(scope.getSpan().getSpanId().isValid());
   }
 }

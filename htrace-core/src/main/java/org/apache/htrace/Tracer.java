@@ -48,8 +48,7 @@ public class Tracer {
       return null;
     }
   };
-  public static final TraceInfo DONT_TRACE = new TraceInfo(-1, -1);
-  private static final long EMPTY_PARENT_ARRAY[] = new long[0];
+  private static final SpanId EMPTY_PARENT_ARRAY[] = new SpanId[0];
 
   /**
    * Log a client error, and throw an exception.
@@ -81,9 +80,8 @@ public class Tracer {
           begin(System.currentTimeMillis()).
           end(0).
           description(description).
-          traceId(nonZeroRandom64()).
           parents(EMPTY_PARENT_ARRAY).
-          spanId(nonZeroRandom64()).
+          spanId(SpanId.fromRandom()).
           build();
     } else {
       return parent.child(description);

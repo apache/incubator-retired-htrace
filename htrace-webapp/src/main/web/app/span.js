@@ -20,7 +20,7 @@
 var htrace = htrace || {};
 
 // The invalid span ID, which is all zeroes.
-htrace.INVALID_SPAN_ID = "0000000000000000";
+htrace.INVALID_SPAN_ID = "00000000000000000000000000000000";
 
 // Convert an array of htrace.Span models into a comma-separated string.
 htrace.spanModelsToString = function(spans) {
@@ -81,8 +81,7 @@ htrace.Span = Backbone.Model.extend({
   // forced to be numbers.
   parse: function(response, options) {
     var span = {};
-    this.set("spanId", response.s ? response.s : htrace.INVALID_SPAN_ID);
-    this.set("traceId", response.i ? response.i : htrace.INVALID_SPAN_ID);
+    this.set("spanId", response.a ? response.a : htrace.INVALID_SPAN_ID);
     this.set("tracerId", response.r ? response.r : "");
     this.set("parents", response.p ? response.p : []);
     this.set("description", response.d ? response.d : "");
@@ -120,10 +119,7 @@ htrace.Span = Backbone.Model.extend({
   unparse: function() {
     var obj = { };
     if (!(this.get("spanId") === htrace.INVALID_SPAN_ID)) {
-      obj.s = this.get("spanId");
-    }
-    if (!(this.get("traceId") === htrace.INVALID_SPAN_ID)) {
-      obj.i = this.get("traceId");
+      obj.a = this.get("spanId");
     }
     if (!(this.get("tracerId") === "")) {
       obj.r = this.get("tracerId");

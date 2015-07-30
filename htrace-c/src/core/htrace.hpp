@@ -221,10 +221,6 @@ namespace htrace {
       scope_ = NULL;
     }
 
-    uint64_t GetSpanId() {
-      return htrace_scope_get_span_id(scope_);
-    }
-
   private:
     friend class Tracer;
     Scope(htrace::Scope &other); // Can't copy

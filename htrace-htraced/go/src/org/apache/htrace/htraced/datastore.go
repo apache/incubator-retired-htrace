@@ -22,6 +22,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/jmhodges/levigo"
@@ -68,6 +69,7 @@ const CURRENT_LAYOUT_VERSION = 2
 var EMPTY_BYTE_BUF []byte = []byte{}
 
 const VERSION_KEY = 'v'
+
 const SPAN_ID_INDEX_PREFIX = 's'
 const BEGIN_TIME_INDEX_PREFIX = 'b'
 const END_TIME_INDEX_PREFIX = 'e'
@@ -87,56 +89,6 @@ func (stats *Statistics) IncrementWrittenSpans() {
 func (stats *Statistics) Copy() *Statistics {
 	return &Statistics{
 		NumSpansWritten: atomic.LoadUint64(&stats.NumSpansWritten),
-	}
-}
-
-// Translate an 8-byte value into a leveldb key.
-func makeKey(tag byte, val uint64) []byte {
-	return []byte{
-		tag,
-		byte(0xff & (val >> 56)),
-		byte(0xff & (val >> 48)),
-		byte(0xff & (val >> 40)),
-		byte(0xff & (val >> 32)),
-		byte(0xff & (val >> 24)),
-		byte(0xff & (val >> 16)),
-		byte(0xff & (val >> 8)),
-		byte(0xff & (val >> 0)),
-	}
-}
-
-func keyToInt(key []byte) uint64 {
-	var id uint64
-	id = (uint64(key[0]) << 56) |
-		(uint64(key[1]) << 48) |
-		(uint64(key[2]) << 40) |
-		(uint64(key[3]) << 32) |
-		(uint64(key[4]) << 24) |
-		(uint64(key[5]) << 16) |
-		(uint64(key[6]) << 8) |
-		(uint64(key[7]) << 0)
-	return id
-}
-
-func makeSecondaryKey(tag byte, fir uint64, sec uint64) []byte {
-	return []byte{
-		tag,
-		byte(0xff & (fir >> 56)),
-		byte(0xff & (fir >> 48)),
-		byte(0xff & (fir >> 40)),
-		byte(0xff & (fir >> 32)),
-		byte(0xff & (fir >> 24)),
-		byte(0xff & (fir >> 16)),
-		byte(0xff & (fir >> 8)),
-		byte(0xff & (fir >> 0)),
-		byte(0xff & (sec >> 56)),
-		byte(0xff & (sec >> 48)),
-		byte(0xff & (sec >> 40)),
-		byte(0xff & (sec >> 32)),
-		byte(0xff & (sec >> 24)),
-		byte(0xff & (sec >> 16)),
-		byte(0xff & (sec >> 8)),
-		byte(0xff & (sec >> 0)),
 	}
 }
 
@@ -186,6 +138,18 @@ func s2u64(val int64) uint64 {
 	return ret
 }
 
+func u64toSlice(val uint64) []byte {
+	return []byte{
+		byte(0xff & (val >> 56)),
+		byte(0xff & (val >> 48)),
+		byte(0xff & (val >> 40)),
+		byte(0xff & (val >> 32)),
+		byte(0xff & (val >> 24)),
+		byte(0xff & (val >> 16)),
+		byte(0xff & (val >> 8)),
+		byte(0xff & (val >> 0))}
+}
+
 func (shd *shard) writeSpan(span *common.Span) error {
 	batch := levigo.NewWriteBatch()
 	defer batch.Close()
@@ -197,21 +161,27 @@ func (shd *shard) writeSpan(span *common.Span) error {
 	if err != nil {
 		return err
 	}
-	batch.Put(makeKey(SPAN_ID_INDEX_PREFIX, span.Id.Val()), spanDataBuf.Bytes())
+	primaryKey :=
+		append([]byte{SPAN_ID_INDEX_PREFIX}, span.Id.Val()...)
+	batch.Put(primaryKey, spanDataBuf.Bytes())
 
 	// Add this to the parent index.
 	for parentIdx := range span.Parents {
-		batch.Put(makeSecondaryKey(PARENT_ID_INDEX_PREFIX,
-			span.Parents[parentIdx].Val(), span.Id.Val()), EMPTY_BYTE_BUF)
+		key := append(append([]byte{PARENT_ID_INDEX_PREFIX},
+			span.Parents[parentIdx].Val()...), span.Id.Val()...)
+		batch.Put(key, EMPTY_BYTE_BUF)
 	}
 
 	// Add to the other secondary indices.
-	batch.Put(makeSecondaryKey(BEGIN_TIME_INDEX_PREFIX, s2u64(span.Begin),
-		span.Id.Val()), EMPTY_BYTE_BUF)
-	batch.Put(makeSecondaryKey(END_TIME_INDEX_PREFIX, s2u64(span.End),
-		span.Id.Val()), EMPTY_BYTE_BUF)
-	batch.Put(makeSecondaryKey(DURATION_INDEX_PREFIX, s2u64(span.Duration()),
-		span.Id.Val()), EMPTY_BYTE_BUF)
+	beginTimeKey := append(append([]byte{BEGIN_TIME_INDEX_PREFIX},
+		u64toSlice(s2u64(span.Begin))...), span.Id.Val()...)
+	batch.Put(beginTimeKey, EMPTY_BYTE_BUF)
+	endTimeKey := append(append([]byte{END_TIME_INDEX_PREFIX},
+		u64toSlice(s2u64(span.End))...), span.Id.Val()...)
+	batch.Put(endTimeKey, EMPTY_BYTE_BUF)
+	durationKey := append(append([]byte{DURATION_INDEX_PREFIX},
+		u64toSlice(s2u64(span.Duration()))...), span.Id.Val()...)
+	batch.Put(durationKey, EMPTY_BYTE_BUF)
 
 	err = shd.ldb.Write(shd.store.writeOpts, batch)
 	if err != nil {
@@ -226,7 +196,7 @@ func (shd *shard) writeSpan(span *common.Span) error {
 
 func (shd *shard) FindChildren(sid common.SpanId, childIds []common.SpanId,
 	lim int32) ([]common.SpanId, int32, error) {
-	searchKey := makeKey('p', sid.Val())
+	searchKey := append([]byte{PARENT_ID_INDEX_PREFIX}, sid.Val()...)
 	iter := shd.ldb.NewIterator(shd.store.readOpts)
 	defer iter.Close()
 	iter.Seek(searchKey)
@@ -241,7 +211,7 @@ func (shd *shard) FindChildren(sid common.SpanId, childIds []common.SpanId,
 		if !bytes.HasPrefix(key, searchKey) {
 			break
 		}
-		id := common.SpanId(keyToInt(key[9:]))
+		id := common.SpanId(key[17:])
 		childIds = append(childIds, id)
 		lim--
 		iter.Next()
@@ -462,7 +432,7 @@ func (store *dataStore) Close() {
 
 // Get the index of the shard which stores the given spanId.
 func (store *dataStore) getShardIndex(sid common.SpanId) int {
-	return int(sid.Val() % uint64(len(store.shards)))
+	return int(sid.Hash32() % uint32(len(store.shards)))
 }
 
 func (store *dataStore) WriteSpan(span *common.Span) {
@@ -475,7 +445,8 @@ func (store *dataStore) FindSpan(sid common.SpanId) *common.Span {
 
 func (shd *shard) FindSpan(sid common.SpanId) *common.Span {
 	lg := shd.store.lg
-	buf, err := shd.ldb.Get(shd.store.readOpts, makeKey('s', sid.Val()))
+	primaryKey := append([]byte{SPAN_ID_INDEX_PREFIX}, sid.Val()...)
+	buf, err := shd.ldb.Get(shd.store.readOpts, primaryKey)
 	if err != nil {
 		if strings.Index(err.Error(), "NotFound:") != -1 {
 			return nil
@@ -541,8 +512,7 @@ func (store *dataStore) FindChildren(sid common.SpanId, lim int32) []common.Span
 
 type predicateData struct {
 	*common.Predicate
-	uintKey uint64
-	strKey  string
+	key []byte
 }
 
 func loadPredicateData(pred *common.Predicate) (*predicateData, error) {
@@ -558,11 +528,11 @@ func loadPredicateData(pred *common.Predicate) (*predicateData, error) {
 			return nil, errors.New(fmt.Sprintf("Unable to parse span id '%s': %s",
 				pred.Val, err.Error()))
 		}
-		p.uintKey = id.Val()
+		p.key = id.Val()
 		break
 	case common.DESCRIPTION:
 		// Any string is valid for a description.
-		p.strKey = pred.Val
+		p.key = []byte(pred.Val)
 		break
 	case common.BEGIN_TIME, common.END_TIME, common.DURATION:
 		// Parse a base-10 signed numeric field.
@@ -571,11 +541,11 @@ func loadPredicateData(pred *common.Predicate) (*predicateData, error) {
 			return nil, errors.New(fmt.Sprintf("Unable to parse %s '%s': %s",
 				pred.Field, pred.Val, err.Error()))
 		}
-		p.uintKey = s2u64(v)
+		p.key = u64toSlice(s2u64(v))
 		break
 	case common.TRACER_ID:
 		// Any string is valid for a tracer ID.
-		p.strKey = pred.Val
+		p.key = []byte(pred.Val)
 		break
 	default:
 		return nil, errors.New(fmt.Sprintf("Unknown field %s", pred.Field))
@@ -626,22 +596,22 @@ func (pred *predicateData) fieldIsNumeric() bool {
 }
 
 // Get the values that this predicate cares about for a given span.
-func (pred *predicateData) extractRelevantSpanData(span *common.Span) (uint64, string) {
+func (pred *predicateData) extractRelevantSpanData(span *common.Span) []byte {
 	switch pred.Field {
 	case common.SPAN_ID:
-		return span.Id.Val(), ""
+		return span.Id.Val()
 	case common.DESCRIPTION:
-		return 0, span.Description
+		return []byte(span.Description)
 	case common.BEGIN_TIME:
-		return s2u64(span.Begin), ""
+		return u64toSlice(s2u64(span.Begin))
 	case common.END_TIME:
-		return s2u64(span.End), ""
+		return u64toSlice(s2u64(span.End))
 	case common.DURATION:
-		return s2u64(span.Duration()), ""
+		return u64toSlice(s2u64(span.Duration()))
 	case common.TRACER_ID:
-		return 0, span.TracerId
+		return []byte(span.TracerId)
 	default:
-		panic(fmt.Sprintf("Field type %s isn't a 64-bit integer.", pred.Field))
+		panic(fmt.Sprintf("Unknown field type %s.", pred.Field))
 	}
 }
 
@@ -656,56 +626,33 @@ func (pred *predicateData) spanPtrIsBefore(a *common.Span, b *common.Span) bool 
 		return true
 	}
 	// Compare the spans according to this predicate.
-	aInt, aStr := pred.extractRelevantSpanData(a)
-	bInt, bStr := pred.extractRelevantSpanData(b)
-	if pred.fieldIsNumeric() {
-		if pred.Op.IsDescending() {
-			return aInt > bInt
-		} else {
-			return aInt < bInt
-		}
+	aVal := pred.extractRelevantSpanData(a)
+	bVal := pred.extractRelevantSpanData(b)
+	cmp := bytes.Compare(aVal, bVal)
+	if pred.Op.IsDescending() {
+		return cmp > 0
 	} else {
-		if pred.Op.IsDescending() {
-			return aStr > bStr
-		} else {
-			return aStr < bStr
-		}
+		return cmp < 0
 	}
 }
 
 // Returns true if the predicate is satisfied by the given span.
 func (pred *predicateData) satisfiedBy(span *common.Span) bool {
-	intVal, strVal := pred.extractRelevantSpanData(span)
-	if pred.fieldIsNumeric() {
-		switch pred.Op {
-		case common.EQUALS:
-			return intVal == pred.uintKey
-		case common.LESS_THAN_OR_EQUALS:
-			return intVal <= pred.uintKey
-		case common.GREATER_THAN_OR_EQUALS:
-			return intVal >= pred.uintKey
-		case common.GREATER_THAN:
-			return intVal > pred.uintKey
-		default:
-			panic(fmt.Sprintf("unknown Op type %s should have been caught "+
-				"during normalization", pred.Op))
-		}
-	} else {
-		switch pred.Op {
-		case common.CONTAINS:
-			return strings.Contains(strVal, pred.strKey)
-		case common.EQUALS:
-			return strVal == pred.strKey
-		case common.LESS_THAN_OR_EQUALS:
-			return strVal <= pred.strKey
-		case common.GREATER_THAN_OR_EQUALS:
-			return strVal >= pred.strKey
-		case common.GREATER_THAN:
-			return strVal > pred.strKey
-		default:
-			panic(fmt.Sprintf("unknown Op type %s should have been caught "+
-				"during normalization", pred.Op))
-		}
+	val := pred.extractRelevantSpanData(span)
+	switch pred.Op {
+	case common.CONTAINS:
+		return bytes.Contains(val, pred.key)
+	case common.EQUALS:
+		return bytes.Equal(val, pred.key)
+	case common.LESS_THAN_OR_EQUALS:
+		return bytes.Compare(val, pred.key) <= 0
+	case common.GREATER_THAN_OR_EQUALS:
+		return bytes.Compare(val, pred.key) >= 0
+	case common.GREATER_THAN:
+		return bytes.Compare(val, pred.key) > 0
+	default:
+		panic(fmt.Sprintf("unknown Op type %s should have been caught "+
+			"during normalization", pred.Op))
 	}
 }
 
@@ -746,7 +693,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 		// organized as [type-code][8b-secondary-key][8b-span-id], elements
 		// with the same secondary index field are ordered by span ID.  So we
 		// create a 17-byte key incorporating the span ID from 'prev.'
-		var startId common.SpanId
+		startId := common.INVALID_SPAN_ID
 		switch pred.Op {
 		case common.EQUALS:
 			if pred.Field == common.SPAN_ID {
@@ -759,17 +706,17 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 				lg.Debugf("Attempted to use a continuation token with an EQUALS "+
 					"SPAN_ID query. %s.  Setting search id = 0",
 					pred.Predicate.String())
-				startId = 0
+				startId = common.INVALID_SPAN_ID
 			} else {
 				// When doing an EQUALS search on a secondary index, the
 				// results are sorted by span id.
-				startId = prev.Id + 1
+				startId = prev.Id.Next()
 			}
 		case common.LESS_THAN_OR_EQUALS:
 			// Subtract one from the previous span id.  Since the previous
 			// start ID will never be 0 (0 is an illegal span id), we'll never
 			// wrap around when doing this.
-			startId = prev.Id - 1
+			startId = prev.Id.Prev()
 		case common.GREATER_THAN_OR_EQUALS:
 			// We can't add one to the span id, since the previous span ID
 			// might be the maximum value.  So just switch over to using
@@ -785,21 +732,22 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 			panic(str)
 		}
 		if pred.Field == common.SPAN_ID {
-			pred.uintKey = uint64(startId)
-			searchKey = makeKey(src.keyPrefix, uint64(startId))
+			pred.key = startId.Val()
+			searchKey = append([]byte{src.keyPrefix}, startId.Val()...)
 		} else {
 			// Start where the previous query left off.  This means adjusting
 			// our uintKey.
-			pred.uintKey, _ = pred.extractRelevantSpanData(prev)
-			searchKey = makeSecondaryKey(src.keyPrefix, pred.uintKey, uint64(startId))
+			pred.key = pred.extractRelevantSpanData(prev)
+			searchKey = append(append([]byte{src.keyPrefix}, pred.key...),
+				startId.Val()...)
 		}
 		if lg.TraceEnabled() {
 			lg.Tracef("Handling continuation token %s for %s.  startId=%d, "+
-				"pred.uintKey=%d\n", prev, pred.Predicate.String(), startId,
-				pred.uintKey)
+				"pred.uintKey=%s\n", prev, pred.Predicate.String(), startId,
+				hex.EncodeToString(pred.key))
 		}
 	} else {
-		searchKey = makeKey(src.keyPrefix, pred.uintKey)
+		searchKey = append([]byte{src.keyPrefix}, pred.key...)
 	}
 	for i := range src.iters {
 		src.iters[i].Seek(searchKey)
@@ -866,7 +814,7 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		var sid common.SpanId
 		if src.keyPrefix == SPAN_ID_INDEX_PREFIX {
 			// The span id maps to the span itself.
-			sid = common.SpanId(keyToInt(key[1:]))
+			sid = common.SpanId(key[1:17])
 			span, err = src.store.shards[shardIdx].decodeSpan(sid, iter.Value())
 			if err != nil {
 				lg.Debugf("Internal error decoding span %s in shard %d: %s\n",
@@ -875,7 +823,7 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			}
 		} else {
 			// With a secondary index, we have to look up the span by id.
-			sid = common.SpanId(keyToInt(key[9:]))
+			sid = common.SpanId(key[9:25])
 			span = src.store.shards[shardIdx].FindSpan(sid)
 			if span == nil {
 				lg.Debugf("Internal error rehydrating span %s in shard %d\n",
@@ -948,7 +896,7 @@ func (store *dataStore) obtainSource(preds *[]*predicateData, span *common.Span)
 	// If there are no predicates that are indexed, read rows in order of span id.
 	spanIdPred := common.Predicate{Op: common.GREATER_THAN_OR_EQUALS,
 		Field: common.SPAN_ID,
-		Val:   "0000000000000000",
+		Val:   common.INVALID_SPAN_ID.String(),
 	}
 	spanIdPredData, err := loadPredicateData(&spanIdPred)
 	if err != nil {

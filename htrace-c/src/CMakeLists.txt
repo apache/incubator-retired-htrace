@@ -75,6 +75,7 @@ set(SRC_ALL
     core/htracer.c
     core/scope.c
     core/span.c
+    core/span_id.c
     receiver/hrpc.c
     receiver/htraced.c
     receiver/local_file.c
@@ -198,8 +199,8 @@ add_utest(span-unit
     test/span-unit.c
 )
 
-add_utest(span_util-unit
-    test/span_util-unit.c
+add_utest(span_id-unit
+    test/span_id-unit.c
 )
 
 add_utest(string-unit

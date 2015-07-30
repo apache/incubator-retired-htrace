@@ -20,10 +20,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.htrace.Span;
+import org.apache.htrace.SpanId;
 import org.apache.htrace.TimelineAnnotation;
 import org.junit.Test;
 
-import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,13 +31,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestMilliSpan {
   private void compareSpans(Span expected, Span got) throws Exception {
     assertEquals(expected.getStartTimeMillis(), got.getStartTimeMillis());
     assertEquals(expected.getStopTimeMillis(), got.getStopTimeMillis());
     assertEquals(expected.getDescription(), got.getDescription());
-    assertEquals(expected.getTraceId(), got.getTraceId());
     assertEquals(expected.getSpanId(), got.getSpanId());
     assertEquals(expected.getTracerId(), got.getTracerId());
     assertTrue(Arrays.equals(expected.getParents(), got.getParents()));
@@ -74,10 +74,10 @@ public class TestMilliSpan {
         description("foospan").
         begin(123L).
         end(456L).
-        parents(new long[] { 7L }).
+        parents(new SpanId[] { new SpanId(7L, 7L) }).
         tracerId("b2404.halxg.com:8080").
-        spanId(989L).
-        traceId(444).build();
+        spanId(new SpanId(7L, 8L)).
+        build();
     String json = span.toJson();
     MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
@@ -89,10 +89,10 @@ public class TestMilliSpan {
         description("foospan").
         begin(-1L).
         end(-1L).
-        parents(new long[] { -1L }).
+        parents(new SpanId[] { new SpanId(-1L, -1L) }).
         tracerId("b2404.halxg.com:8080").
-        spanId(-1L).
-        traceId(-1L).build();
+        spanId(new SpanId(-1L, -2L)).
+        build();
     String json = span.toJson();
     MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
@@ -100,15 +100,15 @@ public class TestMilliSpan {
 
   @Test
   public void testJsonSerializationWithRandomLongValue() throws Exception {
-    Random random = new SecureRandom();
+    SpanId parentId = SpanId.fromRandom();
     MilliSpan span = new MilliSpan.Builder().
         description("foospan").
-        begin(random.nextLong()).
-        end(random.nextLong()).
-        parents(new long[] { random.nextLong() }).
+        begin(ThreadLocalRandom.current().nextLong()).
+        end(ThreadLocalRandom.current().nextLong()).
+        parents(new SpanId[] { parentId }).
         tracerId("b2404.halxg.com:8080").
-        spanId(random.nextLong()).
-        traceId(random.nextLong()).build();
+        spanId(parentId.newChildId()).
+        build();
     String json = span.toJson();
     MilliSpan dspan = MilliSpan.fromJson(json);
     compareSpans(span, dspan);
@@ -120,10 +120,9 @@ public class TestMilliSpan {
         description("foospan").
         begin(300).
         end(400).
-        parents(new long[] { }).
+        parents(new SpanId[] { }).
         tracerId("b2408.halxg.com:8080").
-        spanId(111111111L).
-        traceId(4443);
+        spanId(new SpanId(111111111L, 111111111L));
     Map<String, String> traceInfo = new HashMap<String, String>();
     traceInfo.put("abc", "123");
     traceInfo.put("def", "456");

@@ -45,31 +45,28 @@ func TestCreateDatastore(t *testing.T) {
 }
 
 var SIMPLE_TEST_SPANS []common.Span = []common.Span{
-	common.Span{Id: 1,
+	common.Span{Id: common.TestId("00000000000000000000000000000001"),
 		SpanData: common.SpanData{
 			Begin:       123,
 			End:         456,
 			Description: "getFileDescriptors",
-			TraceId:     999,
 			Parents:     []common.SpanId{},
 			TracerId:    "firstd",
 		}},
-	common.Span{Id: 2,
+	common.Span{Id: common.TestId("00000000000000000000000000000002"),
 		SpanData: common.SpanData{
 			Begin:       125,
 			End:         200,
 			Description: "openFd",
-			TraceId:     999,
-			Parents:     []common.SpanId{1},
+			Parents:     []common.SpanId{common.TestId("00000000000000000000000000000001")},
 			TracerId:    "secondd",
 		}},
-	common.Span{Id: 3,
+	common.Span{Id: common.TestId("00000000000000000000000000000003"),
 		SpanData: common.SpanData{
 			Begin:       200,
 			End:         456,
 			Description: "passFd",
-			TraceId:     999,
-			Parents:     []common.SpanId{1},
+			Parents:     []common.SpanId{common.TestId("00000000000000000000000000000001")},
 			TracerId:    "thirdd",
 		}},
 }
@@ -98,27 +95,27 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
 		t.Fatal()
 	}
-	span := ht.Store.FindSpan(1)
+	span := ht.Store.FindSpan(common.TestId("00000000000000000000000000000001"))
 	if span == nil {
 		t.Fatal()
 	}
-	if span.Id != 1 {
+	if !span.Id.Equal(common.TestId("00000000000000000000000000000001")) {
 		t.Fatal()
 	}
 	common.ExpectSpansEqual(t, &SIMPLE_TEST_SPANS[0], span)
-	children := ht.Store.FindChildren(1, 1)
+	children := ht.Store.FindChildren(common.TestId("00000000000000000000000000000001"), 1)
 	if len(children) != 1 {
 		t.Fatalf("expected 1 child, but got %d\n", len(children))
 	}
-	children = ht.Store.FindChildren(1, 2)
+	children = ht.Store.FindChildren(common.TestId("00000000000000000000000000000001"), 2)
 	if len(children) != 2 {
 		t.Fatalf("expected 2 children, but got %d\n", len(children))
 	}
 	sort.Sort(common.SpanIdSlice(children))
-	if children[0] != 2 {
+	if !children[0].Equal(common.TestId("00000000000000000000000000000002")) {
 		t.Fatal()
 	}
-	if children[1] != 3 {
+	if !children[1].Equal(common.TestId("00000000000000000000000000000003")) {
 		t.Fatal()
 	}
 }
@@ -258,7 +255,7 @@ func TestQueries3(t *testing.T) {
 			common.Predicate{
 				Op:    common.LESS_THAN_OR_EQUALS,
 				Field: common.SPAN_ID,
-				Val:   "0",
+				Val:   common.TestId("00000000000000000000000000000000").String(),
 			},
 		},
 		Lim: 200,
@@ -269,7 +266,7 @@ func TestQueries3(t *testing.T) {
 			common.Predicate{
 				Op:    common.LESS_THAN_OR_EQUALS,
 				Field: common.SPAN_ID,
-				Val:   "2",
+				Val:   common.TestId("00000000000000000000000000000002").String(),
 			},
 		},
 		Lim: 200,
@@ -477,7 +474,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 			common.Predicate{
 				Op:    common.EQUALS,
 				Field: common.SPAN_ID,
-				Val:   "1",
+				Val:   common.TestId("00000000000000000000000000000001").String(),
 			},
 		},
 		Lim:  100,
@@ -491,7 +488,7 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 			common.Predicate{
 				Op:    common.LESS_THAN_OR_EQUALS,
 				Field: common.SPAN_ID,
-				Val:   "2",
+				Val:   common.TestId("00000000000000000000000000000002").String(),
 			},
 		},
 		Lim:  100,

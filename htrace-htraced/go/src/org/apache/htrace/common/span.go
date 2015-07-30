@@ -20,10 +20,11 @@
 package common
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
+	"hash/fnv"
 )
 
 //
@@ -43,18 +44,88 @@ type TimelineAnnotation struct {
 	Msg  string `json:"m"`
 }
 
-type SpanId uint64
+type SpanId []byte
+
+var INVALID_SPAN_ID SpanId = make([]byte, 16) // all zeroes
 
 func (id SpanId) String() string {
-	return fmt.Sprintf("%016x", uint64(id))
+	return fmt.Sprintf("%02x%02x%02x%02x"+
+		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8],
+		id[9], id[10], id[11], id[12], id[13], id[14], id[15])
 }
 
-func (id SpanId) Val() uint64 {
-	return uint64(id)
+func (id SpanId) Val() []byte {
+	return []byte(id)
+}
+
+func (id SpanId) FindProblem() string {
+	if id == nil {
+		return "The span ID is nil"
+	}
+	if len(id) != 16 {
+		return "The span ID is not exactly 16 bytes."
+	}
+	if bytes.Equal(id.Val(), INVALID_SPAN_ID.Val()) {
+		return "The span ID is all zeros."
+	}
+	return ""
+}
+
+func (id SpanId) ToArray() [16]byte {
+	var ret [16]byte
+	copy(ret[:], id.Val()[:])
+	return ret
+}
+
+// Return the next ID in lexicographical order.  For the maximum ID,
+// returns the minimum.
+func (id SpanId) Next() SpanId {
+	next := make([]byte, 16)
+	copy(next, id)
+	for i := len(next) - 1; i >= 0; i-- {
+		if next[i] == 0xff {
+			next[i] = 0
+		} else {
+			next[i] = next[i] + 1
+			break
+		}
+	}
+	return next
+}
+
+// Return the previous ID in lexicographical order.  For the minimum ID,
+// returns the maximum ID.
+func (id SpanId) Prev() SpanId {
+	prev := make([]byte, 16)
+	copy(prev, id)
+	for i := len(prev) - 1; i >= 0; i-- {
+		if prev[i] == 0x00 {
+			prev[i] = 0xff
+		} else {
+			prev[i] = prev[i] - 1
+			break
+		}
+	}
+	return prev
 }
 
 func (id SpanId) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + fmt.Sprintf("%016x", uint64(id)) + `"`), nil
+	return []byte(`"` + id.String() + `"`), nil
+}
+
+func (id SpanId) Compare(other SpanId) int {
+	return bytes.Compare(id.Val(), other.Val())
+}
+
+func (id SpanId) Equal(other SpanId) bool {
+	return bytes.Equal(id.Val(), other.Val())
+}
+
+func (id SpanId) Hash32() uint32 {
+	h := fnv.New32a()
+	h.Write(id.Val())
+	return h.Sum32()
 }
 
 type SpanSlice []*Span
@@ -64,7 +135,7 @@ func (s SpanSlice) Len() int {
 }
 
 func (s SpanSlice) Less(i, j int) bool {
-	return s[i].Id < s[j].Id
+	return s[i].Id.Compare(s[j].Id) < 0
 }
 
 func (s SpanSlice) Swap(i, j int) {
@@ -78,7 +149,7 @@ func (s SpanIdSlice) Len() int {
 }
 
 func (s SpanIdSlice) Less(i, j int) bool {
-	return s[i] < s[j]
+	return s[i].Compare(s[j]) < 0
 }
 
 func (s SpanIdSlice) Swap(i, j int) {
@@ -98,11 +169,18 @@ func (id *SpanId) UnmarshalJSON(b []byte) error {
 }
 
 func (id *SpanId) FromString(str string) error {
-	v, err := strconv.ParseUint(str, 16, 64)
+	i := SpanId(make([]byte, 16))
+	n, err := fmt.Sscanf(str, "%02x%02x%02x%02x"+
+		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		&i[0], &i[1], &i[2], &i[3], &i[4], &i[5], &i[6], &i[7], &i[8],
+		&i[9], &i[10], &i[11], &i[12], &i[13], &i[14], &i[15])
 	if err != nil {
 		return err
 	}
-	*id = SpanId(v)
+	if n != 16 {
+		return errors.New("Failed to find 16 hex digits in the SpanId")
+	}
+	*id = i
 	return nil
 }
 
@@ -110,7 +188,6 @@ type SpanData struct {
 	Begin               int64                `json:"b"`
 	End                 int64                `json:"e"`
 	Description         string               `json:"d"`
-	TraceId             SpanId               `json:"i"`
 	Parents             []SpanId             `json:"p"`
 	Info                TraceInfoMap         `json:"n,omitempty"`
 	TracerId            string               `json:"r"`
@@ -118,7 +195,7 @@ type SpanData struct {
 }
 
 type Span struct {
-	Id SpanId `json:"s"`
+	Id SpanId `json:"a"`
 	SpanData
 }
 

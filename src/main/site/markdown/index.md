@@ -184,13 +184,11 @@ returned will be a child of the current span, otherwise it will start
 a new trace in the current thread (it will be a
 `ProcessRootMilliSpan`). All of the other `startSpan()` methods take some
 parameter describing the parent span of the span to be created. The
-versions that take a `TraceInfo` or a `long traceId` and `long
-parentId` will mostly be used when continuing a trace over RPC. The
-receiver of the RPC will check the message for the additional two
-`longs` and will call `startSpan()` if they are attached.  The last
-`startSpan()` takes a `Span parent`.  The result of `parent.child()`
-will be used for the new span.  `Span.child()` simply returns a span
-that is a child of `this`.
+version that takes a parent id will mostly be used when continuing a trace over
+RPC. The receiver of the RPC will check the message for the 128-bit parent trace
+ID and will call `startSpan()` if it is attached.  The last `startSpan()` takes
+a `Span parent`.  The result of `parent.child()` will be used for the new span.
+`Span.child()` simply returns a span that is a child of `this`.
 
 ###Span Receivers
 In order to use the tracing information consisting of spans,
@@ -259,11 +257,6 @@ HTRACE-1 changes the SpanReceiver interface. HBase was instantiating
 SpanReceivers itself and calling .configure(HTraceConfiguration) on each
 one. The expectation now is that SpanReceiver implementations
 provide a constructor that takes a single parameter of HTraceConfiguration.
-
-HTRACE-16 refactors the TraceTree interface. The handy
-getRoots() method has been replaced with the less obvious
-getSpansByParent().find(Span.ROOT_SPAN_ID) and .getSpansByParentIdMap() is
-also an invocation of getSpansByParent().find().
 
 
 Publishing to Maven Central

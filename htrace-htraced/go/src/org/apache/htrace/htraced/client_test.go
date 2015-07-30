@@ -121,7 +121,7 @@ func TestClientOperations(t *testing.T) {
 		t.Fatalf("FindChildren(%s) returned an invalid number of "+
 			"children: expected %d, got %d\n", parentId, 1, len(children))
 	}
-	if children[0] != childSpan.Id {
+	if !children[0].Equal(childSpan.Id) {
 		t.Fatalf("FindChildren(%s) returned an invalid child id: expected %s, "+
 			" got %s\n", parentId, childSpan.Id, children[0])
 	}

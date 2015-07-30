@@ -69,7 +69,7 @@ func (hcl *Client) GetServerInfo() (*common.ServerInfo, error) {
 
 // Get information about a trace span.  Returns nil, nil if the span was not found.
 func (hcl *Client) FindSpan(sid common.SpanId) (*common.Span, error) {
-	buf, rc, err := hcl.makeGetRequest(fmt.Sprintf("span/%016x", uint64(sid)))
+	buf, rc, err := hcl.makeGetRequest(fmt.Sprintf("span/%s", sid.String()))
 	if err != nil {
 		if rc == http.StatusNoContent {
 			return nil, nil
@@ -133,8 +133,8 @@ func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {
 
 // Find the child IDs of a given span ID.
 func (hcl *Client) FindChildren(sid common.SpanId, lim int) ([]common.SpanId, error) {
-	buf, _, err := hcl.makeGetRequest(fmt.Sprintf("span/%016x/children?lim=%d",
-		uint64(sid), lim))
+	buf, _, err := hcl.makeGetRequest(fmt.Sprintf("span/%s/children?lim=%d",
+		sid.String(), lim))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (hcl *Client) DumpAll(lim int, out chan *common.Span) error {
 	defer func() {
 		close(out)
 	}()
-	searchId := common.SpanId(0)
+	searchId := common.INVALID_SPAN_ID
 	for {
 		q := common.Query{
 			Lim: lim,
@@ -232,7 +232,7 @@ func (hcl *Client) DumpAll(lim int, out chan *common.Span) error {
 		for i := range spans {
 			out <- &spans[i]
 		}
-		searchId = spans[len(spans)-1].Id + 1
+		searchId = spans[len(spans)-1].Id.Next()
 	}
 }
 

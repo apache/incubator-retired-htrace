@@ -63,10 +63,10 @@ func main() {
 	version := app.Command("version", "Print the version of this program.")
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
-	findSpanId := findSpan.Arg("id", "Span ID to find. Example: 0x123456789abcdef").Required().Uint64()
+	findSpanId := findSpan.Arg("id", "Span ID to find. Example: be305e54-4534-2110-a0b2-e06b9effe112").Required().String()
 	findChildren := app.Command("findChildren", "Print out the span IDs that are children of a given span ID.")
-	parentSpanId := findChildren.Arg("id", "Span ID to print children for. Example: 0x123456789abcdef").
-		Required().Uint64()
+	parentSpanId := findChildren.Arg("id", "Span ID to print children for. Example: be305e54-4534-2110-a0b2-e06b9effe112").
+		Required().String()
 	childLim := findChildren.Flag("lim", "Maximum number of child IDs to print.").Default("20").Int()
 	loadFile := app.Command("loadFile", "Write whitespace-separated JSON spans from a file to the server.")
 	loadFilePath := loadFile.Arg("path",
@@ -123,9 +123,13 @@ func main() {
 	case serverInfo.FullCommand():
 		os.Exit(printServerInfo(hcl))
 	case findSpan.FullCommand():
-		os.Exit(doFindSpan(hcl, common.SpanId(*findSpanId)))
+		var id *common.SpanId
+		id.FromString(*findSpanId)
+		os.Exit(doFindSpan(hcl, *id))
 	case findChildren.FullCommand():
-		os.Exit(doFindChildren(hcl, common.SpanId(*parentSpanId), *childLim))
+		var id *common.SpanId
+		id.FromString(*parentSpanId)
+		os.Exit(doFindChildren(hcl, *id, *childLim))
 	case loadJson.FullCommand():
 		os.Exit(doLoadSpanJson(hcl, *loadJsonArg))
 	case loadFile.FullCommand():

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
+import org.apache.htrace.SpanId;
 import org.apache.htrace.util.DataDir;
 import org.apache.htrace.util.HTracedProcess;
 import org.apache.htrace.util.TestUtil;
@@ -126,8 +127,8 @@ public class TestHTracedRESTReceiver {
     Span spans[] = new Span[NUM_SPANS];
     for (int i = 0; i < NUM_SPANS; i++) {
       MilliSpan.Builder builder = new MilliSpan.Builder().
-          parents(new long[]{1L}).
-          spanId(i);
+          parents(new SpanId[] { new SpanId(1L, 1L) }).
+          spanId(new SpanId(1L, i));
       if (i == NUM_SPANS - 1) {
         builder.tracerId("specialTrid");
       }
@@ -150,7 +151,8 @@ public class TestHTracedRESTReceiver {
             for (int i = 0; i < NUM_SPANS; i++) {
               // This is what the REST server expects when querying for a
               // span id.
-              String findSpan = String.format("span/%016x", i);
+              String findSpan = String.format("span/%s",
+                  new SpanId(1L, i).toString());
               ContentResponse response =
                   http.GET(restServerUrl + findSpan);
               String content = processGET(response);
@@ -160,7 +162,8 @@ public class TestHTracedRESTReceiver {
               }
               LOG.info("Got " + content + " for span " + i);
               MilliSpan dspan = MilliSpan.fromJson(content);
-              assertEquals((long)i, dspan.getSpanId());
+              assertEquals(new SpanId(1, i).toString(),
+                dspan.getSpanId().toString());
               // Every span should have the tracer ID we set in the
               // configuration... except for the last span, which had
               // a custom value set.

@@ -75,13 +75,7 @@ public interface Span {
    * The spanId is immutable and cannot be changed.  It is safe to access this
    * from multiple threads.
    */
-  long getSpanId();
-
-  /**
-   * A pseudo-unique (random) number assigned to the trace associated with this
-   * span
-   */
-  long getTraceId();
+  SpanId getSpanId();
 
   /**
    * Create a child span of this span with the given description
@@ -96,14 +90,14 @@ public interface Span {
    *
    * The array will be empty if there are no parents.
    */
-  long[] getParents();
+  SpanId[] getParents();
 
   /**
    * Set the parents of this span.<p/>
    *
    * Any existing parents will be cleared by this call.
    */
-  void setParents(long[] parents);
+  void setParents(SpanId[] parents);
 
   /**
    * Add a data annotation associated with this span
@@ -151,11 +145,8 @@ public interface Span {
     public void serialize(Span span, JsonGenerator jgen, SerializerProvider provider)
         throws IOException {
       jgen.writeStartObject();
-      if (span.getTraceId() != 0) {
-        jgen.writeStringField("i", String.format("%016x", span.getTraceId()));
-      }
-      if (span.getSpanId() != 0) {
-        jgen.writeStringField("s", String.format("%016x", span.getSpanId()));
+      if (span.getSpanId().isValid()) {
+        jgen.writeStringField("a", span.getSpanId().toString());
       }
       if (span.getStartTimeMillis() != 0) {
         jgen.writeNumberField("b", span.getStartTimeMillis());
@@ -171,8 +162,8 @@ public interface Span {
         jgen.writeStringField("r", tracerId);
       }
       jgen.writeArrayFieldStart("p");
-      for (long parent : span.getParents()) {
-        jgen.writeString(String.format("%016x", parent));
+      for (SpanId parent : span.getParents()) {
+        jgen.writeString(parent.toString());
       }
       jgen.writeEndArray();
       Map<String, String> traceInfoMap = span.getKVAnnotations();

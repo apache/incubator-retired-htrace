@@ -38,11 +38,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.htrace.Span;
+import org.apache.htrace.SpanId;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.TimelineAnnotation;
 import org.apache.htrace.TraceCreator;
-import org.apache.htrace.TraceTree.SpansByParent;
-import org.apache.htrace.TraceTree;
+import org.apache.htrace.TraceGraph.SpansByParent;
+import org.apache.htrace.TraceGraph;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -93,9 +94,9 @@ public class TestHBaseSpanReceiver {
       Assert.fail("failed to get spans from HBase. " + e.getMessage());
     }
 
-    TraceTree traceTree = new TraceTree(spans);
+    TraceGraph traceGraph = new TraceGraph(spans);
     Collection<Span> roots =
-        traceTree.getSpansByParent().find(0);
+        traceGraph.getSpansByParent().find(SpanId.INVALID);
     Assert.assertTrue("Trace tree must have roots", !roots.isEmpty());
     Assert.assertEquals(3, roots.size());
 
@@ -107,7 +108,7 @@ public class TestHBaseSpanReceiver {
     Assert.assertTrue(descs.keySet().contains(TraceCreator.SIMPLE_TRACE_ROOT));
     Assert.assertTrue(descs.keySet().contains(TraceCreator.THREADED_TRACE_ROOT));
 
-    SpansByParent spansByParentId = traceTree.getSpansByParent();
+    SpansByParent spansByParentId = traceGraph.getSpansByParent();
     Span rpcRoot = descs.get(TraceCreator.RPC_TRACE_ROOT);
     Assert.assertEquals(1, spansByParentId.find(rpcRoot.getSpanId()).size());
     Span rpcChild1 = spansByParentId.find(rpcRoot.getSpanId()).iterator().next();
@@ -144,19 +145,14 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public long getTraceId() {
-      return span.getTraceId();
-    }
-
-    @Override
-    public long[] getParents() {
+    public SpanId[] getParents() {
       return (span.getParentId() == 0L) ?
-        (new long[] {}) :
-        (new long[] { span.getParentId() });
+        (new SpanId[] {}) :
+        (new SpanId[] { new SpanId(span.getTraceId(), span.getParentId()) });
     }
 
     @Override
-    public void setParents(long[] parents) {
+    public void setParents(SpanId[] parents) {
       throw new UnsupportedOperationException();
     }
 
@@ -171,8 +167,8 @@ public class TestHBaseSpanReceiver {
     }
 
     @Override
-    public long getSpanId() {
-      return span.getSpanId();
+    public SpanId getSpanId() {
+      return new SpanId(span.getTraceId(), span.getSpanId());
     }
 
     @Override

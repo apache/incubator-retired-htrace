@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
-	"org/apache/htrace/test"
 	"os"
 	"strings"
 	"testing"
@@ -116,10 +115,10 @@ func TestFailureDeferringWriter(t *testing.T) {
 }
 
 func TestReadSpans(t *testing.T) {
-	SPAN_TEST_STR := `{"i":"bdd6d4ee48de59bf","s":"c0681027d3ea4928",` +
+	SPAN_TEST_STR := `{"a":"b9f2a1e07b6e4f16b0c2b27303b20e79",` +
 		`"b":1424736225037,"e":1424736225901,"d":"ClientNamenodeProtocol#getFileInfo",` +
-		`"r":"FsShell","p":["60538dfb4df91418"]}
-{"i":"bdd6d4ee48de59bf","s":"60538dfb4df91418","b":1424736224969,` +
+		`"r":"FsShell","p":["3afebdc0a13f4feb811cc5c0e42d30b1"]}
+{"a":"3afebdc0a13f4feb811cc5c0e42d30b1","b":1424736224969,` +
 		`"e":1424736225960,"d":"getFileInfo","r":"FsShell","p":[],"n":{"path":"/"}}
 `
 	r := strings.NewReader(SPAN_TEST_STR)
@@ -129,20 +128,18 @@ func TestReadSpans(t *testing.T) {
 	}
 	SPAN_TEST_EXPECTED := common.SpanSlice{
 		&common.Span{
-			Id: test.SpanId("c0681027d3ea4928"),
+			Id: common.TestId("b9f2a1e07b6e4f16b0c2b27303b20e79"),
 			SpanData: common.SpanData{
-				TraceId:     test.SpanId("bdd6d4ee48de59bf"),
 				Begin:       1424736225037,
 				End:         1424736225901,
 				Description: "ClientNamenodeProtocol#getFileInfo",
 				TracerId:    "FsShell",
-				Parents:     []common.SpanId{test.SpanId("60538dfb4df91418")},
+				Parents:     []common.SpanId{common.TestId("3afebdc0a13f4feb811cc5c0e42d30b1")},
 			},
 		},
 		&common.Span{
-			Id: test.SpanId("60538dfb4df91418"),
+			Id: common.TestId("3afebdc0a13f4feb811cc5c0e42d30b1"),
 			SpanData: common.SpanData{
-				TraceId:     test.SpanId("bdd6d4ee48de59bf"),
 				Begin:       1424736224969,
 				End:         1424736225960,
 				Description: "getFileInfo",

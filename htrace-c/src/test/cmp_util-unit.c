@@ -39,27 +39,33 @@ static struct htrace_span **setup_test_spans(void)
     spans[0]->desc = xstrdup("FirstSpan");
     spans[0]->begin_ms = 1927;
     spans[0]->end_ms = 2000;
-    spans[0]->span_id = 1;
+    spans[0]->span_id.high = 0xface;
+    spans[0]->span_id.low = 1;
 
     spans[1] = xcalloc(sizeof(struct htrace_span));
     spans[1]->desc = xstrdup("SecondSpan");
     spans[1]->begin_ms = 1950;
     spans[1]->end_ms = 2000;
-    spans[1]->span_id = 0xffffffffffffffffULL;
+    spans[1]->span_id.high = 0xface;
+    spans[1]->span_id.low = 2;
     spans[1]->trid = xstrdup("SecondSpanProc");
     spans[1]->num_parents = 1;
-    spans[1]->parent.single = 1;
+    spans[1]->parent.single.high = 0xface;
+    spans[1]->parent.single.low = 1;
 
     spans[2] = xcalloc(sizeof(struct htrace_span));
     spans[2]->desc = xstrdup("ThirdSpan");
     spans[2]->begin_ms = 1969;
     spans[2]->end_ms = 1997;
-    spans[2]->span_id = 0xcfcfcfcfcfcfcfcfULL;
+    spans[1]->span_id.high = 0xface;
+    spans[1]->span_id.low = 0xcfcfcfcfcfcfcfcfULL;
     spans[2]->trid = xstrdup("ThirdSpanProc");
     spans[2]->num_parents = 2;
-    spans[2]->parent.list = xcalloc(sizeof(uint64_t) * 2);
-    spans[2]->parent.list[0] = 1;
-    spans[2]->parent.list[1] = 0xffffffffffffffffULL;
+    spans[2]->parent.list = xcalloc(sizeof(struct htrace_span_id) * 2);
+    spans[2]->parent.list[0].high = 0xface;
+    spans[2]->parent.list[0].low = 1;
+    spans[2]->parent.list[1].high = 0xface;
+    spans[2]->parent.list[1].low = 2;
 
     return spans;
 }

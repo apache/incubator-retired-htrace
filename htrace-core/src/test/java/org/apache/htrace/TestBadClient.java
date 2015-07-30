@@ -24,8 +24,6 @@ import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.Tracer;
-import org.apache.htrace.TraceTree.SpansByParent;
-import org.apache.htrace.TraceTree;
 import org.apache.htrace.impl.AlwaysSampler;
 import org.apache.htrace.impl.LocalFileSpanReceiver;
 import org.apache.htrace.impl.POJOSpanReceiver;

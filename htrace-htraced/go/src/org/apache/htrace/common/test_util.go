@@ -72,3 +72,12 @@ func ExpectStrEqual(t *testing.T, expect string, actual string) {
 func ExpectSpansEqual(t *testing.T, spanA *Span, spanB *Span) {
 	ExpectStrEqual(t, string(spanA.ToJson()), string(spanB.ToJson()))
 }
+
+func TestId(str string) SpanId {
+	var spanId SpanId
+	err := spanId.FromString(str)
+	if err != nil {
+		panic(err.Error())
+	}
+	return spanId
+}

@@ -76,14 +76,15 @@ type dataStoreHandler struct {
 
 func (hand *dataStoreHandler) parseSid(w http.ResponseWriter,
 	str string) (common.SpanId, bool) {
-	val, err := strconv.ParseUint(str, 16, 64)
+	var id common.SpanId
+	err := id.FromString(str)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusBadRequest,
 			fmt.Sprintf("Failed to parse span ID %s: %s", str, err.Error()))
 		w.Write([]byte("Error parsing : " + err.Error()))
-		return 0, false
+		return common.INVALID_SPAN_ID, false
 	}
-	return common.SpanId(val), true
+	return id, true
 }
 
 func (hand *dataStoreHandler) getReqField32(fieldName string, w http.ResponseWriter,

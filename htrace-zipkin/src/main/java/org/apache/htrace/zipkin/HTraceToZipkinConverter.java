@@ -110,15 +110,15 @@ public class HTraceToZipkinConverter {
     Endpoint ep = new Endpoint(ipv4Address, (short) getPort(serviceName), serviceName);
     List<Annotation> annotationList = createZipkinAnnotations(hTraceSpan, ep);
     List<BinaryAnnotation> binaryAnnotationList = createZipkinBinaryAnnotations(hTraceSpan, ep);
-    zipkinSpan.setTrace_id(hTraceSpan.getTraceId());
+    zipkinSpan.setTrace_id(hTraceSpan.getSpanId().getHigh());
     if (hTraceSpan.getParents().length > 0) {
       if (hTraceSpan.getParents().length > 1) {
         LOG.error("zipkin doesn't support spans with multiple parents.  Omitting " +
             "other parents for " + hTraceSpan);
       }
-      zipkinSpan.setParent_id(hTraceSpan.getParents()[0]);
+      zipkinSpan.setParent_id(hTraceSpan.getParents()[0].getLow());
     }
-    zipkinSpan.setId(hTraceSpan.getSpanId());
+    zipkinSpan.setId(hTraceSpan.getSpanId().getLow());
     zipkinSpan.setName(hTraceSpan.getDescription());
     zipkinSpan.setAnnotations(annotationList);
     zipkinSpan.setBinary_annotations(binaryAnnotationList);

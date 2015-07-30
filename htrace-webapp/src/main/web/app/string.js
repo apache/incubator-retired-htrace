@@ -47,16 +47,12 @@ htrace.dateToString = function(val) {
   return moment.utc(val).format("YYYY-MM-DDTHH:mm:ss,SSS");
 };
 
-// Normalize a span ID into the format the server expects to see
-// (no leading 0x).
+// Normalize a span ID into the format the server expects to see--
+// i.e. something like 00000000000000000000000000000000.
 htrace.normalizeSpanId = function(str) {
-  // Strip off the 0x prefix, if there is one.
-  if (str.indexOf("0x") == 0) {
-    str = str.substring(2);
-  }
-  if (str.length != 16) {
+  if (str.length != 36) {
     throw "The length of '" + str + "' was " + str.length +
-      ", but span IDs must be 16 characters long.";
+      ", but span IDs must be 36 characters long.";
   }
   if (str.search(/[^0-9a-fA-F]/) != -1) {
     throw "Span IDs must contain only hexadecimal digits, but '" + str +

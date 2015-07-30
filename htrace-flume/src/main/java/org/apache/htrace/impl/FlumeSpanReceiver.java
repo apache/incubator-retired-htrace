@@ -173,9 +173,8 @@ public class FlumeSpanReceiver implements SpanReceiver {
           for (Span span : dequeuedSpans) {
             // Headers allow Flume to filter
             Map<String, String> headers = new HashMap<String, String>();
-            headers.put("TraceId",      Long.toString(span.getTraceId()));
-            headers.put("SpanId",       Long.toString(span.getSpanId()));
-            headers.put("TracerId",    span.getTracerId());
+            headers.put("SpanId",       span.toString());
+            headers.put("TracerId",     span.getTracerId());
             headers.put("Description",  span.getDescription());
 
             String body = span.toJson();

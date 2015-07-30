@@ -88,14 +88,11 @@ static int doit(RTestData &tdata, struct rtest *rt)
 {
     {
         htrace::Scope scope1(tdata.tracer_, "part1");
-        EXPECT_UINT64_GT(0L, scope1.GetSpanId());
     }
     {
         htrace::Scope scope2(tdata.tracer_, "part2");
-        EXPECT_UINT64_GT(0L, scope2.GetSpanId());
         {
             htrace::Scope scope2_5(tdata.tracer_, "part2.5");
-            EXPECT_UINT64_GT(0L, scope2_5.GetSpanId());
         }
     }
     return EXIT_SUCCESS;
@@ -115,27 +112,27 @@ int rtestpp_simple_run(struct rtest *rt, const char *conf_str)
 int rtestpp_simple_verify(struct rtest *rt, struct span_table *st)
 {
     struct htrace_span *span;
-    uint64_t doit_id, part2_id;
+    struct htrace_span_id doit_id, part2_id;
     char trid[128];
 
     EXPECT_INT_ZERO(rtest_generic_verify(rt, st));
     get_receiver_test_trid(trid, sizeof(trid));
     EXPECT_INT_ZERO(span_table_get(st, &span, "doit", trid));
-    doit_id = span->span_id;
+    htrace_span_id_copy(&doit_id, &span->span_id);
     EXPECT_INT_ZERO(span->num_parents);
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part1", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    EXPECT_UINT64_EQ(doit_id, span->parent.single);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&doit_id, &span->parent.single));
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part2", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    part2_id = span->span_id;
-    EXPECT_UINT64_EQ(doit_id, span->parent.single);
+    htrace_span_id_copy(&part2_id, &span->span_id);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&doit_id, &span->parent.single));
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part2.5", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    EXPECT_UINT64_EQ(part2_id, span->parent.single);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&part2_id, &span->parent.single));
 
     return EXIT_SUCCESS;
 }

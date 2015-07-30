@@ -43,7 +43,7 @@ struct htrace_scope* htrace_start_span(struct htracer *tracer,
 {
     struct htrace_scope *cur_scope, *scope = NULL, *pscope;
     struct htrace_span *span = NULL;
-    uint64_t span_id;
+    struct htrace_span_id span_id;
 
     // Validate the description string.  This ensures that it doesn't have
     // anything silly in it like embedded double quotes, backslashes, or control
@@ -54,15 +54,16 @@ struct htrace_scope* htrace_start_span(struct htracer *tracer,
         return NULL;
     }
     cur_scope = htracer_cur_scope(tracer);
-    if (!cur_scope) {
+    if ((!cur_scope) || (!cur_scope->span)) {
         if (!sampler->ty->next(sampler)) {
             return NULL;
         }
+        htrace_span_id_generate(&span_id, tracer->rnd, NULL);
+    } else {
+        htrace_span_id_generate(&span_id, tracer->rnd,
+                                &cur_scope->span->span_id);
     }
-    do {
-        span_id = random_u64(tracer->rnd);
-    } while (span_id == 0);
-    span = htrace_span_alloc(desc, now_ms(tracer->lg), span_id);
+    span = htrace_span_alloc(desc, now_ms(tracer->lg), &span_id);
     if (!span) {
         htrace_log(tracer->lg, "htrace_span_alloc(desc=%s): OOM\n", desc);
         return NULL;
@@ -112,12 +113,14 @@ struct htrace_scope* htrace_restart_span(struct htracer *tracer,
                                          struct htrace_span *span)
 {
     struct htrace_scope *cur_scope, *scope = NULL;
+    char buf[HTRACE_SPAN_ID_STRING_LENGTH + 1];
 
     scope = malloc(sizeof(*scope));
     if (!scope) {
+        htrace_span_id_to_str(&span->span_id, buf, sizeof(buf));
+        htrace_log(tracer->lg, "htrace_start_span(desc=%s, parent_id=%s"
+                   "): OOM\n", span->desc, buf);
         htrace_span_free(span);
-        htrace_log(tracer->lg, "htrace_start_span(desc=%s, parent_id=%016"PRIx64
-                   "): OOM\n", span->desc, span->span_id);
         return NULL;
     }
     scope->tracer = tracer;
@@ -132,15 +135,21 @@ struct htrace_scope* htrace_restart_span(struct htracer *tracer,
     return scope;
 }
 
-uint64_t htrace_scope_get_span_id(const struct htrace_scope *scope)
+void htrace_scope_get_span_id(const struct htrace_scope *scope,
+                              struct htrace_span_id *id)
 {
     struct htrace_span *span;
 
     if (!scope) {
-        return 0;
+        htrace_span_id_clear(id);
+        return;
     }
     span = scope->span;
-    return span ? span->span_id : 0;
+    if (!span) {
+        htrace_span_id_clear(id);
+        return;
+    }
+    htrace_span_id_copy(id, &span->span_id);
 }
 
 void htrace_scope_close(struct htrace_scope *scope)

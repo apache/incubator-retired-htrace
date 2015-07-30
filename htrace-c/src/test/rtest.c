@@ -18,6 +18,7 @@
 
 #include "core/conf.h"
 #include "core/htrace.h"
+#include "core/scope.h"
 #include "core/span.h"
 #include "test/rtest.h"
 #include "test/span_table.h"
@@ -92,12 +93,17 @@ static int rtest_verify_table_size(struct rtest *rt, struct span_table *st)
 static int doit(struct rtest_data *rdata)
 {
     struct htrace_scope *scope1, *scope2, *scope2_5;
+    struct htrace_span_id span_id;
 
     scope1 = htrace_start_span(rdata->tracer, NULL, "part1");
-    EXPECT_UINT64_GT(0L, htrace_scope_get_span_id(scope1));
+    htrace_scope_get_span_id(scope1, &span_id);
+    EXPECT_TRUE(0 !=
+        htrace_span_id_compare(&INVALID_SPAN_ID, &span_id));
     htrace_scope_close(scope1);
     scope2 = htrace_start_span(rdata->tracer, NULL, "part2");
-    EXPECT_UINT64_GT(0L, htrace_scope_get_span_id(scope2));
+    htrace_scope_get_span_id(scope2, &span_id);
+    EXPECT_TRUE(0 !=
+        htrace_span_id_compare(&INVALID_SPAN_ID, &span_id));
     scope2_5 = htrace_start_span(rdata->tracer, NULL, "part2.5");
     htrace_scope_close(scope2_5);
     htrace_scope_close(scope2);
@@ -122,27 +128,27 @@ int rtest_simple_run(struct rtest *rt, const char *conf_str)
 int rtest_simple_verify(struct rtest *rt, struct span_table *st)
 {
     struct htrace_span *span;
-    uint64_t doit_id, part2_id;
+    struct htrace_span_id doit_id, part2_id;
     char trid[128];
 
     EXPECT_INT_ZERO(rtest_verify_table_size(rt, st));
     get_receiver_test_trid(trid, sizeof(trid));
     EXPECT_INT_ZERO(span_table_get(st, &span, "doit", trid));
-    doit_id = span->span_id;
+    htrace_span_id_copy(&doit_id, &span->span_id);
     EXPECT_INT_ZERO(span->num_parents);
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part1", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    EXPECT_UINT64_EQ(doit_id, span->parent.single);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&doit_id, &span->parent.single));
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part2", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    part2_id = span->span_id;
-    EXPECT_UINT64_EQ(doit_id, span->parent.single);
+    htrace_span_id_copy(&part2_id, &span->span_id);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&doit_id, &span->parent.single));
 
     EXPECT_INT_ZERO(span_table_get(st, &span, "part2.5", trid));
     EXPECT_INT_EQ(1, span->num_parents);
-    EXPECT_UINT64_EQ(part2_id, span->parent.single);
+    EXPECT_TRUE(0 == htrace_span_id_compare(&part2_id, &span->parent.single));
 
     return EXIT_SUCCESS;
 }

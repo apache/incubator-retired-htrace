@@ -38,6 +38,15 @@ func NonZeroRand64(rnd *rand.Rand) int64 {
 	}
 }
 
+func NonZeroRandSpanId(rnd *rand.Rand) common.SpanId {
+	var id common.SpanId
+	id = make([]byte, 16)
+	for i := 0; i < len(id); i++ {
+		id[i] = byte(rnd.Intn(0x100))
+	}
+	return id
+}
+
 func NonZeroRand32(rnd *rand.Rand) int32 {
 	for {
 		r := rnd.Int31()
@@ -60,12 +69,11 @@ func NewRandomSpan(rnd *rand.Rand, potentialParents []*common.Span) *common.Span
 			parents = []common.SpanId{potentialParents[parentIdx].Id}
 		}
 	}
-	return &common.Span{Id: common.SpanId(NonZeroRand64(rnd)),
+	return &common.Span{Id: NonZeroRandSpanId(rnd),
 		SpanData: common.SpanData{
 			Begin:       NonZeroRand64(rnd),
 			End:         NonZeroRand64(rnd),
 			Description: "getFileDescriptors",
-			TraceId:     common.SpanId(NonZeroRand64(rnd)),
 			Parents:     parents,
 			TracerId:    fmt.Sprintf("tracer%d", NonZeroRand32(rnd)),
 		}}

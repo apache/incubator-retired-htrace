@@ -45,7 +45,6 @@ static const char * const PUBLIC_SYMS[] = {
     "htrace_sampler_to_str",
     "htrace_scope_close",
     "htrace_scope_detach",
-    "htrace_scope_get_span_id",
     "htrace_start_span",
     "htracer_create",
     "htracer_free",

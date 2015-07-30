@@ -50,7 +50,8 @@ int span_table_get(struct span_table *st, struct htrace_span **out,
     EXPECT_NONNULL(span);
     EXPECT_STR_EQ(desc, span->desc);
     EXPECT_UINT64_GE(span->begin_ms, span->end_ms);
-    EXPECT_UINT64_GT(0L, span->span_id);
+    EXPECT_TRUE(0 !=
+        htrace_span_id_compare(&INVALID_SPAN_ID, &span->span_id));
     EXPECT_NONNULL(span->trid);
     EXPECT_STR_EQ(trid, span->trid);
     *out = span;

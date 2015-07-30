@@ -193,6 +193,10 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 		"defaultTrid = %s\n", len(req.Spans), req.DefaultTrid)
 	for i := range req.Spans {
 		span := req.Spans[i]
+		spanIdProblem := span.Id.FindProblem()
+		if spanIdProblem != "" {
+			return errors.New(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
+		}
 		if span.TracerId == "" {
 			span.TracerId = req.DefaultTrid
 		}

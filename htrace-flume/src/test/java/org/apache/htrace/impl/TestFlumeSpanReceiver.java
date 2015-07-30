@@ -19,6 +19,7 @@ package org.apache.htrace.impl;
 
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Span;
+import org.apache.htrace.SpanId;
 import org.apache.htrace.TraceCreator;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -42,8 +43,7 @@ public class TestFlumeSpanReceiver {
 
     Span rootSpan = new MilliSpan.Builder().
         description("root").
-        traceId(1).
-        spanId(100).
+        spanId(new SpanId(100, 100)).
         tracerId("test").
         begin(System.currentTimeMillis()).
         build();

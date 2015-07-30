@@ -38,7 +38,7 @@
  */
 
 struct htrace_span *htrace_span_alloc(const char *desc,
-                uint64_t begin_ms, uint64_t span_id)
+                uint64_t begin_ms, struct htrace_span_id *span_id)
 {
     struct htrace_span *span;
 
@@ -53,10 +53,10 @@ struct htrace_span *htrace_span_alloc(const char *desc,
     }
     span->begin_ms = begin_ms;
     span->end_ms = 0;
-    span->span_id = span_id;
+    htrace_span_id_copy(&span->span_id, span_id);
     span->trid = NULL;
     span->num_parents = 0;
-    span->parent.single = 0;
+    htrace_span_id_clear(&span->parent.single);
     span->parent.list = NULL;
     return span;
 }
@@ -74,35 +74,26 @@ void htrace_span_free(struct htrace_span *span)
     free(span);
 }
 
-static int compare_spanids(const void *va, const void *vb)
-{
-    uint64_t a = *((uint64_t*)va);
-    uint64_t b = *((uint64_t*)vb);
-    if (a < b) {
-        return -1;
-    } else if (a > b) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
+typedef int (*qsort_fn_t)(const void *, const void *);
 
 void htrace_span_sort_and_dedupe_parents(struct htrace_span *span)
 {
     int i, j, num_parents = span->num_parents;
-    uint64_t prev;
+    struct htrace_span_id prev;
 
     if (num_parents <= 1) {
         return;
     }
-    qsort(span->parent.list, num_parents, sizeof(uint64_t), compare_spanids);
+    qsort(span->parent.list, num_parents, sizeof(struct htrace_span_id),
+          (qsort_fn_t)htrace_span_id_compare);
     prev = span->parent.list[0];
+    htrace_span_id_copy(&prev, &span->parent.list[0]);
     j = 1;
     for (i = 1; i < num_parents; i++) {
-        uint64_t id = span->parent.list[i];
-        if (id != prev) {
-            span->parent.list[j++] = span->parent.list[i];
-            prev = id;
+        if (htrace_span_id_compare(&prev, span->parent.list + i) != 0) {
+            htrace_span_id_copy(&prev, span->parent.list + i);
+            htrace_span_id_copy(span->parent.list + j, span->parent.list + i);
+            j++;
         }
     }
     span->num_parents = j;
@@ -114,7 +105,8 @@ void htrace_span_sort_and_dedupe_parents(struct htrace_span *span)
     } else if (j != num_parents) {
         // After deduplication, there are now fewer entries.  Use realloc to
         // shrink the size of our dynamic allocation if possible.
-        uint64_t *nlist = realloc(span->parent.list, sizeof(uint64_t) * j);
+        struct htrace_span_id *nlist =
+            realloc(span->parent.list, sizeof(struct htrace_span_id) * j);
         if (nlist) {
             span->parent.list = nlist;
         }
@@ -141,13 +133,15 @@ static int span_json_sprintf_impl(const struct htrace_span *span,
 {
     int num_parents, i, ret = 0;
     const char *prefix = "";
+    char sbuf[HTRACE_SPAN_ID_STRING_LENGTH + 1];
 
     // Note that we have validated the description and process ID strings to
     // make sure they don't contain anything evil.  So we don't need to escape
     // them here.
 
-    ret += fwdprintf(&buf, &max, "{\"s\":\"%016" PRIx64 "\",\"b\":%" PRId64
-                 ",\"e\":%" PRId64",", span->span_id, span->begin_ms,
+    htrace_span_id_to_str(&span->span_id, sbuf, sizeof(sbuf));
+    ret += fwdprintf(&buf, &max, "{\"a\":\"%s\",\"b\":%" PRId64
+                 ",\"e\":%" PRId64",", sbuf, span->begin_ms,
                  span->end_ms);
     if (span->desc[0]) {
         ret += fwdprintf(&buf, &max, "\"d\":\"%s\",", span->desc);
@@ -159,13 +153,13 @@ static int span_json_sprintf_impl(const struct htrace_span *span,
     if (num_parents == 0) {
         ret += fwdprintf(&buf, &max, "\"p\":[]");
     } else if (num_parents == 1) {
-        ret += fwdprintf(&buf, &max, "\"p\":[\"%016"PRIx64"\"]",
-                         span->parent.single);
+        htrace_span_id_to_str(&span->parent.single, sbuf, sizeof(sbuf));
+        ret += fwdprintf(&buf, &max, "\"p\":[\"%s\"]", sbuf);
     } else if (num_parents > 1) {
         ret += fwdprintf(&buf, &max, "\"p\":[");
         for (i = 0; i < num_parents; i++) {
-            ret += fwdprintf(&buf, &max, "%s\"%016" PRIx64 "\"", prefix,
-                             span->parent.list[i]);
+            htrace_span_id_to_str(span->parent.list + i, sbuf, sizeof(sbuf));
+            ret += fwdprintf(&buf, &max, "%s\"%s\"", prefix, sbuf);
             prefix = ",";
         }
         ret += fwdprintf(&buf, &max, "]");
@@ -205,6 +199,12 @@ int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
     if (!cmp_write_map16(ctx, map_size)) {
         return 0;
     }
+    if (!cmp_write_fixstr(ctx, "a", 1)) {
+        return 0;
+    }
+    if (!htrace_span_id_write_msgpack(&span->span_id, ctx)) {
+        return 0;
+    }
     if (!cmp_write_fixstr(ctx, "d", 1)) {
         return 0;
     }
@@ -223,12 +223,6 @@ int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
     if (!cmp_write_u64(ctx, span->end_ms)) {
         return 0;
     }
-    if (!cmp_write_fixstr(ctx, "s", 1)) {
-        return 0;
-    }
-    if (!cmp_write_u64(ctx, span->span_id)) {
-        return 0;
-    }
     if (span->trid) {
         if (!cmp_write_fixstr(ctx, "r", 1)) {
             return 0;
@@ -245,12 +239,12 @@ int span_write_msgpack(const struct htrace_span *span, cmp_ctx_t *ctx)
             return 0;
         }
         if (num_parents == 1) {
-            if (!cmp_write_u64(ctx, span->parent.single)) {
+            if (!htrace_span_id_write_msgpack(&span->parent.single, ctx)) {
                 return 0;
             }
         } else {
             for (i = 0; i < num_parents; i++) {
-                if (!cmp_write_u64(ctx, span->parent.list[i])) {
+                if (!htrace_span_id_write_msgpack(span->parent.list + i, ctx)) {
                     return 0;
                 }
             }
