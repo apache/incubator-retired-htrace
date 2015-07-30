@@ -127,7 +127,7 @@ func TestGetHTracedConfDirs(t *testing.T) {
 	os.Setenv("HTRACED_CONF_DIR", "")
 	dlog := new(bytes.Buffer)
 	dirs := getHTracedConfDirs(dlog)
-	if len(dirs) != 1 || dirs[0] != "." {
+	if len(dirs) != 1 || dirs[0] != getDefaultHTracedConfDir() {
 		t.Fatal()
 	}
 	os.Setenv("HTRACED_CONF_DIR", "/foo/bar:/baz")

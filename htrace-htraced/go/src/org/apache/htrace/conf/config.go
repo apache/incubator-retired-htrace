@@ -68,13 +68,19 @@ type Builder struct {
 	Argv []string
 }
 
+func getDefaultHTracedConfDir() string {
+	return PATH_SEP + "etc" + PATH_SEP + "htraced" + PATH_SEP + "conf";
+}
+
 func getHTracedConfDirs(dlog io.Writer) []string {
 	confDir := os.Getenv("HTRACED_CONF_DIR")
-	io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR=%s\n", confDir))
 	paths := filepath.SplitList(confDir)
 	if len(paths) < 1 {
-		return []string{"."}
+		def := getDefaultHTracedConfDir()
+		io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR defaulting to %s\n", def))
+		return []string{ def }
 	}
+	io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR=%s\n", confDir))
 	return paths
 }
 
