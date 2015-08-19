@@ -24,8 +24,10 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.htrace.core.SpanReceiver;
+import org.apache.htrace.core.SpanReceiverBuilder;
+import org.apache.htrace.core.Trace;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from

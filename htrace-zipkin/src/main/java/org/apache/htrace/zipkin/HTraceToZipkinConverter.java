@@ -22,10 +22,9 @@ import com.twitter.zipkin.gen.BinaryAnnotation;
 import com.twitter.zipkin.gen.Endpoint;
 import com.twitter.zipkin.gen.Span;
 import com.twitter.zipkin.gen.zipkinCoreConstants;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.htrace.TimelineAnnotation;
+import org.apache.htrace.core.TimelineAnnotation;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -104,7 +103,7 @@ public class HTraceToZipkinConverter {
    * <li>Set the last annotation. [SS, CR]
    * </ul>
    */
-  public Span convert(org.apache.htrace.Span hTraceSpan) {
+  public Span convert(org.apache.htrace.core.Span hTraceSpan) {
     Span zipkinSpan = new Span();
     String serviceName = hTraceSpan.getTracerId().toLowerCase();
     Endpoint ep = new Endpoint(ipv4Address, (short) getPort(serviceName), serviceName);
@@ -128,7 +127,7 @@ public class HTraceToZipkinConverter {
   /**
    * Add annotations from the htrace Span.
    */
-  private List<Annotation> createZipkinAnnotations(org.apache.htrace.Span hTraceSpan,
+  private List<Annotation> createZipkinAnnotations(org.apache.htrace.core.Span hTraceSpan,
                                                    Endpoint ep) {
     List<Annotation> annotationList = new ArrayList<Annotation>();
 
@@ -150,7 +149,7 @@ public class HTraceToZipkinConverter {
    *
    * @return list of Annotations that could be added to Zipkin Span.
    */
-  private List<BinaryAnnotation> createZipkinBinaryAnnotations(org.apache.htrace.Span span,
+  private List<BinaryAnnotation> createZipkinBinaryAnnotations(org.apache.htrace.core.Span span,
                                                                Endpoint ep) {
     List<BinaryAnnotation> l = new ArrayList<BinaryAnnotation>();
     for (Map.Entry<String, String> e : span.getKVAnnotations().entrySet()) {

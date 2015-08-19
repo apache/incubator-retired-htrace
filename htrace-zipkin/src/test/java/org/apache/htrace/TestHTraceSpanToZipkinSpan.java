@@ -19,12 +19,12 @@ package org.apache.htrace.zipkin;
 
 import com.twitter.zipkin.gen.zipkinCoreConstants;
 
-import org.apache.htrace.HTraceConfiguration;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanId;
-import org.apache.htrace.Trace;
-import org.apache.htrace.impl.MilliSpan;
-import org.apache.htrace.impl.POJOSpanReceiver;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.Trace;
+import org.apache.htrace.core.MilliSpan;
+import org.apache.htrace.core.POJOSpanReceiver;
 import org.apache.htrace.zipkin.HTraceToZipkinConverter;
 import org.junit.Assert;
 import org.junit.Test;

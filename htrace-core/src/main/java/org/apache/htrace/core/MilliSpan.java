@@ -342,7 +342,7 @@ public class MilliSpan implements Span {
     }
   }
 
-  static MilliSpan fromJson(String json) throws IOException {
+  public static MilliSpan fromJson(String json) throws IOException {
     return JSON_READER.readValue(json);
   }
 }

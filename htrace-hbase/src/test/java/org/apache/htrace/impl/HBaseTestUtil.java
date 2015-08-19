@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.htrace.HBaseHTraceConfiguration;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.SpanReceiverBuilder;
+import org.apache.htrace.core.SpanReceiver;
+import org.apache.htrace.core.SpanReceiverBuilder;
 import org.junit.Assert;
 
 

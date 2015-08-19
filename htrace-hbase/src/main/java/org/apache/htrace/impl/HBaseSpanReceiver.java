@@ -41,14 +41,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.htrace.HBaseHTraceConfiguration;
-import org.apache.htrace.HTraceConfiguration;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.SpanReceiverBuilder;
-import org.apache.htrace.TimelineAnnotation;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.htrace.core.Sampler;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanReceiver;
+import org.apache.htrace.core.SpanReceiverBuilder;
+import org.apache.htrace.core.TimelineAnnotation;
+import org.apache.htrace.core.Trace;
+import org.apache.htrace.core.TracerId;
+import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 
 /**

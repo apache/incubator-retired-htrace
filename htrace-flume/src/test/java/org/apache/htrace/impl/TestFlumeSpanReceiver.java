@@ -17,10 +17,12 @@
 
 package org.apache.htrace.impl;
 
-import org.apache.htrace.HTraceConfiguration;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanId;
-import org.apache.htrace.TraceCreator;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.htrace.core.MilliSpan;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.TraceCreator;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

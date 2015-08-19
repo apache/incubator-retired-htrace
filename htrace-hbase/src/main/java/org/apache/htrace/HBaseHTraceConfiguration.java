@@ -19,7 +19,7 @@
 package org.apache.htrace;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.core.HTraceConfiguration;
 
 /**
  * Meshes {@link HTraceConfiguration} to {@link Configuration}
