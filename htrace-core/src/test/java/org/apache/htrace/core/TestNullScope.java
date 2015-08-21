@@ -20,15 +20,24 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestNullScope {
+  private void verifyNullScope(TraceScope scope) {
+    Assert.assertTrue(null == scope.getSpan());
+    Assert.assertFalse(scope.detached);
+    scope.detach();
+    Assert.assertTrue(scope.detached);
+    scope.reattach();
+    Assert.assertFalse(scope.detached);
+    scope.close();
+  }
+
   @Test
   public void testNullScope() {
-    Assert.assertTrue(!Trace.isTracing());
-    TraceScope tc = Trace.startSpan("NullScopeSingleton");
-    Assert.assertTrue(tc == NullScope.INSTANCE);
-    tc.detach();
-    tc.detach(); // should not fail even if called multiple times.
-    Assert.assertFalse(tc.isDetached());
-    tc.close();
-    tc.close(); // should not fail even if called multiple times.
+    Tracer tracer = new TracerBuilder().
+        name("testNullScope").
+        tracerPool(new TracerPool("testNullScope")).
+        conf(HTraceConfiguration.EMPTY).
+        build();
+    verifyNullScope(tracer.newScope("testNullScope"));
+    verifyNullScope(tracer.newNullScope());
   }
 }

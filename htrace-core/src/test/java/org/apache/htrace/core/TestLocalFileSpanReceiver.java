@@ -16,25 +16,21 @@
  */
 package org.apache.htrace.core;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestLocalFileSpanReceiver {
   @Test
   public void testUniqueLocalTraceFileName() {
     String filename1 = LocalFileSpanReceiver.getUniqueLocalTraceFileName();
-    System.out.println("##### :" + filename1);
     String filename2 = LocalFileSpanReceiver.getUniqueLocalTraceFileName();
-    System.out.println("##### :" + filename2);
     boolean eq = filename1.equals(filename2);
     if (System.getProperty("os.name").startsWith("Linux")) {
       // ${java.io.tmpdir}/[pid]
@@ -48,23 +44,22 @@ public class TestLocalFileSpanReceiver {
   @Test
   public void testWriteToLocalFile() throws IOException {
     String traceFileName = LocalFileSpanReceiver.getUniqueLocalTraceFileName();
-    HashMap<String, String> confMap = new HashMap<String, String>();
-    confMap.put(LocalFileSpanReceiver.PATH_KEY, traceFileName);
-    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
-                LocalFileSpanReceiver.class.getName());
-    confMap.put(TracerId.TRACER_ID_KEY, "testTrid");
-    SpanReceiver rcvr =
-        new SpanReceiverBuilder(HTraceConfiguration.fromMap(confMap))
-            .logErrors(false).build();
-    Trace.addReceiver(rcvr);
-    TraceScope ts = Trace.startSpan("testWriteToLocalFile", Sampler.ALWAYS);
-    ts.close();
-    Trace.removeReceiver(rcvr);
-    rcvr.close();
+    Tracer tracer = new TracerBuilder().
+        name("testWriteToLocalFileTracer").
+        tracerPool(new TracerPool("testWriteToLocalFile")).
+        conf(HTraceConfiguration.fromKeyValuePairs(
+            "sampler.classes", "AlwaysSampler",
+            "span.receiver.classes", LocalFileSpanReceiver.class.getName(),
+            "local.file.span.receiver.path", traceFileName,
+            "tracer.id", "%{tname}")).
+        build();
+    TraceScope scope = tracer.newScope("testWriteToLocalFile");
+    scope.close();
+    tracer.close();
 
     ObjectMapper mapper = new ObjectMapper();
     MilliSpan span = mapper.readValue(new File(traceFileName), MilliSpan.class);
     assertEquals("testWriteToLocalFile", span.getDescription());
-    assertEquals("testTrid", span.getTracerId());
+    assertEquals("testWriteToLocalFileTracer", span.getTracerId());
   }
 }

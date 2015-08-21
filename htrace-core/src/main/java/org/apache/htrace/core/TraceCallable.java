@@ -22,44 +22,35 @@ import java.util.concurrent.Callable;
  * Wrap a Callable with a Span that survives a change in threads.
  */
 public class TraceCallable<V> implements Callable<V> {
+  private final Tracer tracer;
   private final Callable<V> impl;
-  private final Span parent;
+  private final TraceScope parent;
   private final String description;
 
-  public TraceCallable(Callable<V> impl) {
-    this(Trace.currentSpan(), impl);
-  }
-
-  public TraceCallable(Span parent, Callable<V> impl) {
-    this(parent, impl, null);
-  }
-
-  public TraceCallable(Span parent, Callable<V> impl, String description) {
+  TraceCallable(Tracer tracer, TraceScope parent, Callable<V> impl,
+      String description) {
+    this.tracer = tracer;
     this.impl = impl;
     this.parent = parent;
-    this.description = description;
+    if (description == null) {
+      this.description = Thread.currentThread().getName();
+    } else {
+      this.description = description;
+    }
   }
 
   @Override
   public V call() throws Exception {
-    if (parent != null) {
-      TraceScope chunk = Trace.startSpan(getDescription(), parent);
-
-      try {
-        return impl.call();
-      } finally {
-        chunk.close();
-      }
-    } else {
+    TraceScope chunk = tracer.newScope(description,
+        parent.getSpan().getSpanId());
+    try {
       return impl.call();
+    } finally {
+      chunk.close();
     }
   }
 
   public Callable<V> getImpl() {
     return impl;
-  }
-
-  private String getDescription() {
-    return this.description == null ? Thread.currentThread().getName() : description;
   }
 }

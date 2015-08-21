@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.TracerId;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -65,7 +64,7 @@ import org.eclipse.jetty.http.HttpStatus;
  * TODO: Add lazy start; don't start background thread till a span gets queued.
  * TODO: Add some metrics; how many times we've run, how many spans and what size we've sent.
  */
-public class HTracedRESTReceiver implements SpanReceiver {
+public class HTracedRESTReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(HTracedRESTReceiver.class);
 
   /**
@@ -170,11 +169,6 @@ public class HTracedRESTReceiver implements SpanReceiver {
   private boolean mustStartFlush;
 
   /**
-   * The process ID to use for all spans.
-   */
-  private final TracerId tracerId;
-
-  /**
    * Create an HttpClient instance.
    *
    * @param connTimeout         The timeout to use for connecting.
@@ -226,7 +220,6 @@ public class HTracedRESTReceiver implements SpanReceiver {
             capacity + ", url=" + url +  ", periodInMs=" + periodInMs +
             ", maxToSendAtATime=" + maxToSendAtATime);
     }
-    tracerId = new TracerId(conf);
   }
 
   /**
@@ -322,7 +315,6 @@ public class HTracedRESTReceiver implements SpanReceiver {
       try {
         Request request = httpClient.newRequest(url).method(HttpMethod.POST);
         request.header(HttpHeader.CONTENT_TYPE, "application/json");
-        request.header("htrace-trid", tracerId.get());
         StringBuilder bld = new StringBuilder();
         for (Span span : spanBuf) {
           bld.append(span.toJson());

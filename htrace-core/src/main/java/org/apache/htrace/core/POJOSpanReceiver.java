@@ -24,7 +24,7 @@ import java.util.HashSet;
  * SpanReceiver for testing only that just collects the Span objects it
  * receives. The spans it receives can be accessed with getSpans();
  */
-public class POJOSpanReceiver implements SpanReceiver {
+public class POJOSpanReceiver extends SpanReceiver {
   private final Collection<Span> spans;
 
   public POJOSpanReceiver(HTraceConfiguration conf) {

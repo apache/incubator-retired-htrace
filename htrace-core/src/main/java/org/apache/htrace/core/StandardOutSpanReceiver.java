@@ -24,7 +24,7 @@ import java.io.IOException;
 /**
  * Used for testing. Simply prints to standard out any spans it receives.
  */
-public class StandardOutSpanReceiver implements SpanReceiver {
+public class StandardOutSpanReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(StandardOutSpanReceiver.class);
 
   public StandardOutSpanReceiver(HTraceConfiguration conf) {

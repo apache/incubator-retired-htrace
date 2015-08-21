@@ -16,13 +16,17 @@
  */
 package org.apache.htrace.core;
 
-import java.io.IOException;
-import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+
+import org.junit.Test;
 
 public class TestTracerId {
   private void testTracerIdImpl(String expected, String fmt) {
-    assertEquals(expected, new TracerId(fmt).get());
+    assertEquals(expected, new TracerId(
+        HTraceConfiguration.fromKeyValuePairs(TracerId.TRACER_ID_KEY, fmt),
+        "TracerName").get());
   }
 
   @Test
@@ -36,12 +40,13 @@ public class TestTracerId {
 
   @Test
   public void testSubstitutionVariables() throws IOException {
-    testTracerIdImpl(TracerId.getProcessName(), "${pname}");
-    testTracerIdImpl("my." + TracerId.getProcessName(), "my.${pname}");
-    testTracerIdImpl(TracerId.getBestIpString() + ".str", "${ip}.str");
-    testTracerIdImpl("${pname}", "\\${pname}");
-    testTracerIdImpl("$cash$money{}", "$cash$money{}");
+    testTracerIdImpl("myTracerName", "my%{tname}");
+    testTracerIdImpl(TracerId.getProcessName(), "%{pname}");
+    testTracerIdImpl("my." + TracerId.getProcessName(), "my.%{pname}");
+    testTracerIdImpl(TracerId.getBestIpString() + ".str", "%{ip}.str");
+    testTracerIdImpl("%{pname}", "\\%{pname}");
+    testTracerIdImpl("%cash%money{}", "%cash%money{}");
     testTracerIdImpl("Foo." + Long.valueOf(TracerId.getOsPid()).toString(),
-        "Foo.${pid}");
+        "Foo.%{pid}");
   }
 }

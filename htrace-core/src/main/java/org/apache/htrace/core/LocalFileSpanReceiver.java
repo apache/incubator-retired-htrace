@@ -41,10 +41,10 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Writes the spans it receives to a local file.
  */
-public class LocalFileSpanReceiver implements SpanReceiver {
+public class LocalFileSpanReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(LocalFileSpanReceiver.class);
-  public static final String PATH_KEY = "local-file-span-receiver.path";
-  public static final String CAPACITY_KEY = "local-file-span-receiver.capacity";
+  public static final String PATH_KEY = "local.file.span.receiver.path";
+  public static final String CAPACITY_KEY = "local.file.span.receiver.capacity";
   public static final int CAPACITY_DEFAULT = 5000;
   private static ObjectWriter JSON_WRITER = new ObjectMapper().writer();
   private final String path;
@@ -56,7 +56,6 @@ public class LocalFileSpanReceiver implements SpanReceiver {
   private final FileOutputStream stream;
   private final FileChannel channel;
   private final ReentrantLock channelLock = new ReentrantLock();
-  private final TracerId tracerId;
 
   public LocalFileSpanReceiver(HTraceConfiguration conf) {
     int capacity = conf.getInt(CAPACITY_KEY, CAPACITY_DEFAULT);
@@ -64,9 +63,11 @@ public class LocalFileSpanReceiver implements SpanReceiver {
       throw new IllegalArgumentException(CAPACITY_KEY + " must not be " +
           "less than 1.");
     }
-    this.path = conf.get(PATH_KEY);
-    if (path == null || path.isEmpty()) {
-      throw new IllegalArgumentException("must configure " + PATH_KEY);
+    String pathStr = conf.get(PATH_KEY);
+    if (pathStr == null || pathStr.isEmpty()) {
+      path = getUniqueLocalTraceFileName();
+    } else {
+      path = pathStr;
     }
     boolean success = false;
     try {
@@ -91,7 +92,6 @@ public class LocalFileSpanReceiver implements SpanReceiver {
       LOG.debug("Created new LocalFileSpanReceiver with path = " + path +
                 ", capacity = " + capacity);
     }
-    this.tracerId = new TracerId(conf);
   }
 
   /**
@@ -134,10 +134,6 @@ public class LocalFileSpanReceiver implements SpanReceiver {
 
   @Override
   public void receiveSpan(Span span) {
-    if (span.getTracerId().isEmpty()) {
-      span.setTracerId(tracerId.get());
-    }
-
     // Serialize the span data into a byte[].  Note that we're not holding the
     // lock here, to improve concurrency.
     byte jsonBuf[] = null;

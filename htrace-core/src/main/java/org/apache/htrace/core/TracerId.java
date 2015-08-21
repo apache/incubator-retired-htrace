@@ -16,9 +16,6 @@
  */
 package org.apache.htrace.core;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -30,6 +27,9 @@ import java.util.Enumeration;
 import java.util.Locale;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * The HTrace tracer ID.<p/>
  *
@@ -38,17 +38,19 @@ import java.util.TreeSet;
  * replace with the correct values at runtime.<p/>
  *
  * <ul>
- * <li>${ip}: will be replaced with an ip address.</li>
- * <li>${pname}: will be replaced the process name obtained from java.</li>
+ * <li>%{tname}: the tracer name supplied when creating the Tracer.</li>
+ * <li>%{pname}: the process name obtained from the JVM.</li>
+ * <li>%{ip}: will be replaced with an ip address.</li>
+ * <li>%{pid}: the numerical process ID from the operating system.</li>
  * </ul><p/>
  *
- * For example, the string "${pname}/${ip}" will be replaced with something
+ * For example, the string "%{pname}/%{ip}" will be replaced with something
  * like: DataNode/192.168.0.1, assuming that the process' name is DataNode
  * and its IP address is 192.168.0.1.<p/>
  *
- * Process ID strings can contain backslashes as escapes.
- * For example, "\a" will map to "a".  "\${ip}" will map to the literal
- * string "${ip}", not the IP address.  A backslash itself can be escaped by a
+ *  ID strings can contain backslashes as escapes.
+ * For example, "\a" will map to "a".  "\%{ip}" will map to the literal
+ * string "%{ip}", not the IP address.  A backslash itself can be escaped by a
  * preceding backslash.
  */
 public final class TracerId {
@@ -57,16 +59,20 @@ public final class TracerId {
   /**
    * The configuration key to use for process id
    */
-  public static final String TRACER_ID_KEY = "process.id";
+  public static final String TRACER_ID_KEY = "tracer.id";
 
   /**
-   * The default process ID to use if no other ID is configured.
+   * The default tracer ID to use if no other ID is configured.
    */
-  private static final String DEFAULT_TRACER_ID = "${pname}/${ip}";
+  private static final String DEFAULT_TRACER_ID = "%{tname}/%{ip}";
+
+  private final String tracerName;
 
   private final String tracerId;
 
-  TracerId(String fmt) {
+  public TracerId(HTraceConfiguration conf, String tracerName) {
+    this.tracerName = tracerName;
+    String fmt = conf.get(TRACER_ID_KEY, DEFAULT_TRACER_ID);
     StringBuilder bld = new StringBuilder();
     StringBuilder varBld = null;
     boolean escaping = false;
@@ -81,7 +87,7 @@ public final class TracerId {
       }
       switch (varSeen) {
         case 0:
-          if (c == '$') {
+          if (c == '%') {
             if (!escaping) {
               varSeen = 1;
               continue;
@@ -101,7 +107,7 @@ public final class TracerId {
           }
           escaping = false;
           varSeen = 0;
-          bld.append("$").append(c);
+          bld.append("%").append(c);
           break;
         default:
           if (c == '}') {
@@ -130,12 +136,10 @@ public final class TracerId {
     }
   }
 
-  public TracerId(HTraceConfiguration conf) {
-    this(conf.get(TRACER_ID_KEY, DEFAULT_TRACER_ID));
-  }
-
   private String processShellVar(String var) {
-    if (var.equals("pname")) {
+    if (var.equals("tname")) {
+      return tracerName;
+    } else if (var.equals("pname")) {
       return getProcessName();
     } else if (var.equals("ip")) {
       return getBestIpString();

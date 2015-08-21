@@ -170,7 +170,6 @@ public class MilliSpan implements Span {
         throw new IllegalStateException("Span for " + description
             + " has not been started");
       end = System.currentTimeMillis();
-      Tracer.getInstance().deliver(this);
     }
   }
 

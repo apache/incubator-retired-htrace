@@ -16,10 +16,7 @@
  */
 package org.apache.htrace.core;
 
-import java.math.BigInteger;
-import java.lang.Void;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.Random;
 
 /**
  * Uniquely identifies an HTrace span.

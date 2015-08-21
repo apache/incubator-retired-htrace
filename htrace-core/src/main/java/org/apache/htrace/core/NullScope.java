@@ -17,28 +17,53 @@
 package org.apache.htrace.core;
 
 /**
- * Singleton instance representing an empty {@link TraceScope}.
+ * An empty {@link TraceScope}.
  */
-public final class NullScope extends TraceScope {
-
-  public static final TraceScope INSTANCE = new NullScope();
-
-  private NullScope() {
-    super(null, null);
+class NullScope extends TraceScope {
+  NullScope(Tracer tracer) {
+    super(tracer, null, null);
   }
 
   @Override
-  public Span detach() {
-    return null;
+  public SpanId getSpanId() {
+    return SpanId.INVALID;
+  }
+
+  @Override
+  public void detach() {
+    if (detached) {
+      Tracer.throwClientError("Can't detach this TraceScope  because " +
+          "it is already detached.");
+    }
+    detached = true;
+  }
+
+  @Override
+  public void reattach() {
+    if (!detached) {
+      Tracer.throwClientError("Can't reattach this TraceScope  because " +
+          "it is not detached.");
+    }
+    detached = false;
   }
 
   @Override
   public void close() {
-    return;
+    tracer.popNullScope();
   }
 
   @Override
   public String toString() {
     return "NullScope";
+  }
+
+  @Override
+  public void addKVAnnotation(String key, String value) {
+    // do nothing
+  }
+
+  @Override
+  public void addTimelineAnnotation(String msg) {
+    // do nothing
   }
 }

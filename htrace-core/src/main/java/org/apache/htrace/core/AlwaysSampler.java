@@ -19,8 +19,7 @@ package org.apache.htrace.core;
 /**
  * A Sampler that always returns true.
  */
-public final class AlwaysSampler implements Sampler {
-
+public final class AlwaysSampler extends Sampler {
   public static final AlwaysSampler INSTANCE = new AlwaysSampler(null);
 
   public AlwaysSampler(HTraceConfiguration conf) {

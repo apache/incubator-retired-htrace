@@ -20,42 +20,32 @@ package org.apache.htrace.core;
  * Wrap a Runnable with a Span that survives a change in threads.
  */
 public class TraceRunnable implements Runnable {
-
-  private final Span parent;
+  private final Tracer tracer;
+  private final TraceScope parent;
   private final Runnable runnable;
   private final String description;
 
-  public TraceRunnable(Runnable runnable) {
-    this(Trace.currentSpan(), runnable);
-  }
-
-  public TraceRunnable(Span parent, Runnable runnable) {
-    this(parent, runnable, null);
-  }
-
-  public TraceRunnable(Span parent, Runnable runnable, String description) {
+  public TraceRunnable(Tracer tracer, TraceScope parent,
+      Runnable runnable, String description) {
+    this.tracer = tracer;
     this.parent = parent;
     this.runnable = runnable;
-    this.description = description;
+    if (description == null) {
+      this.description = Thread.currentThread().getName();
+    } else {
+      this.description = description;
+    }
   }
 
   @Override
   public void run() {
-    if (parent != null) {
-      TraceScope chunk = Trace.startSpan(getDescription(), parent);
-
-      try {
-        runnable.run();
-      } finally {
-        chunk.close();
-      }
-    } else {
+    TraceScope chunk = tracer.newScope(description,
+        parent.getSpan().getSpanId());
+    try {
       runnable.run();
+    } finally {
+      chunk.close();
     }
-  }
-
-  private String getDescription() {
-    return this.description == null ? Thread.currentThread().getName() : description;
   }
 
   public Runnable getRunnable() {

@@ -16,17 +16,16 @@
  */
 package org.apache.htrace.core;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Sampler that returns true a certain percentage of the time. Specify the frequency interval by
  * configuring a {@code double} value for {@link #SAMPLER_FRACTION_CONF_KEY}.
  */
-public class ProbabilitySampler implements Sampler {
+public class ProbabilitySampler extends Sampler {
   private static final Log LOG = LogFactory.getLog(ProbabilitySampler.class);
   public final double threshold;
   public final static String SAMPLER_FRACTION_CONF_KEY = "sampler.fraction";

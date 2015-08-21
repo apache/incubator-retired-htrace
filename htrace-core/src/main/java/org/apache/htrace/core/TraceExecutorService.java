@@ -26,18 +26,21 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-
 public class TraceExecutorService implements ExecutorService {
-
+  private final Tracer tracer;
+  private final String scopeName;
   private final ExecutorService impl;
 
-  public TraceExecutorService(ExecutorService impl) {
+  TraceExecutorService(Tracer tracer, String scopeName,
+                       ExecutorService impl) {
+    this.tracer = tracer;
+    this.scopeName = scopeName;
     this.impl = impl;
   }
 
   @Override
   public void execute(Runnable command) {
-    impl.execute(new TraceRunnable(command));
+    impl.execute(tracer.wrap(command, scopeName));
   }
 
   @Override
@@ -68,24 +71,24 @@ public class TraceExecutorService implements ExecutorService {
 
   @Override
   public <T> Future<T> submit(Callable<T> task) {
-    return impl.submit(new TraceCallable<T>(task));
+    return impl.submit(tracer.wrap(task, scopeName));
   }
 
   @Override
   public <T> Future<T> submit(Runnable task, T result) {
-    return impl.submit(new TraceRunnable(task), result);
+    return impl.submit(tracer.wrap(task, scopeName), result);
   }
 
   @Override
   public Future<?> submit(Runnable task) {
-    return impl.submit(new TraceRunnable(task));
+    return impl.submit(tracer.wrap(task, scopeName));
   }
 
   private <T> Collection<? extends Callable<T>> wrapCollection(
       Collection<? extends Callable<T>> tasks) {
     List<Callable<T>> result = new ArrayList<Callable<T>>();
     for (Callable<T> task : tasks) {
-      result.add(new TraceCallable<T>(task));
+      result.add(tracer.wrap(task, scopeName));
     }
     return result;
   }

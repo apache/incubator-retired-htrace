@@ -133,6 +133,8 @@ public class TestHTracedRESTReceiver {
           spanId(new SpanId(1L, i));
       if (i == NUM_SPANS - 1) {
         builder.tracerId("specialTrid");
+      } else {
+        builder.tracerId(TestHTraceConfiguration.TRACER_ID);
       }
       spans[i] = builder.build();
     }

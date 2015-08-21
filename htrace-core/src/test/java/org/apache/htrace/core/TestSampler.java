@@ -16,40 +16,85 @@
  */
 package org.apache.htrace.core;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSampler {
+  private Sampler[] getSamplersFromConf(HTraceConfiguration conf) {
+    Tracer tracer = new TracerBuilder().
+        name("MyTracer").
+        tracerPool(new TracerPool("getSamplersFromConf")).
+        conf(conf).
+        build();
+    Sampler[] samplers = tracer.getSamplers();
+    tracer.close();
+    return samplers;
+  }
+
+  private void checkArrayContains(List<Class<? extends Sampler>> expected,
+                                  Sampler[] samplers) {
+    for (Iterator<Class<? extends Sampler>> iter = expected.iterator();
+         iter.hasNext(); ) {
+      Class<? extends Sampler> samplerClass = iter.next();
+      boolean found = false;
+      for (int i = 0; i < samplers.length; i++) {
+        if (samplers[i] != null) {
+          if (samplers[i].getClass().equals(samplerClass)) {
+            samplers[i] = null;
+            found = true;
+            break;
+          }
+        }
+      }
+      Assert.assertTrue("Failed to find sampler class " +
+          samplerClass.getName(), found);
+    }
+    for (int i = 0; i < samplers.length; i++) {
+      if (samplers[i] != null) {
+        Assert.fail("Got extra sampler of type " +
+            samplers.getClass().getName());
+      }
+    }
+  }
+
+  private void checkArrayContains(Class<? extends Sampler> expected, Sampler[] samplers) {
+    LinkedList<Class<? extends Sampler>> expectedList =
+        new LinkedList<Class<? extends Sampler>>();
+    expectedList.add(expected);
+    checkArrayContains(expectedList, samplers);
+  }
+
   @Test
-  public void testSamplerBuilder() {
-    Sampler alwaysSampler = new SamplerBuilder(
-        HTraceConfiguration.fromKeyValuePairs("sampler", "AlwaysSampler")).
-        build();
-    Assert.assertEquals(AlwaysSampler.class, alwaysSampler.getClass());
+  public void testTracerBuilderCreatesCorrectSamplers() {
+    Sampler[] samplers = getSamplersFromConf(HTraceConfiguration.
+        fromKeyValuePairs("sampler.classes", "AlwaysSampler"));
+    checkArrayContains(AlwaysSampler.class, samplers);
 
-    Sampler neverSampler = new SamplerBuilder(
-        HTraceConfiguration.fromKeyValuePairs("sampler", "NeverSampler")).
-        build();
-    Assert.assertEquals(NeverSampler.class, neverSampler.getClass());
+    samplers = getSamplersFromConf(HTraceConfiguration.
+        fromKeyValuePairs("sampler.classes", "NeverSampler"));
+    checkArrayContains(NeverSampler.class, samplers);
 
-    Sampler neverSampler2 = new SamplerBuilder(HTraceConfiguration.
-        fromKeyValuePairs("sampler", "NonExistentSampler")).
-        build();
-    Assert.assertEquals(NeverSampler.class, neverSampler2.getClass());
+    samplers = getSamplersFromConf(HTraceConfiguration.
+        fromKeyValuePairs("sampler.classes", "NonExistentSampler"));
+    Assert.assertEquals(0, samplers.length);
 
-    Sampler neverSampler3 = new SamplerBuilder(HTraceConfiguration.
-        fromKeyValuePairs("sampler.is.not.defined", "NonExistentSampler")).
-        build();
-    Assert.assertEquals(NeverSampler.class, neverSampler3.getClass());
+    samplers = getSamplersFromConf(HTraceConfiguration.EMPTY);
+    Assert.assertEquals(0, samplers.length);
   }
 
   @Test
   public void testAlwaysSampler() {
-    TraceScope cur = Trace.startSpan("test");
-    Assert.assertNotNull(cur);
-    cur.close();
+    AlwaysSampler sampler = new AlwaysSampler(HTraceConfiguration.EMPTY);
+    Assert.assertTrue(sampler.next());
+  }
+
+  @Test
+  public void testNeverSampler() {
+    NeverSampler sampler = new NeverSampler(HTraceConfiguration.EMPTY);
+    Assert.assertTrue(!sampler.next());
   }
 }

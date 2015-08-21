@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.htrace.HBaseHTraceConfiguration;
 import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.SpanReceiverBuilder;
 import org.junit.Assert;
 
 
@@ -59,7 +58,8 @@ public class HBaseTestUtil {
   }
 
   public static SpanReceiver startReceiver(Configuration conf) {
-    return new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf)).build();
+    return new SpanReceiver.Builder(
+        new HBaseHTraceConfiguration(conf)).build();
   }
 
   public static SpanReceiver startReceiver(HBaseTestingUtility util) {

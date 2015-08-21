@@ -45,11 +45,10 @@ import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.SpanReceiverBuilder;
 import org.apache.htrace.core.TimelineAnnotation;
-import org.apache.htrace.core.Trace;
-import org.apache.htrace.core.TracerId;
 import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
+import org.apache.htrace.core.TracerBuilder;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 
 /**
@@ -59,7 +58,7 @@ import org.apache.htrace.protobuf.generated.SpanProtos;
  * From there background worker threads will send them
  * to a HBase database.
  */
-public class HBaseSpanReceiver implements SpanReceiver {
+public class HBaseSpanReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(HBaseSpanReceiver.class);
 
   public static final String COLLECTOR_QUORUM_KEY = "htrace.hbase.collector-quorum";
@@ -127,7 +126,6 @@ public class HBaseSpanReceiver implements SpanReceiver {
   private final byte[] cf;
   private final byte[] icf;
   private final int maxSpanBatchSize;
-  private final TracerId tracerId;
 
   public HBaseSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
@@ -155,7 +153,6 @@ public class HBaseSpanReceiver implements SpanReceiver {
     for (int i = 0; i < numThreads; i++) {
       this.service.submit(new WriteSpanRunnable());
     }
-    this.tracerId = new TracerId(conf);
   }
 
   private class WriteSpanRunnable implements Runnable {
@@ -334,9 +331,6 @@ public class HBaseSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
-        if (span.getTracerId().isEmpty()) {
-          span.setTracerId(tracerId.get());
-        }
         this.queue.add(span);
       } catch (IllegalStateException e) {
         // todo: supress repeating error logs.
@@ -354,29 +348,28 @@ public class HBaseSpanReceiver implements SpanReceiver {
    * @throws IOException
    */
   public static void main(String[] args) throws Exception {
-    SpanReceiverBuilder builder =
-      new SpanReceiverBuilder(new HBaseHTraceConfiguration(HBaseConfiguration.create()));
-    SpanReceiver receiver =
-      builder.spanReceiverClass(HBaseSpanReceiver.class.getName()).build();
-    Trace.addReceiver(receiver);
-    TraceScope parent = Trace.startSpan("HBaseSpanReceiver.main.parent", Sampler.ALWAYS);
+    Tracer tracer = new TracerBuilder().
+        conf(new HBaseHTraceConfiguration(HBaseConfiguration.create())).
+        build();
+    tracer.addSampler(Sampler.ALWAYS);
+    TraceScope parent = tracer.newScope("HBaseSpanReceiver.main.parent");
     Thread.sleep(10);
     long traceid = parent.getSpan().getSpanId().getHigh();
-    TraceScope child1 = Trace.startSpan("HBaseSpanReceiver.main.child.1");
+    TraceScope child1 = tracer.newScope("HBaseSpanReceiver.main.child.1");
     Thread.sleep(10);
     child1.close();
-    TraceScope child2 = Trace.startSpan("HBaseSpanReceiver.main.child.2", parent.getSpan());
+    TraceScope child2 = tracer.newScope("HBaseSpanReceiver.main.child.2");
     Thread.sleep(10);
-    TraceScope gchild = Trace.startSpan("HBaseSpanReceiver.main.grandchild");
-    Trace.addTimelineAnnotation("annotation 1.");
+    TraceScope gchild = tracer.newScope("HBaseSpanReceiver.main.grandchild");
+    gchild.addTimelineAnnotation("annotation 1.");
     Thread.sleep(10);
-    Trace.addTimelineAnnotation("annotation 2.");
+    gchild.addTimelineAnnotation("annotation 2.");
     gchild.close();
     Thread.sleep(10);
     child2.close();
     Thread.sleep(10);
     parent.close();
-    receiver.close();
+    tracer.close();
     System.out.println("trace id: " + traceid);
   }
 }

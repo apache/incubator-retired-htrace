@@ -19,8 +19,7 @@ package org.apache.htrace.core;
 /**
  * A Sampler that never returns true.
  */
-public final class NeverSampler implements Sampler {
-
+public final class NeverSampler extends Sampler {
   public static final NeverSampler INSTANCE = new NeverSampler(null);
 
   public NeverSampler(HTraceConfiguration conf) {
@@ -30,5 +29,4 @@ public final class NeverSampler implements Sampler {
   public boolean next() {
     return false;
   }
-
 }

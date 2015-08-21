@@ -16,54 +16,25 @@
  */
 package org.apache.htrace.core;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
-import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Does some stuff and traces it.
  */
-public class TraceCreator implements TestRule {
-  private final List<SpanReceiver> receivers = new ArrayList<SpanReceiver>();
-
+public class TraceCreator {
   public static final String RPC_TRACE_ROOT = "createSampleRpcTrace";
   public static final String THREADED_TRACE_ROOT = "createThreadedTrace";
   public static final String SIMPLE_TRACE_ROOT = "createSimpleTrace";
 
-  public TraceCreator addReceiver(SpanReceiver receiver) {
-    Trace.addReceiver(receiver);
-    this.receivers.add(receiver);
-    return this;
-  }
+  private final Tracer tracer;
 
-  @Override
-  public Statement apply(final Statement base, Description description) {
-    return new Statement() {
-      @Override
-      public void evaluate() throws Throwable {
-        try {
-          base.evaluate();
-          for (SpanReceiver receiver : receivers) {
-            receiver.close();
-          }
-        } finally {
-          for (SpanReceiver receiver : receivers) {
-            Trace.removeReceiver(receiver);
-          }
-        }
-      }
-    };
+  public TraceCreator(Tracer tracer) {
+    this.tracer = tracer;
   }
 
   public void createSampleRpcTrace() {
-    TraceScope s = Trace.startSpan(RPC_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = tracer.newScope(RPC_TRACE_ROOT);
     try {
       pretendRpcSend();
     } finally {
@@ -72,7 +43,7 @@ public class TraceCreator implements TestRule {
   }
 
   public void createSimpleTrace() {
-    TraceScope s = Trace.startSpan(SIMPLE_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = tracer.newScope(SIMPLE_TRACE_ROOT);
     try {
       importantWork1();
     } finally {
@@ -84,14 +55,14 @@ public class TraceCreator implements TestRule {
    * Creates the demo trace (will create different traces from call to call).
    */
   public void createThreadedTrace() {
-    TraceScope s = Trace.startSpan(THREADED_TRACE_ROOT, Sampler.ALWAYS);
+    TraceScope s = tracer.newScope(THREADED_TRACE_ROOT);
     try {
       Random r = ThreadLocalRandom.current();
       int numThreads = r.nextInt(4) + 1;
       Thread[] threads = new Thread[numThreads];
 
       for (int i = 0; i < numThreads; i++) {
-        threads[i] = new Thread(Trace.wrap(new MyRunnable()));
+        threads[i] = new Thread(tracer.wrap(new MyRunnable(), null));
       }
       for (int i = 0; i < numThreads; i++) {
         threads[i].start();
@@ -109,7 +80,7 @@ public class TraceCreator implements TestRule {
   }
 
   private void importantWork1() {
-    TraceScope cur = Trace.startSpan("important work 1");
+    TraceScope cur = tracer.newScope("important work 1");
     try {
       Thread.sleep((long) (2000 * Math.random()));
       importantWork2();
@@ -121,7 +92,7 @@ public class TraceCreator implements TestRule {
   }
 
   private void importantWork2() {
-    TraceScope cur = Trace.startSpan("important work 2");
+    TraceScope cur = tracer.newScope("important work 2");
     try {
       Thread.sleep((long) (2000 * Math.random()));
     } catch (InterruptedException e) {
@@ -142,7 +113,7 @@ public class TraceCreator implements TestRule {
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       } catch (ArithmeticException ae) {
-        TraceScope c = Trace.startSpan("dealing with arithmetic exception.");
+        TraceScope c = tracer.newScope("dealing with arithmetic exception.");
         try {
           Thread.sleep((long) (3000 * Math.random()));
         } catch (InterruptedException ie1) {
@@ -155,11 +126,12 @@ public class TraceCreator implements TestRule {
   }
 
   public void pretendRpcSend() {
-    pretendRpcReceiveWithTraceInfo(Trace.currentSpan());
+    Span span = tracer.getCurrentSpan();
+    pretendRpcReceiveWithTraceInfo(span.getSpanId());
   }
 
-  public void pretendRpcReceiveWithTraceInfo(Span parent) {
-    TraceScope s = Trace.startSpan("received RPC", parent);
+  public void pretendRpcReceiveWithTraceInfo(SpanId parentId) {
+    TraceScope s = tracer.newScope("received RPC", parentId);
     try {
       importantWork1();
     } finally {

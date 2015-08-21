@@ -44,7 +44,7 @@ import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TracerId;
 
-public class FlumeSpanReceiver implements SpanReceiver {
+public class FlumeSpanReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(FlumeSpanReceiver.class);
 
   public static final String NUM_THREADS_KEY = "htrace.flume.num-threads";
@@ -90,12 +90,10 @@ public class FlumeSpanReceiver implements SpanReceiver {
   private int maxSpanBatchSize;
   private String flumeHostName;
   private int flumePort;
-  private final TracerId tracerId;
 
   public FlumeSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.tf = new SimpleThreadFactory();
-    this.tracerId = new TracerId(conf);
     configure(conf);
   }
 
@@ -274,9 +272,6 @@ public class FlumeSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
-        if (span.getTracerId().isEmpty()) {
-          span.setTracerId(tracerId.get());
-        }
         this.queue.add(span);
       } catch (IllegalStateException e) {
         LOG.error("Error trying to append span (" +

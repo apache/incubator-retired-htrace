@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Sampler that returns true every N calls. Specify the frequency interval by configuring a
  * {@code long} value for {@link #SAMPLER_FREQUENCY_CONF_KEY}.
  */
-public class CountSampler implements Sampler {
+public class CountSampler extends Sampler {
   public final static String SAMPLER_FREQUENCY_CONF_KEY = "sampler.frequency";
 
   final long frequency;

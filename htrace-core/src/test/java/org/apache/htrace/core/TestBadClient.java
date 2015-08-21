@@ -16,6 +16,12 @@
  */
 package org.apache.htrace.core;
 
+import java.io.File;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -24,57 +30,121 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-
 public class TestBadClient {
+  @After
+  public void clearBadState() {
+    // Clear the bad trace state so that we don't disrupt other unit tests
+    // that run in this JVM.
+    Tracer.threadLocalScope.set(null);
+  }
+
   /**
    * Test closing an outer scope when an inner one is still active.
    */
   @Test
   public void TestClosingOuterScope() throws Exception {
+    Tracer tracer = new TracerBuilder().
+        name("TestClosingOuterScopeTracer").
+        tracerPool(new TracerPool("TestClosingOuterScope")).
+        conf(HTraceConfiguration.
+            fromKeyValuePairs("sampler.classes", "AlwaysSampler")).build();
     boolean gotException = false;
-    TraceScope outerScope = Trace.startSpan("outer", AlwaysSampler.INSTANCE);
-    TraceScope innerScope = Trace.startSpan("inner");
+    TraceScope outerScope = tracer.newScope("outer");
+    TraceScope innerScope = tracer.newScope("inner");
     try {
       outerScope.close();
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
-          containsString("You have probably forgotten to close or detach"));
+          containsString("it is not the current TraceScope"));
       gotException = true;
     }
     assertTrue("Expected to get exception because of improper " +
         "scope closure.", gotException);
     innerScope.close();
+    tracer.close();
   }
 
   /**
    * Test calling detach() two times on a scope object.
    */
   @Test
-  public void TestDoubleDetach() throws Exception {
+  public void TestDoubleDetachIsCaught() throws Exception {
+    Tracer tracer = new TracerBuilder().
+        name("TestDoubleDetach").
+        tracerPool(new TracerPool("TestDoubleDetachIsCaught")).
+        conf(HTraceConfiguration.
+            fromKeyValuePairs("sampler.classes", "AlwaysSampler")).build();
     boolean gotException = false;
-    TraceScope myScope = Trace.startSpan("myScope", AlwaysSampler.INSTANCE);
+    TraceScope myScope = tracer.newScope("myScope");
     myScope.detach();
     try {
       myScope.detach();
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
-          containsString("it has already been detached."));
+          containsString("it is already detached."));
       gotException = true;
     }
     assertTrue("Expected to get exception because of double TraceScope " +
         "detach.", gotException);
+    tracer.close();
   }
 
-  private static class SpanHolder {
-    Span span;
+  /**
+   * Test calling detach() two times on a scope object.
+   */
+  @Test
+  public void TestDoubleDetachOnNullScope() throws Exception {
+    Tracer tracer = new TracerBuilder().
+        name("TestDoubleDetachOnNullScope").
+        tracerPool(new TracerPool("TestDoubleDetachOnNullScope")).
+        conf(HTraceConfiguration.
+            fromKeyValuePairs("sampler.classes", "NeverSampler")).build();
+    boolean gotException = false;
+    TraceScope myScope = tracer.newScope("myScope");
+    myScope.detach();
+    try {
+      myScope.detach();
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          containsString("it is already detached."));
+      gotException = true;
+    }
+    assertTrue("Expected to get exception because of double TraceScope " +
+        "detach on NullScope.", gotException);
+    tracer.close();
+  }
 
-    void set(Span span) {
-      this.span = span;
+  /**
+   * Test calling reattach() two times on a scope object.
+   */
+  @Test
+  public void TestDoubleReattachIsCaught() throws Exception {
+    Tracer tracer = new TracerBuilder().
+        name("TestDoubleReattach").
+        tracerPool(new TracerPool("TestDoubleReattachIsCaught")).
+        conf(HTraceConfiguration.
+            fromKeyValuePairs("sampler.classes", "AlwaysSampler")).build();
+    boolean gotException = false;
+    TraceScope myScope = tracer.newScope("myScope");
+    myScope.detach();
+    myScope.reattach();
+    try {
+      myScope.reattach();
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          containsString("it is not detached."));
+      gotException = true;
+    }
+    assertTrue("Expected to get exception because of double TraceScope " +
+        "reattach.", gotException);
+    tracer.close();
+  }
+
+  private static class ScopeHolder {
+    TraceScope scope;
+
+    void set(TraceScope scope) {
+      this.scope = scope;
     }
   }
 
@@ -83,64 +153,53 @@ public class TestBadClient {
    */
   @Test
   public void TestPassingSpanBetweenThreads() throws Exception {
-    final SpanHolder spanHolder = new SpanHolder();
+    final Tracer tracer = new TracerBuilder().
+        name("TestPassingSpanBetweenThreads").
+        tracerPool(new TracerPool("TestPassingSpanBetweenThreads")).
+        conf(HTraceConfiguration.
+            fromKeyValuePairs("sampler.classes", "AlwaysSampler")).build();
+    POJOSpanReceiver receiver =
+        new POJOSpanReceiver(HTraceConfiguration.EMPTY);
+    tracer.getTracerPool().addReceiver(receiver);
+    final ScopeHolder scopeHolder = new ScopeHolder();
     Thread th = new Thread(new Runnable() {
       @Override
       public void run() {
-        TraceScope workerScope = Trace.startSpan("workerSpan",
-            AlwaysSampler.INSTANCE);
-        spanHolder.set(workerScope.getSpan());
+        TraceScope workerScope = tracer.newScope("workerSpan");
         workerScope.detach();
+        scopeHolder.set(workerScope);
       }
     });
     th.start();
     th.join();
+    TraceScope workerScope = scopeHolder.scope;
+    SpanId workerScopeId = workerScope.getSpan().getSpanId();
 
-    // Create new scope whose parent is the worker thread's span. 
-    TraceScope outermost = Trace.startSpan("outermost", spanHolder.span);
-    TraceScope nested = Trace.startSpan("nested");
+    // Create new scope whose parent is the worker thread's span.
+    workerScope.reattach();
+    TraceScope nested = tracer.newScope("nested");
     nested.close();
-    outermost.close();
     // Create another span which also descends from the worker thread's span.
-    TraceScope nested2 = Trace.startSpan("nested2", spanHolder.span);
+    TraceScope nested2 = tracer.newScope("nested2");
     nested2.close();
 
     // Close the worker thread's span.
-    spanHolder.span.stop();
+    workerScope.close();
 
     // We can create another descendant, even though the worker thread's span
     // has been stopped.
-    TraceScope lateChildScope = Trace.startSpan("lateChild", spanHolder.span);
+    TraceScope lateChildScope = tracer.newScope("lateChild", workerScopeId);
     lateChildScope.close();
-  }
+    tracer.close();
 
-  /**
-   * Test trying to manually set our TraceScope's parent in a case where there
-   * is a currently active span.
-   */
-  @Test
-  public void TestIncorrectStartSpan() throws Exception {
-    // Create new scope
-    TraceScope outermost = Trace.startSpan("outermost",
-        AlwaysSampler.INSTANCE);
-    // Create nested scope
-    TraceScope nested = Trace.startSpan("nested", outermost.getSpan()); 
-    // Error
-    boolean gotException = false;
-    try {
-      TraceScope error = Trace.startSpan("error", outermost.getSpan()); 
-      error.close();
-    } catch (RuntimeException e) {
-      assertThat(e.getMessage(),
-          containsString("there is already a currentSpan"));
-      gotException = true;
-    }
-    assertTrue("Expected to get exception because of incorrect startSpan.",
-        gotException);
-  }
-
-  @After
-  public void resetCurrentSpan() {
-    Tracer.getInstance().setCurrentSpan(null);
+    TraceGraph traceGraph = new TraceGraph(receiver.getSpans());
+    Collection<Span> rootSpans =
+        traceGraph.getSpansByParent().find(SpanId.INVALID);
+    Assert.assertEquals(1, rootSpans.size());
+    Assert.assertEquals(workerScopeId,
+        rootSpans.iterator().next().getSpanId());
+    Collection<Span> childSpans =
+        traceGraph.getSpansByParent().find(workerScopeId);
+    Assert.assertEquals(3, childSpans.size());
   }
 }

@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.TracerId;
 import org.apache.htrace.zipkin.HTraceToZipkinConverter;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -60,7 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * HTrace spans are queued into a blocking queue.  From there background worker threads will
  * batch the spans together and then send them through to a Zipkin collector.
  */
-public class ZipkinSpanReceiver implements SpanReceiver {
+public class ZipkinSpanReceiver extends SpanReceiver {
   private static final Log LOG = LogFactory.getLog(ZipkinSpanReceiver.class);
 
   /**
@@ -141,8 +140,6 @@ public class ZipkinSpanReceiver implements SpanReceiver {
     }
   };
 
-  private final TracerId tracerId;
-
   ////////////////////
   /// Variables that will change on each call to configure()
   ///////////////////
@@ -155,7 +152,6 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   public ZipkinSpanReceiver(HTraceConfiguration conf) {
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.protocolFactory = new TBinaryProtocol.Factory();
-    this.tracerId = new TracerId(conf);
     configure(conf);
   }
 
@@ -375,9 +371,6 @@ public class ZipkinSpanReceiver implements SpanReceiver {
   public void receiveSpan(Span span) {
     if (running.get()) {
       try {
-        if (span.getTracerId().isEmpty()) {
-          span.setTracerId(tracerId.get());
-        }
         this.queue.add(span);
       } catch (IllegalStateException e) {
         LOG.error("Error trying to append span (" + span.getDescription() + ") to the queue."

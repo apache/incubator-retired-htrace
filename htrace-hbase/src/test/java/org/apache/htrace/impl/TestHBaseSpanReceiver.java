@@ -30,20 +30,25 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanId;
-import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TimelineAnnotation;
 import org.apache.htrace.core.TraceCreator;
-import org.apache.htrace.core.TraceGraph.SpansByParent;
 import org.apache.htrace.core.TraceGraph;
+import org.apache.htrace.core.TraceGraph.SpansByParent;
+import org.apache.htrace.core.Tracer;
+import org.apache.htrace.core.TracerBuilder;
+import org.apache.htrace.core.TracerPool;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -65,16 +70,39 @@ public class TestHBaseSpanReceiver {
     UTIL.shutdownMiniCluster();
   }
 
+  private Table createTable(HBaseTestingUtility util) {
+    Table htable = null;
+    try {
+      htable = util.createTable(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_TABLE),
+          new byte[][]{Bytes.toBytes(HBaseSpanReceiver.DEFAULT_COLUMNFAMILY),
+              Bytes.toBytes(HBaseSpanReceiver.DEFAULT_INDEXFAMILY)});
+    } catch (IOException e) {
+      Assert.fail("failed to create htrace table. " + e.getMessage());
+    }
+    return htable;
+  }
+
   // Reenable after fix circular dependency
   @Ignore @Test
   public void testHBaseSpanReceiver() {
-    Table htable = HBaseTestUtil.createTable(UTIL);
-    SpanReceiver receiver = HBaseTestUtil.startReceiver(UTIL);
-    TraceCreator tc = new TraceCreator().addReceiver(receiver);
+    Table htable = createTable(UTIL);
+    Configuration conf = UTIL.getConfiguration();
+    Tracer tracer = new TracerBuilder().
+        name("testHBaseSpanReceiver").
+        tracerPool(new TracerPool("testHBaseSpanReceiver")).
+        conf(HTraceConfiguration.fromKeyValuePairs(
+          HBaseSpanReceiver.COLLECTOR_QUORUM_KEY,
+              conf.get(HConstants.ZOOKEEPER_QUORUM),
+          HBaseSpanReceiver.ZOOKEEPER_CLIENT_PORT_KEY,
+              "" + conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181),
+          HBaseSpanReceiver.ZOOKEEPER_ZNODE_PARENT_KEY,
+              conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT)
+        )).build();
+    TraceCreator tc = new TraceCreator(tracer);
     tc.createThreadedTrace();
     tc.createSimpleTrace();
     tc.createSampleRpcTrace();
-    HBaseTestUtil.stopReceiver(receiver);
+    tracer.close();
     Scan scan = new Scan();
     scan.addFamily(Bytes.toBytes(HBaseSpanReceiver.DEFAULT_COLUMNFAMILY));
     scan.setMaxVersions(1);

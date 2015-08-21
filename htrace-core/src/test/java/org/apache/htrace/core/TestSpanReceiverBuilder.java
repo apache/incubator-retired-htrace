@@ -16,93 +16,87 @@
  */
 package org.apache.htrace.core;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
 public class TestSpanReceiverBuilder {
   private static final Log LOG =
       LogFactory.getLog(TestSpanReceiverBuilder.class);
 
-  /**
-   * Test that if no span receiver is configured, the builder returns null.
-   */
-  @Test
-  public void testGetNullSpanReceiver() {
-    SpanReceiverBuilder builder =
-        new SpanReceiverBuilder(HTraceConfiguration.EMPTY).logErrors(false);
-    SpanReceiver rcvr = builder.build();
-    Assert.assertEquals(null, rcvr);
+  private List<SpanReceiver> createSpanReceivers(String classes) {
+    Tracer tracer = new TracerBuilder().
+        name("MyTracer").
+        tracerPool(new TracerPool("createSpanReceivers")).
+        conf(HTraceConfiguration.fromKeyValuePairs(
+            "span.receiver.classes", classes)).
+        build();
+    SpanReceiver[] receivers = tracer.getTracerPool().getReceivers();
+    tracer.close();
+    LinkedList<SpanReceiver> receiverList = new LinkedList<SpanReceiver>();
+    for (SpanReceiver item: receivers) {
+      receiverList.add(item);
+    }
+    return receiverList;
   }
 
-  private static SpanReceiver createSpanReceiver(Map<String, String> m) {
-    HTraceConfiguration hconf = HTraceConfiguration.fromMap(m);
-    SpanReceiverBuilder builder =
-        new SpanReceiverBuilder(hconf).
-            logErrors(false);
-    return builder.build();
-  }
-
-  private static final File TMPDIR =
-      new File(System.getProperty("java.io.tmpdir"));
-
-  /**
-   * Test getting various SpanReceiver objects.
-   */
   @Test
-  public void testGetSpanReceivers() throws Exception {
-    HashMap<String, String> confMap = new HashMap<String, String>();
-
-    // Create LocalFileSpanReceiver
-    File testFile = new File(TMPDIR, UUID.randomUUID().toString());
-    try {
-      confMap.put(LocalFileSpanReceiver.PATH_KEY, testFile.getAbsolutePath());
-      confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
-          "org.apache.htrace.core.LocalFileSpanReceiver");
-      SpanReceiver rcvr = createSpanReceiver(confMap);
-      Assert.assertNotNull(rcvr);
-      Assert.assertEquals("org.apache.htrace.core.LocalFileSpanReceiver",
-          rcvr.getClass().getName());
-      rcvr.close();
-    } finally {
-      if (!testFile.delete()) {
-        LOG.debug("failed to delete " + testFile); // keep findbugs happy
+  public void TestCreateStandardSpanReceivers() {
+    List<SpanReceiver> receivers;
+    receivers = createSpanReceivers("");
+    Assert.assertTrue(receivers.isEmpty());
+    receivers = createSpanReceivers("POJOSpanReceiver");
+    Assert.assertTrue(receivers.get(0).getClass().getName().
+        equals("org.apache.htrace.core.POJOSpanReceiver"));
+    receivers = createSpanReceivers(
+               "org.apache.htrace.core.StandardOutSpanReceiver");
+    Assert.assertTrue(receivers.get(0).getClass().getName().
+        equals("org.apache.htrace.core.StandardOutSpanReceiver"));
+    receivers = createSpanReceivers(
+               "POJOSpanReceiver;StandardOutSpanReceiver");
+    Assert.assertEquals(2, receivers.size());
+    for (Iterator<SpanReceiver> iter = receivers.iterator(); iter.hasNext();) {
+      SpanReceiver receiver = iter.next();
+      if (receiver.getClass().getName().equals(
+          "org.apache.htrace.core.POJOSpanReceiver")) {
+        iter.remove();
+        break;
       }
     }
-
-    // Create POJOSpanReceiver
-    confMap.remove(LocalFileSpanReceiver.PATH_KEY);
-    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY, "POJOSpanReceiver");
-    SpanReceiver rcvr = createSpanReceiver(confMap);
-    Assert.assertEquals("org.apache.htrace.core.POJOSpanReceiver",
-        rcvr.getClass().getName());
-    rcvr.close();
-
-    // Create StandardOutSpanReceiver
-    confMap.remove(LocalFileSpanReceiver.PATH_KEY);
-    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
-        "org.apache.htrace.core.StandardOutSpanReceiver");
-    rcvr = createSpanReceiver(confMap);
-    Assert.assertEquals("org.apache.htrace.core.StandardOutSpanReceiver",
-        rcvr.getClass().getName());
-    rcvr.close();
+    for (Iterator<SpanReceiver> iter = receivers.iterator(); iter.hasNext();) {
+      SpanReceiver receiver = iter.next();
+      if (receiver.getClass().getName().equals(
+          "org.apache.htrace.core.StandardOutSpanReceiver")) {
+        iter.remove();
+        break;
+      }
+    }
+    Assert.assertEquals(0, receivers.size());
   }
 
-  public static class TestSpanReceiver implements SpanReceiver {
-    final static String SUCCEEDS = "test.span.receiver.succeeds";
+  public static class GoodSpanReceiver extends SpanReceiver {
+    public GoodSpanReceiver(HTraceConfiguration conf) {
+    }
 
-    public TestSpanReceiver(HTraceConfiguration conf) {
-      if (conf.get(SUCCEEDS) == null) {
-        throw new RuntimeException("Can't create TestSpanReceiver: " +
-            "invalid configuration.");
-      }
+    @Override
+    public void receiveSpan(Span span) {
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
+  }
+
+  public static class BadSpanReceiver extends SpanReceiver {
+    public BadSpanReceiver(HTraceConfiguration conf) {
+      throw new RuntimeException("Can't create BadSpanReceiver");
     }
 
     @Override
@@ -120,20 +114,14 @@ public class TestSpanReceiverBuilder {
    */
   @Test
   public void testGetSpanReceiverWithConstructorError() throws Exception {
-    HashMap<String, String> confMap = new HashMap<String, String>();
-
-    // Create TestSpanReceiver
-    confMap.put(SpanReceiverBuilder.SPAN_RECEIVER_CONF_KEY,
-        TestSpanReceiver.class.getName());
-    confMap.put(TestSpanReceiver.SUCCEEDS, "true");
-    SpanReceiver rcvr = createSpanReceiver(confMap);
-    Assert.assertEquals(TestSpanReceiver.class.getName(),
-        rcvr.getClass().getName());
-    rcvr.close();
-
-    // Fail to create TestSpanReceiver
-    confMap.remove(TestSpanReceiver.SUCCEEDS);
-    rcvr = createSpanReceiver(confMap);
-    Assert.assertEquals(null, rcvr);
+    List<SpanReceiver> receivers;
+    receivers = createSpanReceivers(
+        GoodSpanReceiver.class.getName());
+    Assert.assertEquals(1, receivers.size());
+    Assert.assertTrue(receivers.get(0).getClass().getName().
+        contains("GoodSpanReceiver"));
+    receivers = createSpanReceivers(
+        BadSpanReceiver.class.getName());
+    Assert.assertEquals(0, receivers.size());
   }
 }

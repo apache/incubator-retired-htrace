@@ -20,12 +20,10 @@ package org.apache.htrace.zipkin;
 import com.twitter.zipkin.gen.zipkinCoreConstants;
 
 import org.apache.htrace.core.HTraceConfiguration;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.SpanId;
-import org.apache.htrace.core.Trace;
 import org.apache.htrace.core.MilliSpan;
 import org.apache.htrace.core.POJOSpanReceiver;
-import org.apache.htrace.zipkin.HTraceToZipkinConverter;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,14 +37,10 @@ import static org.junit.Assert.assertTrue;
  * Creates HTrace and then convert it to Zipkin trace and checks whether it is a valid span or not.
  */
 public class TestHTraceSpanToZipkinSpan {
-
   private static final String ROOT_SPAN_DESC = "ROOT";
 
   @Test
   public void testHTraceToZipkin() throws IOException {
-    POJOSpanReceiver psr = new POJOSpanReceiver(HTraceConfiguration.EMPTY);
-    Trace.addReceiver(psr);
-
     Span rootSpan = new MilliSpan.Builder().
             description(ROOT_SPAN_DESC).
             parents(new SpanId[] { } ).
