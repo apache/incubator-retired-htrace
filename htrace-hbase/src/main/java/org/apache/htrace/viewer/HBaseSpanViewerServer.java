@@ -22,87 +22,66 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 public class HBaseSpanViewerServer implements Tool {
   private static final Log LOG = LogFactory.getLog(HBaseSpanViewerServer.class);
   public static final String HTRACE_VIEWER_HTTP_ADDRESS_KEY = "htrace.viewer.http.address";
   public static final String HTRACE_VIEWER_HTTP_ADDRESS_DEFAULT = "0.0.0.0:16900";
-  public static final String HTRACE_CONF_ATTR = "htrace.conf";
-  public static final String HTRACE_APPDIR = "webapps";
-  public static final String NAME = "htrace";
-
   private Configuration conf;
-  private HttpServer2 httpServer;
-  private InetSocketAddress httpAddress;
+  private Server server;
 
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
 
+  @Override
   public Configuration getConf() {
     return this.conf;
   }
 
-  void start() throws IOException {
-    httpAddress = NetUtils.createSocketAddr(
-        conf.get(HTRACE_VIEWER_HTTP_ADDRESS_KEY, HTRACE_VIEWER_HTTP_ADDRESS_DEFAULT));
-    conf.set(HTRACE_VIEWER_HTTP_ADDRESS_KEY, NetUtils.getHostPortString(httpAddress));
-    HttpServer2.Builder builder = new HttpServer2.Builder();
-    builder.setName(NAME).setConf(conf);
-    if (httpAddress.getPort() == 0) {
-      builder.setFindPort(true);
+  public void stop() throws Exception {
+    if (server != null) {
+      server.stop();
     }
-    URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddress));
-    builder.addEndpoint(uri);
-    LOG.info("Starting Web-server for " + NAME + " at: " + uri);
-    httpServer = builder.build();
-    httpServer.setAttribute(HTRACE_CONF_ATTR, conf);
-    httpServer.addServlet("gettraces",
-                          HBaseSpanViewerTracesServlet.PREFIX,
-                          HBaseSpanViewerTracesServlet.class);
-    httpServer.addServlet("getspans",
-                          HBaseSpanViewerSpansServlet.PREFIX + "/*",
-                          HBaseSpanViewerSpansServlet.class);
-
-    // for webapps/htrace bundled in jar.
-    String rb = httpServer.getClass()
-                          .getClassLoader()
-                          .getResource("webapps/" + NAME)
-                          .toString();
-    httpServer.getWebAppContext().setResourceBase(rb);
-
-    httpServer.start();
-    httpAddress = httpServer.getConnectorAddress(0);
-  }
-
-  void join() throws Exception {
-    if (httpServer != null) {
-      httpServer.join();
-    }
-  }
-
-  void stop() throws Exception {
-    if (httpServer != null) {
-      httpServer.stop();
-    }
-  }
-
-  InetSocketAddress getHttpAddress() {
-    return httpAddress;
   }
 
   public int run(String[] args) throws Exception {
-    start();
-    join();
-    stop();
+    URI uri = new URI("http://" + conf.get(HTRACE_VIEWER_HTTP_ADDRESS_KEY,
+                                           HTRACE_VIEWER_HTTP_ADDRESS_DEFAULT));
+    InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
+    server = new Server(addr);
+    ServletContextHandler root =
+      new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
+    server.setHandler(root);
+
+    String resourceBase = server.getClass()
+                                .getClassLoader()
+                                .getResource("webapps/htrace")
+                                .toExternalForm();
+    root.setResourceBase(resourceBase);
+    root.setWelcomeFiles(new String[]{"index.html"});
+    root.addServlet(new ServletHolder(new DefaultServlet()),
+                    "/");
+    root.addServlet(new ServletHolder(new HBaseSpanViewerTracesServlet(conf)),
+                    "/gettraces");
+    root.addServlet(new ServletHolder(new HBaseSpanViewerSpansServlet(conf)),
+                    "/getspans/*");
+
+    server.start();
+    server.join();
     return 0;
   }
 

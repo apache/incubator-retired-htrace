@@ -29,8 +29,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.ServletUtil;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 
 public class HBaseSpanViewerTracesServlet extends HttpServlet {
@@ -43,6 +41,11 @@ public class HBaseSpanViewerTracesServlet extends HttpServlet {
           return null;
         }
       };
+  private Configuration conf;
+
+  public HBaseSpanViewerTracesServlet(Configuration conf) {
+    this.conf = conf;
+  }
 
   @Override
   @SuppressWarnings("unchecked")
@@ -50,8 +53,6 @@ public class HBaseSpanViewerTracesServlet extends HttpServlet {
       throws ServletException, IOException {
     HBaseSpanViewer viewer = tlviewer.get();
     if (viewer == null) {
-      final Configuration conf = (Configuration) getServletContext()
-        .getAttribute(HBaseSpanViewerServer.HTRACE_CONF_ATTR);
       viewer = new HBaseSpanViewer(conf);
       tlviewer.set(viewer);
     }

@@ -29,8 +29,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.ServletUtil;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 
 public class HBaseSpanViewerSpansServlet extends HttpServlet {
@@ -43,22 +41,24 @@ public class HBaseSpanViewerSpansServlet extends HttpServlet {
           return null;
         }
       };
+  private Configuration conf;
+
+  public HBaseSpanViewerSpansServlet(Configuration conf) {
+    this.conf = conf;
+  }
 
   @Override
   @SuppressWarnings("unchecked")
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    final String path =
-        validatePath(ServletUtil.getDecodedPath(request, PREFIX));
-    if (path == null) {
+    final String path = request.getRequestURI().substring(PREFIX.length());
+    if (path == null || path.length() == 0) {
       response.setContentType("text/plain");
       response.getWriter().print("Invalid input");
       return;
     }
     HBaseSpanViewer viewer = tlviewer.get();
     if (viewer == null) {
-      final Configuration conf = (Configuration) getServletContext()
-        .getAttribute(HBaseSpanViewerServer.HTRACE_CONF_ATTR);
       viewer = new HBaseSpanViewer(conf);
       tlviewer.set(viewer);
     }
@@ -88,10 +88,5 @@ public class HBaseSpanViewerSpansServlet extends HttpServlet {
     if (viewer != null) {
       viewer.close();
     }
-  }
-
-  public static String validatePath(String p) {
-    return p == null || p.length() == 0?
-      null: new Path(p).toUri().getPath();
   }
 }
