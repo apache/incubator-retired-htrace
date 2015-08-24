@@ -61,7 +61,7 @@ htrace.PType = Backbone.Model.extend({
       return val;
     case "spanid":
       return htrace.normalizeSpanId(val);
-    case "processid":
+    case "tracerid":
       htrace.checkStringIsNotEmpty(val);
       return val;
     default:
@@ -81,7 +81,7 @@ htrace.PType = Backbone.Model.extend({
       return "0";
     case "spanid":
       return "";
-    case "processid":
+    case "tracerid":
       return "";
     default:
       return "(unknown)";
@@ -109,10 +109,10 @@ htrace.parsePType = function(name) {
       return new htrace.PType({name: name, field:"duration", op:"le"});
     case "Span ID is":
       return new htrace.PType({name: name, field:"spanid", op:"eq"});
-    case "ProcessId contains":
-      return new htrace.PType({name: name, field:"processid", op:"cn"});
-    case "ProcessId is exactly":
-      return new htrace.PType({name: name, field:"processid", op:"eq"});
+    case "TracerId contains":
+      return new htrace.PType({name: name, field:"tracerid", op:"cn"});
+    case "TracerId is exactly":
+      return new htrace.PType({name: name, field:"tracerid", op:"eq"});
     default:
       return null
   }

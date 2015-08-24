@@ -154,7 +154,7 @@ htrace.SearchResultsView = Backbone.View.extend({
   //
   //  0              xB         xD                   xS         viewX
   //  +--------------+----------+--------------------+-----------+
-  //  |ProcessId     | Buttons  | Span Description   | Scrollbar |
+  //  |TracerId      | Buttons  | Span Description   | Scrollbar |
   //  +--------------+----------+--------------------+-----------+
   //
   setupCoordinates: function() {
