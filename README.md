@@ -20,3 +20,12 @@ HTrace
 HTrace is a tracing framework for use with distributed systems.
 
 See documentation at src/main/site/markdown/index.md or at http://htrace.incubator.apache.org.
+
+Building
+--------
+Only Maven 3.0.4 should be used to create HTrace releases - see [HTRACE-236](https://issues.apache.org/jira/browse/HTRACE-236)
+(Support building release artifacts with Maven versions other than 3.0.4) for details.  
+
+To get around this while using Maven 3.3 [HTRACE-234](https://issues.apache.org/jira/browse/HTRACE-234)
+you can run maven with `-DcreateDependencyReducedPom=false`.  
+

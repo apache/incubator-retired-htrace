@@ -33,6 +33,7 @@ language governing permissions and limitations under the License. -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.99.2</hbase.version>
     <jetty.version>9.2.13.v20150730</jetty.version>
+    <createDependencyReducedPom>true</createDependencyReducedPom>
   </properties>
 
   <build>
@@ -67,6 +68,9 @@ language governing permissions and limitations under the License. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <configuration>
+          <createDependencyReducedPom>${createDependencyReducedPom}</createDependencyReducedPom>
+        </configuration>
         <executions>
           <execution>
             <phase>package</phase>
