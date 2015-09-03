@@ -48,7 +48,6 @@ import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TimelineAnnotation;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
-import org.apache.htrace.core.TracerBuilder;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 
 /**
@@ -348,7 +347,7 @@ public class HBaseSpanReceiver extends SpanReceiver {
    * @throws IOException
    */
   public static void main(String[] args) throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         conf(new HBaseHTraceConfiguration(HBaseConfiguration.create())).
         build();
     tracer.addSampler(Sampler.ALWAYS);

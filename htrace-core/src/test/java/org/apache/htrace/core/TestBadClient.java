@@ -43,7 +43,7 @@ public class TestBadClient {
    */
   @Test
   public void TestClosingOuterScope() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestClosingOuterScopeTracer").
         tracerPool(new TracerPool("TestClosingOuterScope")).
         conf(HTraceConfiguration.
@@ -69,7 +69,7 @@ public class TestBadClient {
    */
   @Test
   public void TestDoubleDetachIsCaught() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestDoubleDetach").
         tracerPool(new TracerPool("TestDoubleDetachIsCaught")).
         conf(HTraceConfiguration.
@@ -94,7 +94,7 @@ public class TestBadClient {
    */
   @Test
   public void TestDoubleDetachOnNullScope() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestDoubleDetachOnNullScope").
         tracerPool(new TracerPool("TestDoubleDetachOnNullScope")).
         conf(HTraceConfiguration.
@@ -119,7 +119,7 @@ public class TestBadClient {
    */
   @Test
   public void TestDoubleReattachIsCaught() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestDoubleReattach").
         tracerPool(new TracerPool("TestDoubleReattachIsCaught")).
         conf(HTraceConfiguration.
@@ -153,7 +153,7 @@ public class TestBadClient {
    */
   @Test
   public void TestPassingSpanBetweenThreads() throws Exception {
-    final Tracer tracer = new TracerBuilder().
+    final Tracer tracer = new Tracer.Builder().
         name("TestPassingSpanBetweenThreads").
         tracerPool(new TracerPool("TestPassingSpanBetweenThreads")).
         conf(HTraceConfiguration.

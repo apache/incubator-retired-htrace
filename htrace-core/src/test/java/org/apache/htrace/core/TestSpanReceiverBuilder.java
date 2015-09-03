@@ -32,7 +32,7 @@ public class TestSpanReceiverBuilder {
       LogFactory.getLog(TestSpanReceiverBuilder.class);
 
   private List<SpanReceiver> createSpanReceivers(String classes) {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("MyTracer").
         tracerPool(new TracerPool("createSpanReceivers")).
         conf(HTraceConfiguration.fromKeyValuePairs(

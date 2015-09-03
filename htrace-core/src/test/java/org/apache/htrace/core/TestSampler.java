@@ -25,7 +25,7 @@ import org.junit.Test;
 
 public class TestSampler {
   private Sampler[] getSamplersFromConf(HTraceConfiguration conf) {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("MyTracer").
         tracerPool(new TracerPool("getSamplersFromConf")).
         conf(conf).

@@ -53,13 +53,13 @@ should be disabled.   The goal of HTrace is to trace an entire request.
 To instrument your system you must:
 
 <b>1. Create a Tracer object.</b>
-You can create a Tracer object via the TracerBuilder.
+You can create a Tracer object via the Tracer#Builder.
 
 ````java
-    Tracer tracer = new TracerBuilder(conf).setName("MyApp").build();
+    Tracer tracer = new Tracer#Builder(conf).setName("MyApp").build();
 ...
 
-The TracerBuilder will take care of creating the appropriate Sampler and
+The Tracer#Builder will take care of creating the appropriate Sampler and
 SpanReceiver objects, as well as the Tracer itself.   If a SpanReceiver was
 created, we will install a shutdown hook to close it when the JVM shuts down.
 

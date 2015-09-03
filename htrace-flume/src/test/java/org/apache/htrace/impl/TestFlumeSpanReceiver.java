@@ -25,7 +25,6 @@ import org.apache.htrace.core.SpanId;
 import org.apache.htrace.core.TraceCreator;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
-import org.apache.htrace.core.TracerBuilder;
 import org.apache.htrace.core.TracerPool;
 
 import org.junit.Assert;
@@ -39,7 +38,7 @@ public class TestFlumeSpanReceiver {
   public FakeFlume flumeServer = new FakeFlume();
 
   private Tracer newTracer() {
-    return new TracerBuilder().
+    return new Tracer.Builder().
         name("FlumeTracer").
         tracerPool(new TracerPool("newTracer")).
         conf(HTraceConfiguration.fromKeyValuePairs(

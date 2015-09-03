@@ -28,7 +28,7 @@ import org.junit.Test;
 public class TestHTrace {
   @Test
   public void TestTracerCreateAndClose() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestSimpleScope").
         tracerPool(new TracerPool("TestTracerCreateAndClose")).
         conf(HTraceConfiguration.fromKeyValuePairs(
@@ -43,7 +43,7 @@ public class TestHTrace {
 
   @Test
   public void TestSimpleScope() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestSimpleScope").
         tracerPool(new TracerPool("TestSimpleScope")).
         conf(HTraceConfiguration.fromKeyValuePairs(
@@ -62,7 +62,7 @@ public class TestHTrace {
 
   @Test
   public void TestCreateSpans() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("TestCreateSpans").
         tracerPool(new TracerPool("TestCreateSpans")).
         conf(HTraceConfiguration.fromKeyValuePairs(
@@ -113,7 +113,7 @@ public class TestHTrace {
 
   @Test(timeout=60000)
   public void testRootSpansHaveNonZeroSpanId() throws Exception {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("testRootSpansHaveNonZeroSpanId").
         tracerPool(new TracerPool("testRootSpansHaveNonZeroSpanId")).
         conf(HTraceConfiguration.fromKeyValuePairs(

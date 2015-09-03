@@ -44,7 +44,7 @@ public class TestLocalFileSpanReceiver {
   @Test
   public void testWriteToLocalFile() throws IOException {
     String traceFileName = LocalFileSpanReceiver.getUniqueLocalTraceFileName();
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("testWriteToLocalFileTracer").
         tracerPool(new TracerPool("testWriteToLocalFile")).
         conf(HTraceConfiguration.fromKeyValuePairs(

@@ -47,7 +47,6 @@ import org.apache.htrace.core.TraceCreator;
 import org.apache.htrace.core.TraceGraph;
 import org.apache.htrace.core.TraceGraph.SpansByParent;
 import org.apache.htrace.core.Tracer;
-import org.apache.htrace.core.TracerBuilder;
 import org.apache.htrace.core.TracerPool;
 import org.apache.htrace.protobuf.generated.SpanProtos;
 import org.junit.AfterClass;
@@ -87,7 +86,7 @@ public class TestHBaseSpanReceiver {
   public void testHBaseSpanReceiver() {
     Table htable = createTable(UTIL);
     Configuration conf = UTIL.getConfiguration();
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("testHBaseSpanReceiver").
         tracerPool(new TracerPool("testHBaseSpanReceiver")).
         conf(HTraceConfiguration.fromKeyValuePairs(

@@ -32,7 +32,7 @@ public class TestNullScope {
 
   @Test
   public void testNullScope() {
-    Tracer tracer = new TracerBuilder().
+    Tracer tracer = new Tracer.Builder().
         name("testNullScope").
         tracerPool(new TracerPool("testNullScope")).
         conf(HTraceConfiguration.EMPTY).
