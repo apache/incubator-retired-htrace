@@ -33,13 +33,6 @@ language governing permissions and limitations under the License. -->
   <build>
     <plugins>
       <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
@@ -67,6 +60,8 @@ language governing permissions and limitations under the License. -->
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
+          <!--Make it so assembly:single does nothing in here-->
+          <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
       <!--Move this to top-level. These shade patterns are common across components
