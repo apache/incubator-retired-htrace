@@ -119,12 +119,6 @@ language governing permissions and limitations under the License. -->
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.7</version>
-      <scope>provided</scope>
-    </dependency>
     <!-- Global deps. -->
     <dependency>
       <groupId>commons-logging</groupId>
