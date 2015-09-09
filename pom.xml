@@ -97,13 +97,14 @@ language governing permissions and limitations under the License. -->
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
   </developers>
+
   <build>
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
-          <version>2.1.2</version>
+          <version>${maven-source-plugin.version}</version>
           <executions>
             <execution>
               <id>attach-sources</id>
@@ -116,7 +117,7 @@ language governing permissions and limitations under the License. -->
         </plugin>
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.8.1</version>
+          <version>${maven-javadoc-plugin.version}</version>
           <executions>
             <execution>
               <id>attach-javadocs</id>
@@ -130,7 +131,7 @@ language governing permissions and limitations under the License. -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>2.4</version>
+          <version>${maven-jar-plugin.version}</version>
           <executions>
             <execution>
               <goals>
@@ -142,7 +143,7 @@ language governing permissions and limitations under the License. -->
         <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.11</version>
+          <version>${apache-rat-plugin.version}</version>
           <executions>
             <execution>
               <phase>package</phase>
@@ -181,7 +182,7 @@ language governing permissions and limitations under the License. -->
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.5.1</version>
+          <version>${maven-compiler-plugin.version}</version>
           <configuration>
             <source>1.7</source>
             <target>1.7</target>
@@ -192,7 +193,7 @@ language governing permissions and limitations under the License. -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.1</version>
+          <version>${maven-gpg-plugin.version}</version>
           <executions>
             <execution>
               <id>sign-artifacts</id>
@@ -206,7 +207,7 @@ language governing permissions and limitations under the License. -->
         <plugin>
           <!-- explicitly define maven-deploy-plugin after other to force exec order -->
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.7</version>
+          <version>${maven-deploy-plugin.version}</version>
           <executions>
             <execution>
               <id>deploy</id>
@@ -220,7 +221,7 @@ language governing permissions and limitations under the License. -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.1</version>
+          <version>${maven-shade-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -236,23 +237,23 @@ language governing permissions and limitations under the License. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.4</version>
+        <version>${maven-site-plugin.version}</version>
         <dependencies>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
             <artifactId>wagon-ssh</artifactId>
-            <version>2.2</version>
+            <version>${wagon-ssh.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.maven.doxia</groupId>
             <artifactId>doxia-module-markdown</artifactId>
-            <version>1.6</version>
+            <version>${doxia-module-markdown.version}</version>
           </dependency>
         <dependency>
           <groupId>lt.velykis.maven.skins</groupId>
           <artifactId>reflow-velocity-tools</artifactId>
-          <version>1.1.1</version>
+          <version>${reflow-velocity-tools.version}</version>
         </dependency>
         <!-- Reflow skin requires Velocity >= 1.7  -->
         <dependency>
@@ -279,10 +280,25 @@ language governing permissions and limitations under the License. -->
       </plugin>
     </plugins>
   </build>
+
   <properties>
     <targetJdk>1.7</targetJdk>
     <failIfNoTests>false</failIfNoTests>
+    <maven-source-plugin.version>2.1.2</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>2.8.1</maven-javadoc-plugin.version>
+    <maven-jar-plugin.version>2.4</maven-jar-plugin.version>
+    <apache-rat-plugin.version>0.11</apache-rat-plugin.version>
+    <maven-compiler-plugin.version>2.5.1</maven-compiler-plugin.version>
+    <maven-gpg-plugin.version>1.1</maven-gpg-plugin.version>
+    <maven-deploy-plugin.version>2.7</maven-deploy-plugin.version>
+    <maven-shade-plugin.version>2.1</maven-shade-plugin.version>
+    <maven-site-plugin.version>3.4</maven-site-plugin.version>
+    <wagon-ssh.version>2.2</wagon-ssh.version>
+    <doxia-module-markdown.version>1.6</doxia-module-markdown.version>
+    <reflow-velocity-tools.version>1.1.1</reflow-velocity-tools.version>
+    <maven-war-plugin.version>2.6</maven-war-plugin.version>
   </properties>
+
   <dependencyManagement>
     <dependencies>
       <dependency>
