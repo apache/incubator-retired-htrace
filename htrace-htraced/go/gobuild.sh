@@ -127,7 +127,7 @@ install)
         || die "go install failed."
     # Make a symlink to web src dir so can do development in-situ out
     # of build dir. This is ugly but blame go build.
-    ln -fs "../../htrace-webapp/src/main/web" "${GOBIN}/../"
+    ln -fs "../../htrace-webapp/src/main/webapp" "${GOBIN}/../web"
     # Set the RPATH to make bundling leveldb and snappy easier.
     set_rpath "${GOBIN}/htraced"
     ;;

@@ -32,7 +32,7 @@ language governing permissions and limitations under the License. -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
         <configuration>
-          <webXml>src/main/web/WEB-INF/web.xml</webXml>
+          <webXml>src/main/webapp/WEB-INF/web.xml</webXml>
         </configuration>
       </plugin>
       <plugin>
