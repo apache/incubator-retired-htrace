@@ -45,6 +45,7 @@
       <item name="Modules" href="modules.html" />
       <item name="Project Info" href="project-info.html" />
       <item name="Team" href="team-list.html" />
+      <item name="Building" href="building.html" />
     </menu>
     <menu name="ASF">
         <item name="Apache Software Foundation"      href="http://www.apache.org/foundation/" />
