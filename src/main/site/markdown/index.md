@@ -14,17 +14,14 @@
 
 Apache HTrace is an <a href="http://htrace.incubator.apache.org">Apache Incubator</a>
 project. To add HTrace to your project, see detail on how to add it as a
-<a href="dependency-info.html">dependency</a>.
-
-Formerly, HTrace was available at org.htrace.
+<a href="dependency-info.html">dependency</a>. Formerly, HTrace was available at `org.htrace`.
 
 * htrace-4.0.0-incubating published September 15th, 2015. [Download it!](http://www.apache.org/dyn/closer.cgi/incubator/htrace/)
 * htrace-3.2.0-incubating published June 2nd, 2015. [Download it!](http://www.apache.org/dyn/closer.cgi/incubator/htrace/)
 * We made our first release from Apache Incubator, htrace-3.1.0-incubating, January 20th, 2015. [Download it!](http://www.apache.org/dyn/closer.cgi/incubator/htrace/)
 
 
-API
----
+## API
 Using HTrace requires adding some instrumentation to your application.
 Before we get into the details, lets review our terminology.  HTrace
 borrows [Dapper's](http://research.google.com/pubs/pub36356.html)
@@ -51,21 +48,19 @@ analyzed.  HTrace comes with several standard span receivers, such as
 <b>Sampler:</b> Samplers determine when tracing should be enabled, and when it
 should be disabled.   The goal of HTrace is to trace an entire request.
 
-### How to add tracing to your application
+## How to add tracing to your application
 To instrument your system you must:
 
-<b>1. Create a Tracer object.</b>
-You can create a Tracer object via the Tracer#Builder.
+### Create a Tracer object
+You can create a Tracer object via the `Tracer#Builder`.
 
-````java
     Tracer tracer = new Tracer#Builder(conf).setName("MyApp").build();
-...
 
-The Tracer#Builder will take care of creating the appropriate Sampler and
+The `Tracer#Builder` will take care of creating the appropriate Sampler and
 SpanReceiver objects, as well as the Tracer itself.   If a SpanReceiver was
 created, we will install a shutdown hook to close it when the JVM shuts down.
 
-<b>2. Attach additional information to your RPCs.</b>
+### Attach additional information to your RPCs
 In order to create the causal links necessary for a trace, HTrace needs to know
 about the causal relationships between spans.  The only information you need to
 add to your RPCs is the 128-bit span ID.  If tracing is enabled when you send an
@@ -73,22 +68,18 @@ RPC, attach the ID of the current span to the message.  On the receiving end of
 the RPC, check to see if the message has a span ID attached.  If it does, start
 a new trace scope with that span as a parent.
 
-<b>3. Wrap your thread changes.</b>
+### Wrap your thread changes
 HTrace stores span information in java's ThreadLocals, which causes
 the trace to be "lost" on thread changes. The only way to prevent
 this is to "wrap" your thread changes. For example, if your code looks
 like this:
 
-````java
     Thread t1 = new Thread(new MyRunnable());
     ...
-````
 
 Just change it to look this:
 
-````java
     Thread t1 = new Thread(Trace.wrap(new MyRunnable()));
-````
 
 That's it! `Trace.wrap()` takes a single argument (a runnable or a
 callable) and if the current thread is a part of a trace, returns a
@@ -111,7 +102,7 @@ current span at the time the put was created.  Then when the put is
 pulled out of the list to be processed, you can start a new span as
 the child of the span stored in the Put.
 
-<b>3. Add custom spans and annotations.</b>
+### Add custom spans and annotations
 Once you've augmented your RPC's and wrapped the necessary thread
 changes, you can add more spans and annotations wherever you want.
 For example, you might do some expensive computation that you want to
@@ -119,24 +110,27 @@ see on your traces.  In this case, you could start a new span before
 the computation that you then stop after the computation has
 finished. It might look like this:
 
-````java
     Span computationSpan = tracer.newScope("Expensive computation.");
     try {
         //expensive computation here
     } finally {
         computationSpan.stop();
     }
-````
 
 HTrace also supports key-value annotations on a per-trace basis.
 
 Example:
 
-````java
     scope.addAnnotation("faultyRecordCounter".getBytes(), "1".getBytes());
-````
 
-#### htrace-zipkin
+### Generating test spans
+The test that creates a sample trace (TestHTrace) takes a command line
+argument telling it where to write span information. Run
+`mvn test -DargLine="-DspanFile=FILE\_PATH"` to write span
+information to FILE_PATH. If no file is specified, span information
+will be written to standard out.
+
+## htrace-zipkin
 htrace-zipkin provides the `SpanReceiver` implementation
 which sends spans to [Zipkin](https://github.com/twitter/zipkin) collector.
 You can build the uber-jar (htrace-zipkin-*-jar-withdependency.jar) for manual
@@ -146,18 +140,6 @@ htrace-core and its dependencies.
     $ cd htrace-zipkin
     $ mvn compile assembly:single
 
-#### htrace-hbase
+## htrace-hbase
 See htrace-hbase for an Span Receiver implementation that writes HBase.
 
-Generating test spans
--------------------------------
-The test that creates a sample trace (TestHTrace) takes a command line
-argument telling it where to write span information. Run
-`mvn test -DargLine="-DspanFile=FILE\_PATH"` to write span
-information to FILE_PATH. If no file is specified, span information
-will be written to standard out.
-
-Publishing to Maven Central
--------------------------------
-See [OSSRH-8896](https://issues.sonatype.org/browse/OSSRH-8896)
-for repository vitals.
