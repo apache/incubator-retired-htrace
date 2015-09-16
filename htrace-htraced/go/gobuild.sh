@@ -101,6 +101,8 @@ else
 fi
 
 case $ACTION in
+    # Add any directory you want to clean up into the pom too. We cannot run
+    # this gobuild clean from mvn.
 clean)
     rm -rf -- "${GOBIN}" ${SCRIPT_DIR}/pkg
     ;;

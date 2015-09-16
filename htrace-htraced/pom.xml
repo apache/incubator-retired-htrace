@@ -132,19 +132,11 @@ language governing permissions and limitations under the License. -->
               </tasks>
             </configuration>
           </execution>
-          <execution>
-            <phase>clean</phase>
-            <id>go_clean</id>
-            <goals><goal>run</goal></goals>
-            <configuration>
-              <tasks>
-                <exec executable="bash" failonerror="true" dir="${basedir}/go">
-                  <arg value="-c"/>
-                  <arg value="./gobuild.sh clean"/>
-                </exec>
-              </tasks>
-            </configuration>
-          </execution>
+          <!--We used to call go/gobuild.sh clean here but it fails if
+              the first thing we do is mvn clean because this plugin
+              expects all plugins to be in place. Instead use the
+              below maven-clean-plugin to clean out any extra go dirs.
+           -->
         </executions>
       </plugin>
       <plugin>
@@ -154,6 +146,13 @@ language governing permissions and limitations under the License. -->
           <filesets>
             <fileset>
               <directory>bin</directory>
+            </fileset>
+            <!--Below dirs must match what gobuild.sh clean does.-->
+            <fileset>
+              <directory>go/build</directory>
+            </fileset>
+            <fileset>
+              <directory>go/pkg</directory>
             </fileset>
           </filesets>
         </configuration>
