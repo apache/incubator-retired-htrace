@@ -14,7 +14,113 @@
 
 # Building HTrace
 ## Publishing a Release Candidate
-TODO
+### Generating the PGP key (if you haven't already)
+Create new pgp key.  See http://www.apache.org/dev/openpgp.html
+
+    sudo zypper -y install gpg
+    gpg --version
+    gpg (GnuPG) 2.0.22
+
+This is a new enough version according to the apache site.
+
+Generate a new key via
+
+    gpg --gen-key --s2k-digest-algo sha512
+
+Answer 4096 bits, no expiration time.
+
+Uploaded key to http://pgp.mit.edu/ It now appears as
+
+    http://pgp.mit.edu/pks/lookup?op=get&amp;search=0xDE78987A9CD4D9D3
+
+Get the pgp key signed by others.
+
+Add the new pgp key to the KEYS file
+
+### JIRA maintenance
+From hadoop HowToRelease at https://wiki.apache.org/hadoop/HowToRelease :
+Bulk update Jira to unassign from this release all issues that are open
+non-blockers.
+
+#### Maven and build
+Update the versions in Maven.
+
+    mvn versions:set -DnewVersion=4.0.0
+
+or do it manually by editing the pom.xml files.  Commit the new versions.
+
+Add a settings.xml in `~/.m2/settings.xml` with the appropriate logins.
+
+Create the release branch:
+
+   git checkout -b 4.0
+
+Create the release tag via git
+
+    git tag -s 4.0.0RC0 -m '4.0 release candidate 0' -u 9CD4D9D3
+
+For some reason, I get a message about needing a password.  But no password
+is actually asked for.  Perhaps it is supplied by the window manager via its
+keyring-like program.
+
+Push branch-X.Y.Z and the newly created tag to the remote repo.
+
+    git push apache 4.0 4.0.0RC0
+
+Upload the build to Sonatype's servers.
+
+    git clean -fdqx .
+    mvn clean deploy -Psign,src,dist -DskipTests
+
+This will take a while because it needs to upload to the servers.
+
+Log into repository.apache.org and go to
+https://repository.apache.org/#stagingRepositories
+Select the repo you uploaded earlier.  You can browse the files
+here to verify it looks right.  When you are satisfied, click "Close".
+
+Generate the source tarball via:
+
+    mvn clean install -DskipTests assembly:single -Pdist
+
+Generate the side files.
+
+    gpg --print-mds /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz > \
+    /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz.mds
+    gpg --armor --output /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz.asc \
+      --detach-sig /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz
+
+rsync up to your public_html directory in people.apache.org.
+
+    rsync -avi /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.* \
+    people.apache.org:~/public_html/htrace/releases/4.0.0
+
+Generate release notes via JIRA at
+https://issues.apache.org/jira/browse/HTRACE/
+by clicking on the release and then clicking the grey "release notes"
+button in the top right.
+
+### Mailing list
+Propose a new release on the mailing list.  Wait 1 day for responses.
+
+Post a message with the form:
+
+     > I've posted the first release candidate here:
+     >
+     > http://people.apache.org/~cmccabe/htrace/releases/4.0.0/rc0
+     >
+     > The jars have been staged here:
+     >
+     > https://repository.apache.org/content/repositories/orgapachehtrace-1017
+     >
+     > There's a lot of great stuff in this release [description]
+     >
+     > The vote will run for 5 days.
+     >
+     > cheers,
+     > Colin
+     >
+     > [release notes]
 
 ## Publishing htrace.incubator.apache.org website
 Checkout the current website. It is in svn (that's right, subversion).
@@ -24,22 +130,27 @@ committed, the commit is published as `htrace.incubator.apache.org`.
 Here is how you'd check out the current site into a directory named
 `htrace.incubator.apache.org` in the current directory:
 
+~~~
  $ svn checkout https://svn.apache.org/repos/asf/incubator/htrace/site/publish htrace.incubator.apache.org
+~~~
 
 Next, run the site publishing script at `${HTRACE_CHECKOUT_DIR}/bin/publish_hbase_website.sh`.
 It will dump out usage information that looks like this:
- $ ./bin/publish_hbase_website.sh
- Usage: ./bin/publish_hbase_website.sh [-i | -a] [-g &lt;dir>] [-s &lt;dir>]
- -h          Show this message
- -i          Prompts the user for input
- -a          Does not prompt the user. Potentially dangerous.
- -g          The local location of the HTrace git repository
- -s          The local location of the HTrace website svn checkout
-Either -i or -a is required.
-Edit the script to set default Git and SVN directories.
+
+    $ ./bin/publish_hbase_website.sh
+    Usage: ./bin/publish_hbase_website.sh [-i | -a] [-g &lt;dir>] [-s &lt;dir>]
+    -h          Show this message
+    -i          Prompts the user for input
+    -a          Does not prompt the user. Potentially dangerous.
+    -g          The local location of the HTrace git repository
+    -s          The local location of the HTrace website svn checkout
+    Either -i or -a is required.
+    Edit the script to set default Git and SVN directories.
 
 To run the publish site script interactively, here is an example where
 the git checkout is at `~/checkouts/incubator-htrace` and the svn checkout
 is at `~/checkouts/htrace.incubator.apache.org`:
 
+~~~
  $ ./bin/publish_hbase_website.sh -i -g ~/checkouts/incubator-htrace -s ~/checkouts/htrace.incubator.apache.org/
+~~~
