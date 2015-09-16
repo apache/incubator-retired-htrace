@@ -14,7 +14,7 @@ language governing permissions and limitations under the License. -->
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>12</version>
+    <version>17</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
