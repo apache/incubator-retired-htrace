@@ -31,6 +31,7 @@ language governing permissions and limitations under the License. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
+        <version>${maven-war-plugin.version}</version>
         <configuration>
           <webXml>src/main/webapp/WEB-INF/web.xml</webXml>
         </configuration>
