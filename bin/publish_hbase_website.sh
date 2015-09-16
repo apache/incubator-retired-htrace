@@ -93,7 +93,7 @@ if [ $INTERACTIVE ]; then
     read -p "Build the site? (y/n)" yn
     case $yn in
         [Yy]* ) 
-    			mvn clean package javadoc:aggregate site site:stage -DskipTests
+    			mvn clean package javadoc:aggregate site site:stage -DskipTests || die
           status=$?
           if [ $status != 0 ]; then
             echo "The website does not build. Aborting."
