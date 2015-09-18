@@ -161,6 +161,9 @@ public class Tracer implements Closeable {
           samplers.toArray(new Sampler[samplers.size()]));
       tracerPool.addTracer(tracer);
       loadSpanReceivers();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Created " + tracer + " for " + name);
+      }
       return tracer;
     }
   }
