@@ -16,16 +16,20 @@
  */
 package org.apache.htrace.core;
 
+import java.util.Arrays;
+import java.util.HashSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-
 /**
  * A pool of Tracer objects.
+ *
+ * There may be more than one {@link Tracer} running inside a single 'process'; for example,
+ * unit tests may spin up a DataNode, a NameNode, and HDFS clients all running in a single JVM
+ * instance, each with its own Tracer. TracerPool is where all Tracer instances register
+ * on creation so Tracers can coordinate around shared resources such as {@link SpanReceiver}
+ * instances. TracerPool takes care of properly cleaning up registered Tracer instances on shutdown.
  */
 public class TracerPool {
   private static final Log LOG = LogFactory.getLog(TracerPool.class);
@@ -118,7 +122,6 @@ public class TracerPool {
    */
   public synchronized boolean addReceiver(SpanReceiver receiver) {
     SpanReceiver[] receivers = curReceivers;
-    int j = 0;
     for (int i = 0; i < receivers.length; i++) {
       if (receivers[i] == receiver) {
         LOG.trace(toString() + ": can't add receiver " + receiver.toString() +
@@ -157,7 +160,6 @@ public class TracerPool {
    */
   public synchronized boolean removeReceiver(SpanReceiver receiver) {
     SpanReceiver[] receivers = curReceivers;
-    int j = 0;
     for (int i = 0; i < receivers.length; i++) {
       if (receivers[i] == receiver) {
         SpanReceiver[] newReceivers = new SpanReceiver[receivers.length - 1];

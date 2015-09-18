@@ -17,7 +17,6 @@
 package org.apache.htrace.core;
 
 import java.io.Closeable;
-import java.lang.System;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -26,22 +25,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * A Tracer provides the implementation for collecting and distributing Spans
- * within a process.
+ * Use a Tracer instance inside a 'process' to collect and distribute its trace Spans.
+ * Example processes are an HDFS DataNode or an HBase RegionServer. A Tracer instance is your
+ * one-stop shop for all things tracing.
+ * 
+ * <p>
  */
 public class Tracer implements Closeable {
   private static final Log LOG = LogFactory.getLog(Tracer.class);
 
-  public final static String SPAN_RECEIVER_CLASSES_KEY =
-      "span.receiver.classes";
-  public final static String SAMPLER_CLASSES_KEY =
-      "sampler.classes";
+  public final static String SPAN_RECEIVER_CLASSES_KEY = "span.receiver.classes";
+  public final static String SAMPLER_CLASSES_KEY = "sampler.classes";
 
   public static class Builder {
     private String name;
@@ -50,9 +49,23 @@ public class Tracer implements Closeable {
         Builder.class.getClassLoader();
     private TracerPool tracerPool = TracerPool.GLOBAL;
 
+    /**
+     * @deprecated Since 4.0.0. Use Constructor that takes a <code>name</code> argument instead
+     */
+    @Deprecated
     public Builder() {
     }
 
+    public Builder(final String name) {
+      name(name);
+    }
+
+    /**
+     * @param name
+     * @return This
+     * @deprecated Since 4.0.0. Use Constructor that takes a <code>name</code> argument instead.
+     */
+    @Deprecated
     public Builder name(String name) {
       this.name = name;
       return this;
@@ -141,7 +154,6 @@ public class Tracer implements Closeable {
       if (name == null) {
         throw new RuntimeException("You must specify a name for this Tracer.");
       }
-      LinkedList<SpanReceiver> spanReceivers = new LinkedList<SpanReceiver>();
       LinkedList<Sampler> samplers = new LinkedList<Sampler>();
       loadSamplers(samplers);
       String tracerId = new TracerId(conf, name).get();
@@ -263,7 +275,7 @@ public class Tracer implements Closeable {
   }
 
   /**
-   * If the current thread is tracing, this function returns the Tracer that is
+   * @return If the current thread is tracing, this function returns the Tracer that is
    * being used; otherwise, it returns null.
    */
   public static Tracer curThreadTracer() {
@@ -339,7 +351,7 @@ public class Tracer implements Closeable {
    * Create a new trace scope.
    *
    * If there are no scopes above the current scope, we will apply our
-   * configured samplers.  Otherwise, we will create a span only if this thread
+   * configured samplers. Otherwise, we will create a trace Span only if this thread
    * is already tracing, or if the passed parentID was valid.
    *
    * @param description         The description of the new span to create.
@@ -375,8 +387,10 @@ public class Tracer implements Closeable {
    * Create a new trace scope.
    *
    * If there are no scopes above the current scope, we will apply our
-   * configured samplers.  Otherwise, we will create a span only if this thread
+   * configured samplers. Otherwise, we will create a trace Span only if this thread
    * is already tracing.
+   * @param description         The description of the new span to create.
+   * @return                    The new trace scope.
    */
   public TraceScope newScope(String description) {
     TraceScope parentScope = threadLocalScope.get();
@@ -508,7 +522,6 @@ public class Tracer implements Closeable {
       throwClientError(toString() + " is closed.");
     }
     Sampler[] samplers = curSamplers;
-    int j = 0;
     for (int i = 0; i < samplers.length; i++) {
       if (samplers[i] == sampler) {
         return false;
@@ -531,7 +544,6 @@ public class Tracer implements Closeable {
       throwClientError(toString() + " is closed.");
     }
     Sampler[] samplers = curSamplers;
-    int j = 0;
     for (int i = 0; i < samplers.length; i++) {
       if (samplers[i] == sampler) {
         Sampler[] newSamplers = new Sampler[samplers.length - 1];
