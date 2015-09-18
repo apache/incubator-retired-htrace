@@ -90,7 +90,7 @@ public class Tracer implements Closeable {
       if (resultString.isEmpty()) {
         resultString = "no samplers";
       }
-      LOG.info(SAMPLER_CLASSES_KEY + " = " + classNamesStr +
+      LOG.debug(SAMPLER_CLASSES_KEY + " = " + classNamesStr +
           "; loaded " + resultString);
     }
 
@@ -112,7 +112,7 @@ public class Tracer implements Closeable {
       if (resultString.isEmpty()) {
         resultString = "no span receivers";
       }
-      LOG.info(SPAN_RECEIVER_CLASSES_KEY + " = " + classNamesStr +
+      LOG.debug(SPAN_RECEIVER_CLASSES_KEY + " = " + classNamesStr +
           "; loaded " + resultString);
     }
 
