@@ -78,7 +78,9 @@ public interface Span {
 
   /**
    * Create a child span of this span with the given description
+   * @deprecated Since 4.0.0. Use {@link MilliSpan.Builder}
    */
+  @Deprecated
   Span child(String description);
 
   @Override

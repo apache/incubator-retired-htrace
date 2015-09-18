@@ -17,14 +17,11 @@
 package org.apache.htrace.core;
 
 import java.io.Closeable;
-import java.lang.Thread;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
+/**
+ * Create a new TraceScope at major transitions. Hosts current tracing context.
+ */
 public class TraceScope implements Closeable {
-  private static final Log LOG = LogFactory.getLog(TraceScope.class);
-
   /**
    * The tracer to use for this scope.
    */
@@ -112,7 +109,6 @@ public class TraceScope implements Closeable {
   @Override
   public void close() {
     tracer.closeScope(this);
-
   }
 
   public void addKVAnnotation(String key, String value) {
