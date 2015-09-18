@@ -1,4 +1,4 @@
-This product includes software developed by The Apache Software
+This product includes software developed at The Apache Software
 Foundation (http://www.apache.org/).
 
 In addition, this product includes software dependencies. See
