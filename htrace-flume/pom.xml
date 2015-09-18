@@ -70,13 +70,13 @@ language governing permissions and limitations under the License. -->
     <!-- Module deps. -->
     <dependency>
       <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core</artifactId>
+      <artifactId>htrace-core4</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core</artifactId>
+      <artifactId>htrace-core4</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
