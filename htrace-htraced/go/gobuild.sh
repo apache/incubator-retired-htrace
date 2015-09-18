@@ -116,8 +116,10 @@ install)
     fi
 
     # Download dependencies into the build directory.
-    echo "godep restore..."
-    godep restore || die "failed to set up dependencies"
+    pushd "${GOBIN}/.." &> /dev/null || die "failed to cd to ${GOBIN}/.."
+    echo "${GOBIN}/godep restore..."
+    "${GOBIN}/godep" restore || die "failed to set up dependencies"
+    popd &> /dev/null
 
     # Discover the git version
     GIT_VERSION=$(git rev-parse HEAD)
