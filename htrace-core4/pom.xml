@@ -22,7 +22,7 @@ language governing permissions and limitations under the License. -->
     <relativePath>..</relativePath>
   </parent>
 
-  <name>htrace-core</name>
+  <name>htrace-core4</name>
   <url>http://incubator.apache.org/projects/htrace.html</url>
 
   <properties>
