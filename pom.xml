@@ -29,7 +29,7 @@ language governing permissions and limitations under the License. -->
 
   <modules>
     <module>htrace-c</module>
-    <module>htrace-core4</module>
+    <module>htrace-core</module>
     <module>htrace-webapp</module>
     <module>htrace-zipkin</module>
     <module>htrace-hbase</module>
