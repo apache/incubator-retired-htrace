@@ -40,4 +40,11 @@ public class zipkinCoreConstants {
 
   public static final String SERVER_RECV = "sr";
 
+  public static final String WIRE_SEND = "ws";
+
+  public static final String WIRE_RECV = "wr";
+
+  public static final String CLIENT_ADDR = "ca";
+
+  public static final String SERVER_ADDR = "sa";
 }

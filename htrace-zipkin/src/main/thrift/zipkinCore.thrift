@@ -14,13 +14,18 @@
 namespace java com.twitter.zipkin.gen
 namespace rb Zipkin
 
-//************** Collection related structs **************
-
-// these are the annotations we always expect to find in a span
+//************** Common annotation values **************
 const string CLIENT_SEND = "cs"
 const string CLIENT_RECV = "cr"
 const string SERVER_SEND = "ss"
 const string SERVER_RECV = "sr"
+const string WIRE_SEND = "ws"
+const string WIRE_RECV = "wr"
+
+//************** Common binary annotation keys **************
+const string CLIENT_ADDR = "ca"
+const string SERVER_ADDR = "sa"
+
 
 // this represents a host and port in a network
 struct Endpoint {
@@ -34,7 +39,7 @@ struct Annotation {
   1: i64 timestamp                 // microseconds from epoch
   2: string value                  // what happened at the timestamp?
   3: optional Endpoint host        // host this happened on
-  4: optional i32 duration         // how long did the operation take? microseconds
+  // 4: optional i32 OBSOLETE_duration         // how long did the operation take? microseconds
 }
 
 enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }

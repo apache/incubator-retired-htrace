@@ -187,7 +187,6 @@ public class HTraceToZipkinConverter {
       annotation.setTimestamp(time * 1000);
     }
 
-    annotation.setDuration(1);
     annotation.setValue(value);
     return annotation;
   }
