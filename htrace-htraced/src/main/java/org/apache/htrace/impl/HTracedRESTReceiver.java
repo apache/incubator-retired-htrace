@@ -132,7 +132,7 @@ public class HTracedRESTReceiver extends SpanReceiver {
    * Maximum spans to post to htraced at a time.
    */
   public static final String CLIENT_REST_MAX_SPANS_AT_A_TIME_KEY =
-    "htrace.client.rest.batch.size";
+    "client.rest.batch.size";
   private static final int CLIENT_REST_MAX_SPANS_AT_A_TIME_DEFAULT = 100;
 
   /**
