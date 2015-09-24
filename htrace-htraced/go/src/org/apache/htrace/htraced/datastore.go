@@ -951,3 +951,26 @@ func (store *dataStore) HandleQuery(query *common.Query) ([]*common.Span, error)
 	}
 	return ret, nil
 }
+
+func (store *dataStore) ServerStats() *common.ServerStats {
+	serverStats := common.ServerStats {
+		Shards : make([]common.ShardStats, len(store.shards)),
+	}
+	for shardIdx := range(store.shards) {
+		shard := store.shards[shardIdx]
+		serverStats.Shards[shardIdx].Path = shard.path
+		r := levigo.Range {
+			Start : append([]byte{SPAN_ID_INDEX_PREFIX},
+				common.INVALID_SPAN_ID.Val()...),
+			Limit : append([]byte{SPAN_ID_INDEX_PREFIX + 1},
+				common.INVALID_SPAN_ID.Val()...),
+		}
+		vals := shard.ldb.GetApproximateSizes([]levigo.Range { r })
+		serverStats.Shards[shardIdx].ApproxNumSpans = vals[0]
+		serverStats.Shards[shardIdx].LevelDbStats =
+			shard.ldb.PropertyValue("leveldb.stats")
+		store.lg.Infof("shard.ldb.PropertyValue(leveldb.stats)=%s\n",
+			shard.ldb.PropertyValue("leveldb.stats"))
+	}
+	return &serverStats
+}

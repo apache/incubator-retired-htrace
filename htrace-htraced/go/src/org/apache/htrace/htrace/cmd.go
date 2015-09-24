@@ -32,6 +32,7 @@ import (
 	"org/apache/htrace/conf"
 	"os"
 	"time"
+	"strings"
 )
 
 var RELEASE_VERSION string
@@ -62,6 +63,8 @@ func main() {
 	verbose = app.Flag("verbose", "Verbose.").Default("false").Bool()
 	version := app.Command("version", "Print the version of this program.")
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
+	serverStats := app.Command("serverStats", "Print statistics retrieved from the htraced server.")
+	serverStatsJson := serverStats.Flag("json", "Display statistics as raw JSON.").Default("false").Bool()
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
 	findSpanId := findSpan.Arg("id", "Span ID to find. Example: be305e54-4534-2110-a0b2-e06b9effe112").Required().String()
 	findChildren := app.Command("findChildren", "Print out the span IDs that are children of a given span ID.")
@@ -122,6 +125,12 @@ func main() {
 		os.Exit(printVersion())
 	case serverInfo.FullCommand():
 		os.Exit(printServerInfo(hcl))
+	case serverStats.FullCommand():
+		if (*serverStatsJson) {
+			os.Exit(printServerStatsJson(hcl))
+		} else {
+			os.Exit(printServerStats(hcl))
+		}
 	case findSpan.FullCommand():
 		var id *common.SpanId
 		id.FromString(*findSpanId)
@@ -174,6 +183,41 @@ func printServerInfo(hcl *htrace.Client) int {
 		return EXIT_FAILURE
 	}
 	fmt.Printf("HTraced server version %s (%s)\n", info.ReleaseVersion, info.GitVersion)
+	return EXIT_SUCCESS
+}
+
+// Print information retrieved from an htraced server via /server/info
+func printServerStats(hcl *htrace.Client) int {
+	stats, err := hcl.GetServerStats()
+	if err != nil {
+		fmt.Println(err.Error())
+		return EXIT_FAILURE
+	}
+	fmt.Printf("HTraced server stats:\n")
+	fmt.Printf("%d leveldb shards.\n", len(stats.Shards))
+	for i := range(stats.Shards) {
+		shard := stats.Shards[i]
+		fmt.Printf("==== %s ===\n", shard.Path)
+		fmt.Printf("Approximate number of spans: %d\n", shard.ApproxNumSpans)
+		stats := strings.Replace(shard.LevelDbStats, "\\n", "\n", -1)
+		fmt.Printf("%s\n", stats)
+	}
+	return EXIT_SUCCESS
+}
+
+// Print information retrieved from an htraced server via /server/info as JSON
+func printServerStatsJson(hcl *htrace.Client) int {
+	stats, err := hcl.GetServerStats()
+	if err != nil {
+		fmt.Println(err.Error())
+		return EXIT_FAILURE
+	}
+	buf, err := json.MarshalIndent(stats, "", "  ")
+	if err != nil {
+		fmt.Printf("Error marshalling server stats: %s", err.Error())
+		return EXIT_FAILURE
+	}
+	fmt.Printf("%s\n", string(buf))
 	return EXIT_SUCCESS
 }
 

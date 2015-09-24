@@ -27,3 +27,19 @@ type ServerInfo struct {
 	// The git hash that this software was built with.
 	GitVersion string
 }
+
+// Info returned by /server/stats
+type ServerStats struct {
+	Shards []ShardStats
+}
+
+type ShardStats struct {
+	Path string
+
+	// The approximate number of spans present in this shard.  This may be an
+	// underestimate.
+	ApproxNumSpans uint64
+
+	// leveldb.stats information
+	LevelDbStats string
+}

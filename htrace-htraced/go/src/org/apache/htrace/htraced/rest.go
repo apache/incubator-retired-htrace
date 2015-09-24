@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"org/apache/htrace/common"
@@ -66,6 +67,24 @@ func (hand *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	if hand.lg.DebugEnabled() {
 		hand.lg.Debugf("Returned serverInfo %s\n", string(buf))
 	}
+	w.Write(buf)
+}
+
+type serverStatsHandler struct {
+	dataStoreHandler
+}
+
+func (hand *serverStatsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
+	hand.lg.Debugf("serverStatsHandler\n")
+	stats := hand.store.ServerStats()
+	buf, err := json.Marshal(&stats)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("error marshalling ServerStats: %s\n", err.Error()))
+		return
+	}
+	hand.lg.Debugf("Returned ServerStats %s\n", string(buf))
 	w.Write(buf)
 }
 
@@ -161,7 +180,19 @@ type writeSpansHandler struct {
 
 func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
-	dec := json.NewDecoder(req.Body)
+	var dec *json.Decoder
+	if hand.lg.TraceEnabled() {
+		b, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			writeError(hand.lg, w, http.StatusBadRequest,
+				fmt.Sprintf("Error reading span data: %s", err.Error()))
+			return
+		}
+		hand.lg.Tracef("writeSpansHandler: read %s\n", string(b))
+		dec = json.NewDecoder(bytes.NewBuffer(b))
+	} else {
+		dec = json.NewDecoder(req.Body)
+	}
 	spans := make([]*common.Span, 0, 32)
 	defaultTrid := req.Header.Get("htrace-trid")
 	for {
@@ -174,6 +205,12 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 				return
 			}
 			break
+		}
+		spanIdProblem := span.Id.FindProblem()
+		if spanIdProblem != "" {
+			writeError(hand.lg, w, http.StatusBadRequest,
+				fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
+			return
 		}
 		if span.TracerId == "" {
 			span.TracerId = defaultTrid
@@ -261,6 +298,10 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	r := mux.NewRouter().StrictSlash(false)
 
 	r.Handle("/server/info", &serverInfoHandler{lg: rsv.lg}).Methods("GET")
+
+	serverStatsH := &serverStatsHandler{dataStoreHandler: dataStoreHandler{
+		store: store, lg: rsv.lg}}
+	r.Handle("/server/stats", serverStatsH).Methods("GET")
 
 	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}
