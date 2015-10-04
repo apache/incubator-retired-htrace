@@ -17,12 +17,10 @@
 
 package org.apache.htrace.impl;
 
-import com.twitter.zipkin.gen.LogEntry;
-import com.twitter.zipkin.gen.Scribe;
-
-import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.htrace.Transport;
 import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
@@ -30,27 +28,25 @@ import org.apache.htrace.zipkin.HTraceToZipkinConverter;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TIOStreamTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Zipkin is an open source tracing library. This span receiver acts as a bridge between HTrace and
@@ -58,32 +54,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p/>
  * HTrace spans are queued into a blocking queue.  From there background worker threads will
  * batch the spans together and then send them through to a Zipkin collector.
+ *
+ * Pluggable Zipkin transports are supported through the "zipkin.transport.class" configuration
+ * Implementations for Scribe (ScribeTransport) (default) and Kafka (KafkaTransport) are available
+ *
  */
 public class ZipkinSpanReceiver extends SpanReceiver {
+
   private static final Log LOG = LogFactory.getLog(ZipkinSpanReceiver.class);
-
-  /**
-   * Default hostname to fall back on.
-   */
-  private static final String DEFAULT_COLLECTOR_HOSTNAME = "localhost";
-  public static final String HOSTNAME_KEY = "zipkin.collector-hostname";
-
-  /**
-   * Default collector port.
-   */
-  private static final int DEFAULT_COLLECTOR_PORT = 9410; // trace collector default port.
-  public static final String PORT_KEY = "zipkin.collector-port";
 
   /**
    * Default number of threads to use.
    */
   private static final int DEFAULT_NUM_THREAD = 1;
   public static final String NUM_THREAD_KEY = "zipkin.num-threads";
-
-  /**
-   * this is used to tell scribe that the entries are for zipkin..
-   */
-  private static final String CATEGORY = "zipkin";
 
   /**
    * Whether the service which is traced is in client or a server mode. It is used while creating
@@ -105,6 +89,14 @@ public class ZipkinSpanReceiver extends SpanReceiver {
    * How many errors in a row before we start dropping traces on the floor.
    */
   private static final int MAX_ERRORS = 10;
+
+  private static final String DEFAULT_TRANSPORT_CLASS = "org.apache.htrace.impl.ScribeTransport";
+  public static final String TRANSPORT_CLASS_KEY = "zipkin.transport.class";
+
+  /**
+   * The transport that the spans will be sent trough
+   */
+  private Transport transport;
 
   /**
    * The queue that will get all HTrace spans that are to be sent.
@@ -146,20 +138,37 @@ public class ZipkinSpanReceiver extends SpanReceiver {
   private HTraceToZipkinConverter converter;
   private ExecutorService service;
   private HTraceConfiguration conf;
-  private String collectorHostname;
-  private int collectorPort;
 
   public ZipkinSpanReceiver(HTraceConfiguration conf) {
+    this.transport = createTransport(conf);
     this.queue = new ArrayBlockingQueue<Span>(1000);
     this.protocolFactory = new TBinaryProtocol.Factory();
     configure(conf);
   }
 
+  private void logAndThrow(Throwable exception) {
+    LOG.error(ExceptionUtils.getStackTrace(exception));
+    throw new RuntimeException(exception);
+  }
+
+  protected Transport createTransport(HTraceConfiguration conf) {
+    ClassLoader classLoader = Builder.class.getClassLoader();
+    String className = conf.get(TRANSPORT_CLASS_KEY, DEFAULT_TRANSPORT_CLASS);
+    Transport transport = null;
+    try {
+      Class<?> cls = classLoader.loadClass(className);
+      transport = (Transport)cls.newInstance();
+    } catch (ClassNotFoundException
+        | InstantiationException
+        | IllegalAccessException e) {
+      logAndThrow(e);
+    }
+    return transport;
+  }
+
   private void configure(HTraceConfiguration conf) {
     this.conf = conf;
 
-    this.collectorHostname = conf.get(HOSTNAME_KEY, DEFAULT_COLLECTOR_HOSTNAME);
-    this.collectorPort = conf.getInt(PORT_KEY, DEFAULT_COLLECTOR_PORT);
 
     // initialize the endpoint. This endpoint is used while writing the Span.
     initConverter();
@@ -186,26 +195,23 @@ public class ZipkinSpanReceiver extends SpanReceiver {
     InetAddress tracedServiceHostname = null;
     // Try and get the hostname.  If it's not configured try and get the local hostname.
     try {
+      //TODO (clehene) extract conf to constant
+      //TODO (clehene) has this been deprecated?
       String host = conf.get("zipkin.traced-service-hostname",
           InetAddress.getLocalHost().getHostAddress());
-
       tracedServiceHostname = InetAddress.getByName(host);
     } catch (UnknownHostException e) {
       LOG.error("Couldn't get the localHost address", e);
     }
     short tracedServicePort = (short) conf.getInt("zipkin.traced-service-port", -1);
     byte[] address = tracedServiceHostname != null
-        ? tracedServiceHostname.getAddress() : DEFAULT_COLLECTOR_HOSTNAME.getBytes();
+        ? tracedServiceHostname.getAddress() : InetAddress.getLoopbackAddress().getAddress();
     int ipv4 = ByteBuffer.wrap(address).getInt();
     this.converter = new HTraceToZipkinConverter(ipv4, tracedServicePort);
   }
 
 
   private class WriteSpanRunnable implements Runnable {
-    /**
-     * scribe client to push zipkin spans
-     */
-    private Scribe.Iface scribe = null;
     private final ByteArrayOutputStream baos;
     private final TProtocol streamProtocol;
 
@@ -215,16 +221,15 @@ public class ZipkinSpanReceiver extends SpanReceiver {
     }
 
     /**
-     * This runnable converts a HTrace span to a Zipkin span and sends it across the zipkin
-     * collector as a thrift object. The scribe client which is used for rpc writes a list of
-     * LogEntry objects, so the span objects are first transformed into LogEntry objects before
-     * sending to the zipkin-collector.
+     *
+     * This runnable converts an HTrace span to a Zipkin span and sends it across the transport
+     * as a Thrift object.
      * <p/>
      * Here is a little ascii art which shows the above transformation:
      * <pre>
-     *  +------------+   +------------+   +------------+              +-----------------+
-     *  | HTrace Span|-->|Zipkin Span |-->| (LogEntry) | ===========> | Zipkin Collector|
-     *  +------------+   +------------+   +------------+ (Scribe rpc) +-----------------+
+     *  +------------+   +------------+              +-----------------+
+     *  | HTrace Span|-->|Zipkin Span | ===========> | Zipkin Collector|
+     *  +------------+   +------------+ (transport)  +-----------------+
      *  </pre>
      */
     @Override
@@ -236,6 +241,7 @@ public class ZipkinSpanReceiver extends SpanReceiver {
 
       while (running.get() || queue.size() > 0) {
         Span firstSpan = null;
+        //TODO (clenene) the following code (try / catch) is duplicated in / from FlumeSpanReceiver
         try {
           // Block for up to a second. to try and get a span.
           // We only block for a little bit in order to notice if the running value has changed
@@ -256,13 +262,17 @@ public class ZipkinSpanReceiver extends SpanReceiver {
 
         if (dequeuedSpans.isEmpty()) continue;
 
-        // If this is the first time through or there was an error re-connect
-        if (scribe == null) {
-          startClient();
+        if (!transport.isOpen()) {
+          try {
+            transport.open(conf);
+          } catch (Throwable e) {
+            logAndThrow(e);
+          }
         }
+
         // Create a new list every time through so that the list doesn't change underneath
         // thrift as it's sending.
-        List<LogEntry> entries = new ArrayList<LogEntry>(dequeuedSpans.size());
+        List<byte[]> entries = new ArrayList<>(dequeuedSpans.size());
         try {
           // Convert every de-queued span
           for (Span htraceSpan : dequeuedSpans) {
@@ -273,76 +283,57 @@ public class ZipkinSpanReceiver extends SpanReceiver {
             // Write the span to a BAOS
             zipkinSpan.write(streamProtocol);
 
-            // Do Base64 encoding and put the string into a log entry.
-            LogEntry logEntry =
-                new LogEntry(CATEGORY, Base64.encodeBase64String(baos.toByteArray()));
-            entries.add(logEntry);
+            entries.add(baos.toByteArray());
           }
 
           // Send the entries
-          scribe.Log(entries);
+          transport.send(entries);
+
           // clear the list for the next time through.
           dequeuedSpans.clear();
           // reset the error counter.
           errorCount = 0;
         } catch (Exception e) {
-          LOG.error("Error when writing to the zipkin collector: " +
-              collectorHostname + ":" + collectorPort, e);
-
-          errorCount += 1;
-          // If there have been ten errors in a row start dropping things.
-          if (errorCount < MAX_ERRORS) {
-            try {
-              queue.addAll(dequeuedSpans);
-            } catch (IllegalStateException ex) {
-              LOG.error("Drop " + dequeuedSpans.size() + " span(s) because queue is full");
-            }
-          }
-
-          closeClient();
-          try {
-            // Since there was an error sleep just a little bit to try and allow the
-            // zipkin collector some time to recover.
-            Thread.sleep(500);
-          } catch (InterruptedException e1) {
-            // Ignored
-          }
+          errorCount = handleException(dequeuedSpans, errorCount, e);
         }
       }
       closeClient();
     }
 
+    private long handleException(List<Span> dequeuedSpans, long errorCount, Exception e) {
+      LOG.error("Error when writing to the zipkin transport: " + transport, e);
+
+      errorCount += 1;
+      // If there have been ten errors in a row start dropping things.
+      if (errorCount < MAX_ERRORS) {
+        try {
+          queue.addAll(dequeuedSpans);
+        } catch (IllegalStateException ex) {
+          LOG.error("Drop " + dequeuedSpans.size() + " span(s) because queue is full");
+        }
+      }
+      closeClient();
+      try {
+        // Since there was an error sleep just a little bit to try and allow the
+        // zipkin collector some time to recover.
+        Thread.sleep(500);
+      } catch (InterruptedException e1) {
+        // Ignored
+      }
+      return errorCount;
+    }
+
     /**
      * Close out the connection.
      */
-    private void closeClient() {
-      // close out the transport.
-      if (scribe != null && scribe instanceof Scribe.Client) {
-        ((Scribe.Client) scribe).getInputProtocol().getTransport().close();
-        scribe = null;
+    private void closeClient(){
+      try {
+        transport.close();
+      } catch (IOException e) {
+        LOG.warn("Failed to close transport", e);
       }
     }
 
-    /**
-     * Re-connect to Zipkin.
-     */
-    private void startClient() {
-      if (this.scribe == null) {
-        this.scribe = newScribe();
-      }
-    }
-  }
-
-  // Override for testing
-  Scribe.Iface newScribe() {
-    TTransport transport = new TFramedTransport(new TSocket(collectorHostname, collectorPort));
-    try {
-      transport.open();
-    } catch (TTransportException e) {
-      e.printStackTrace();
-    }
-    TProtocol protocol = protocolFactory.getProtocol(transport);
-    return new Scribe.Client(protocol);
   }
 
   /**

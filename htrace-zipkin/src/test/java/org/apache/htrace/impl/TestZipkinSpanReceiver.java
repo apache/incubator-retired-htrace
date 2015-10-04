@@ -17,14 +17,7 @@
 
 package org.apache.htrace.impl;
 
-import com.twitter.zipkin.gen.LogEntry;
-import com.twitter.zipkin.gen.ResultCode;
-import com.twitter.zipkin.gen.Scribe;
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.htrace.Transport;
 import org.apache.htrace.core.AlwaysSampler;
 import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.MilliSpan;
@@ -40,17 +33,22 @@ import org.apache.thrift.transport.TMemoryBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 public class TestZipkinSpanReceiver {
 
-  private Tracer newTracer(final Scribe.Iface scribe) {
+  private Tracer newTracer(final Transport transport) {
     TracerPool pool = new TracerPool("newTracer");
     pool.addReceiver(new ZipkinSpanReceiver(HTraceConfiguration.EMPTY) {
-      @Override Scribe.Iface newScribe() {
-        return scribe;
+      @Override
+      protected Transport createTransport(HTraceConfiguration conf) {
+        return transport;
       }
     });
-    return new Tracer.Builder().
-        name("ZipkinTracer").
+    return new Tracer.Builder("ZipkinTracer").
         tracerPool(pool).
         conf(HTraceConfiguration.fromKeyValuePairs(
             "sampler.classes", AlwaysSampler.class.getName()
@@ -60,8 +58,8 @@ public class TestZipkinSpanReceiver {
 
   @Test
   public void testSimpleTraces() throws IOException, InterruptedException {
-    FakeZipkinScribe scribe = new FakeZipkinScribe();
-    Tracer tracer = newTracer(scribe);
+    FakeZipkinTransport transport = new FakeZipkinTransport();
+    Tracer tracer = newTracer(transport);
     Span rootSpan = new MilliSpan.Builder().
         description("root").
         spanId(new SpanId(100, 100)).
@@ -72,43 +70,26 @@ public class TestZipkinSpanReceiver {
     TraceScope innerOne = tracer.newScope("innerOne");
     TraceScope innerTwo = tracer.newScope("innerTwo");
     innerTwo.close();
-    Assert.assertTrue(scribe.nextMessageAsSpan().getName().contains("innerTwo"));
+    Assert.assertTrue(transport.nextMessageAsSpan().getName().contains("innerTwo"));
     innerOne.close();
-    Assert.assertTrue(scribe.nextMessageAsSpan().getName().contains("innerOne"));
+    Assert.assertTrue(transport.nextMessageAsSpan().getName().contains("innerOne"));
     rootSpan.addKVAnnotation("foo", "bar");
     rootSpan.addTimelineAnnotation("timeline");
     rootScope.close();
-    Assert.assertTrue(scribe.nextMessageAsSpan().getName().contains("root"));
+    Assert.assertTrue(transport.nextMessageAsSpan().getName().contains("root"));
     tracer.close();
   }
 
   @Test
   public void testConcurrency() throws IOException {
-    Scribe.Iface alwaysOk = new Scribe.Iface() {
-      @Override
-      public ResultCode Log(List<LogEntry> messages) throws TException {
-        return ResultCode.OK;
-      }
-    };
-    Tracer tracer = newTracer(alwaysOk);
+    Tracer tracer = newTracer(new FakeZipkinTransport(){
+      @Override public void send(List<byte[]> spans) throws IOException { /*do nothing*/ }
+    });
     TraceCreator traceCreator = new TraceCreator(tracer);
     traceCreator.createThreadedTrace();
   }
 
-  @Test
-  public void testResilience() throws IOException {
-    Scribe.Iface alwaysTryLater = new Scribe.Iface() {
-      @Override
-      public ResultCode Log(List<LogEntry> messages) throws TException {
-        return ResultCode.TRY_LATER;
-      }
-    };
-    Tracer tracer = newTracer(alwaysTryLater);
-    TraceCreator traceCreator = new TraceCreator(tracer);
-    traceCreator.createThreadedTrace();
-  }
-
-  private static class FakeZipkinScribe implements Scribe.Iface {
+  private static class FakeZipkinTransport implements Transport {
 
     private final BlockingQueue<com.twitter.zipkin.gen.Span> receivedSpans =
         new ArrayBlockingQueue<com.twitter.zipkin.gen.Span>(1);
@@ -117,19 +98,35 @@ public class TestZipkinSpanReceiver {
       return receivedSpans.take();
     }
 
-    @Override
-    public ResultCode Log(List<LogEntry> messages) throws TException {
-      for (LogEntry message : messages) {
-        Assert.assertEquals("zipkin", message.category);
-        byte[] bytes = Base64.decodeBase64(message.message);
 
-        TMemoryBuffer transport = new TMemoryBuffer(bytes.length);
-        transport.write(bytes);
-        com.twitter.zipkin.gen.Span zSpan = new com.twitter.zipkin.gen.Span();
-        zSpan.read(new TBinaryProtocol(transport));
-        receivedSpans.add(zSpan);
+    @Override
+    public void open(HTraceConfiguration conf) throws IOException {
+
+    }
+
+    @Override
+    public boolean isOpen() {
+      return false;
+    }
+
+    @Override
+    public void send(List<byte[]> spans) throws IOException {
+      for (byte[] message : spans) {
+        TMemoryBuffer transport = new TMemoryBuffer(message.length);
+        try {
+          transport.write(message);
+          com.twitter.zipkin.gen.Span zSpan = new com.twitter.zipkin.gen.Span();
+          zSpan.read(new TBinaryProtocol(transport));
+          receivedSpans.add(zSpan);
+        } catch (TException e) {
+          throw new IOException(e);
+        }
       }
-      return ResultCode.OK;
+    }
+
+    @Override
+    public void close() throws IOException {
+
     }
   }
 }
