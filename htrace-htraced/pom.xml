@@ -76,15 +76,15 @@ language governing permissions and limitations under the License. -->
               <relocations>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
-                  <shadedPattern>org.apache.htrace.commons.logging</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.commons.logging</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.fasterxml.jackson</pattern>
-                  <shadedPattern>org.apache.htrace.fasterxml.jackson</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.fasterxml.jackson</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.eclipse.jetty</pattern>
-                  <shadedPattern>org.apache.htrace.jetty</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.jetty</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

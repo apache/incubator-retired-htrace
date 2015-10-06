@@ -63,47 +63,47 @@ language governing permissions and limitations under the License. -->
 
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
-                  <shadedPattern>org.apache.htrace.commons.logging</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.commons.logging</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.apache.thrift</pattern>
-                  <shadedPattern>org.apache.htrace.thrift</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.thrift</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.slf4j</pattern>
-                  <shadedPattern>org.apache.htrace.slf4j</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.slf4j</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.apache.commons.codec</pattern>
-                  <shadedPattern>org.apache.htrace.commons.codec</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.commons.codec</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.apache.commons.lang</pattern>
-                  <shadedPattern>org.apache.htrace.commons.lang</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.commons.lang</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.apache.http</pattern>
-                  <shadedPattern>org.apache.htrace.http</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.http</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.apache.kafka</pattern>
-                  <shadedPattern>org.apache.htrace.kafka</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.kafka</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>kafka</pattern>
-                  <shadedPattern>org.apache.htrace.kafka</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.kafka</shadedPattern>
                 </relocation>
 
                 <relocation>
                   <pattern>org.I0Itec</pattern>
-                  <shadedPattern>org.apache.htrace.I0Itec</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.I0Itec</shadedPattern>
                 </relocation>
 
               </relocations>

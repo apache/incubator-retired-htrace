@@ -78,19 +78,19 @@ language governing permissions and limitations under the License. -->
               <relocations>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
-                  <shadedPattern>org.apache.htrace.commons.logging</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.commons.logging</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.google.protobuf</pattern>
-                  <shadedPattern>org.apache.htrace.com.google.protobuf</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.com.google.protobuf</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.eclipse.jetty</pattern>
-                  <shadedPattern>org.apache.htrace.org.eclipse.jetty</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.org.eclipse.jetty</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>javax.servlet</pattern>
-                  <shadedPattern>org.apache.htrace.javax.servlet</shadedPattern>
+                  <shadedPattern>org.apache.htrace.shaded.javax.servlet</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
