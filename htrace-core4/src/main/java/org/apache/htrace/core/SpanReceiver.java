@@ -39,7 +39,7 @@ public abstract class SpanReceiver implements Closeable {
   public static class Builder {
     private static final Log LOG = LogFactory.getLog(Builder.class);
 
-    private final static String DEFAULT_PACKAGE = "org.apache.htrace.core";
+    final static String DEFAULT_PACKAGE = "org.apache.htrace.core";
     private final HTraceConfiguration conf;
     private boolean logErrors;
     private String className;
