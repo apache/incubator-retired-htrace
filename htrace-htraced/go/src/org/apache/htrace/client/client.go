@@ -114,32 +114,13 @@ func (hcl *Client) WriteSpans(req *common.WriteSpansReq) error {
 
 func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {
 	var w bytes.Buffer
-	var err error
-	for i := range req.Spans {
-		var buf []byte
-		buf, err = json.Marshal(req.Spans[i])
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error serializing span: %s",
-				err.Error()))
-		}
-		_, err = w.Write(buf)
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error writing span: %s",
-				err.Error()))
-		}
-		_, err = w.Write([]byte{'\n'})
-		//err = io.WriteString(&w, "\n")
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error writing: %s",
-				err.Error()))
-		}
+	enc := json.NewEncoder(&w)
+	err := enc.Encode(req)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error serializing span: %s",
+			err.Error()))
 	}
-	customHeaders := make(map[string]string)
-	if req.DefaultTrid != "" {
-		customHeaders["htrace-trid"] = req.DefaultTrid
-	}
-	_, _, err = hcl.makeRestRequest("POST", "writeSpans",
-		&w, customHeaders)
+	_, _, err = hcl.makeRestRequest("POST", "writeSpans", &w)
 	if err != nil {
 		return err
 	}
@@ -182,24 +163,19 @@ func (hcl *Client) Query(query *common.Query) ([]common.Span, error) {
 	return spans, nil
 }
 
-var EMPTY = make(map[string]string)
-
 func (hcl *Client) makeGetRequest(reqName string) ([]byte, int, error) {
-	return hcl.makeRestRequest("GET", reqName, nil, EMPTY)
+	return hcl.makeRestRequest("GET", reqName, nil)
 }
 
 // Make a general JSON REST request.
 // Returns the request body, the response code, and the error.
 // Note: if the response code is non-zero, the error will also be non-zero.
-func (hcl *Client) makeRestRequest(reqType string, reqName string, reqBody io.Reader,
-	customHeaders map[string]string) ([]byte, int, error) {
+func (hcl *Client) makeRestRequest(reqType string, reqName string,
+	reqBody io.Reader) ([]byte, int, error) {
 	url := fmt.Sprintf("http://%s/%s",
 		hcl.restAddr, reqName)
 	req, err := http.NewRequest(reqType, url, reqBody)
 	req.Header.Set("Content-Type", "application/json")
-	for k, v := range customHeaders {
-		req.Header.Set(k, v)
-	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

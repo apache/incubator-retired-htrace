@@ -16,8 +16,18 @@
  */
 package org.apache.htrace.util;
 
+import org.apache.htrace.core.MilliSpan;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.TimelineAnnotation;
+
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -87,5 +97,70 @@ public class TestUtil {
       }
       Thread.sleep(periodMs);
     }
+  }
+
+  private static long nonZeroRandomLong(Random rand) {
+    long r = 0;
+    do {
+      r = rand.nextLong();
+    } while (r == 0);
+    return r;
+  }
+
+  private static long positiveRandomLong(Random rand) {
+    long r = rand.nextLong();
+    if (r == Long.MIN_VALUE) {
+      // Math.abs can't handle this case
+      return Long.MAX_VALUE;
+    } else if (r > 0) {
+      return r;
+    } else {
+      return -r;
+    }
+  }
+
+  private static String randomString(Random rand) {
+    return new UUID(positiveRandomLong(rand),
+          positiveRandomLong(rand)).toString();
+  }
+
+  public static Span randomSpan(Random rand) {
+    MilliSpan.Builder builder = new MilliSpan.Builder();
+    builder.spanId(
+          new SpanId(nonZeroRandomLong(rand), nonZeroRandomLong(rand)));
+    builder.begin(positiveRandomLong(rand));
+    builder.end(positiveRandomLong(rand));
+    builder.description(randomString(rand));
+    builder.tracerId(randomString(rand));
+    int numParents = rand.nextInt(4);
+    SpanId[] parents = new SpanId[numParents];
+    for (int i = 0; i < numParents; i++) {
+      parents[i] =
+          new SpanId(nonZeroRandomLong(rand), nonZeroRandomLong(rand));
+    }
+    builder.parents(parents);
+    int numTraceInfos = rand.nextInt(4);
+    Map<String, String> traceInfo = new HashMap<String, String>(numTraceInfos);
+    for (int i = 0; i < numTraceInfos; i++) {
+      traceInfo.put(randomString(rand), randomString(rand));
+    }
+    builder.traceInfo(traceInfo);
+    int numTimelineAnnotations = rand.nextInt(4);
+    List<TimelineAnnotation> timeline =
+        new LinkedList<TimelineAnnotation>();
+    for (int i = 0; i < numTimelineAnnotations; i++) {
+      timeline.add(new TimelineAnnotation(positiveRandomLong(rand),
+            randomString(rand)));
+    }
+    builder.timeline(timeline);
+    return builder.build();
+  }
+
+  public static Span[] randomSpans(Random rand, int numSpans) {
+    Span[] spans = new Span[numSpans];
+    for (int i = 0; i < spans.length; i++) {
+      spans[i] = randomSpan(rand);
+    }
+    return spans;
   }
 }

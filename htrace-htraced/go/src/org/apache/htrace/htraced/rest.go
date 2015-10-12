@@ -193,37 +193,24 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	} else {
 		dec = json.NewDecoder(req.Body)
 	}
-	spans := make([]*common.Span, 0, 32)
-	defaultTrid := req.Header.Get("htrace-trid")
-	for {
-		var span common.Span
-		err := dec.Decode(&span)
-		if err != nil {
-			if err != io.EOF {
-				writeError(hand.lg, w, http.StatusBadRequest,
-					fmt.Sprintf("Error parsing spans: %s", err.Error()))
-				return
-			}
-			break
-		}
-		spanIdProblem := span.Id.FindProblem()
-		if spanIdProblem != "" {
-			writeError(hand.lg, w, http.StatusBadRequest,
-				fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
-			return
-		}
-		if span.TracerId == "" {
-			span.TracerId = defaultTrid
-		}
-		spans = append(spans, &span)
+	var msg common.WriteSpansReq
+	err := dec.Decode(&msg)
+	if (err != nil) && (err != io.EOF) {
+		writeError(hand.lg, w, http.StatusBadRequest,
+			fmt.Sprintf("Error parsing WriteSpansReq: %s", err.Error()))
+		return
 	}
 	hand.lg.Debugf("writeSpansHandler: received %d span(s).  defaultTrid = %s\n",
-		len(spans), defaultTrid)
-	for spanIdx := range spans {
+		len(msg.Spans), msg.DefaultTrid)
+	for spanIdx := range msg.Spans {
 		if hand.lg.DebugEnabled() {
-			hand.lg.Debugf("writing span %s\n", spans[spanIdx].ToJson())
+			hand.lg.Debugf("writing span %s\n", msg.Spans[spanIdx].ToJson())
 		}
-		hand.store.WriteSpan(spans[spanIdx])
+		span := msg.Spans[spanIdx]
+		if span.TracerId == "" {
+			span.TracerId = msg.DefaultTrid
+		}
+		hand.store.WriteSpan(span)
 	}
 }
 

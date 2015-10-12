@@ -31,8 +31,8 @@ import (
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
-	"time"
 	"strings"
+	"time"
 )
 
 var RELEASE_VERSION string
@@ -126,7 +126,7 @@ func main() {
 	case serverInfo.FullCommand():
 		os.Exit(printServerInfo(hcl))
 	case serverStats.FullCommand():
-		if (*serverStatsJson) {
+		if *serverStatsJson {
 			os.Exit(printServerStatsJson(hcl))
 		} else {
 			os.Exit(printServerStats(hcl))
@@ -195,7 +195,7 @@ func printServerStats(hcl *htrace.Client) int {
 	}
 	fmt.Printf("HTraced server stats:\n")
 	fmt.Printf("%d leveldb shards.\n", len(stats.Shards))
-	for i := range(stats.Shards) {
+	for i := range stats.Shards {
 		shard := stats.Shards[i]
 		fmt.Printf("==== %s ===\n", shard.Path)
 		fmt.Printf("Approximate number of spans: %d\n", shard.ApproxNumSpans)

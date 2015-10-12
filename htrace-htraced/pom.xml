@@ -86,6 +86,10 @@ language governing permissions and limitations under the License. -->
                   <pattern>org.eclipse.jetty</pattern>
                   <shadedPattern>org.apache.htrace.shaded.jetty</shadedPattern>
                 </relocation>
+                <dependency>
+                  <pattern>org.msgpack</pattern>
+                  <shadedPattern>org.apache.htrace.msgpack</shadedPattern>
+                </dependency>
               </relocations>
             </configuration>
             <goals>
@@ -200,12 +204,11 @@ language governing permissions and limitations under the License. -->
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
-    <!-- htraced rest client deps. -->
-    <!--Is this too much? Pulls down jetty-http, jetty-server, jetty-io
-     This is new-style jetty client, jetty9 and jdk7 required.
-     It can do async but we will use it synchronously at first.
-     Has nice tutorial: http://www.eclipse.org/jetty/documentation/9.1.5.v20140505/http-client-api.html
-     -->
+    <dependency>
+      <groupId>org.msgpack</groupId>
+      <artifactId>msgpack-core</artifactId>
+      <version>0.7.0-p9</version>
+    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-client</artifactId>

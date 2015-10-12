@@ -38,12 +38,37 @@ const MAX_HRPC_BODY_LENGTH = 64 * 1024 * 1024
 
 // A request to write spans to htraced.
 type WriteSpansReq struct {
-	DefaultTrid string
+	DefaultTrid string `json:",omitempty"`
 	Spans       []*Span
+}
+
+// Info returned by /server/info
+type ServerInfo struct {
+	// The server release version.
+	ReleaseVersion string
+
+	// The git hash that this software was built with.
+	GitVersion string
 }
 
 // A response to a WriteSpansReq
 type WriteSpansResp struct {
+}
+
+// Info returned by /server/stats
+type ServerStats struct {
+	Shards []ShardStats
+}
+
+type ShardStats struct {
+	Path string
+
+	// The approximate number of spans present in this shard.  This may be an
+	// underestimate.
+	ApproxNumSpans uint64
+
+	// leveldb.stats information
+	LevelDbStats string
 }
 
 // The header which is sent over the wire for HRPC

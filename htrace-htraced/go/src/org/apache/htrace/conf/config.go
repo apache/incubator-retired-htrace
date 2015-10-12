@@ -69,7 +69,7 @@ type Builder struct {
 }
 
 func getDefaultHTracedConfDir() string {
-	return PATH_SEP + "etc" + PATH_SEP + "htraced" + PATH_SEP + "conf";
+	return PATH_SEP + "etc" + PATH_SEP + "htraced" + PATH_SEP + "conf"
 }
 
 func getHTracedConfDirs(dlog io.Writer) []string {
@@ -78,7 +78,7 @@ func getHTracedConfDirs(dlog io.Writer) []string {
 	if len(paths) < 1 {
 		def := getDefaultHTracedConfDir()
 		io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR defaulting to %s\n", def))
-		return []string{ def }
+		return []string{def}
 	}
 	io.WriteString(dlog, fmt.Sprintf("HTRACED_CONF_DIR=%s\n", confDir))
 	return paths

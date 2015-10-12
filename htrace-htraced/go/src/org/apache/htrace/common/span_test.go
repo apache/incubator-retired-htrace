@@ -92,7 +92,7 @@ func TestSpanMsgPack(t *testing.T) {
 			End:         5678,
 			Description: "getFileDescriptors",
 			Parents:     []SpanId{},
-			TracerId:   "testTracerId",
+			TracerId:    "testTracerId",
 		}}
 	mh := new(codec.MsgpackHandle)
 	mh.WriteExt = true

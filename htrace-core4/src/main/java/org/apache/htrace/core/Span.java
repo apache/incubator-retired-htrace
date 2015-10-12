@@ -17,6 +17,7 @@
 package org.apache.htrace.core;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -170,8 +171,11 @@ public interface Span {
       Map<String, String> traceInfoMap = span.getKVAnnotations();
       if (!traceInfoMap.isEmpty()) {
         jgen.writeObjectFieldStart("n");
-        for (Map.Entry<String, String> e : traceInfoMap.entrySet()) {
-          jgen.writeStringField(e.getKey(), e.getValue());
+        String[] keys = traceInfoMap.keySet().
+            toArray(new String[traceInfoMap.size()]);
+        Arrays.sort(keys);
+        for (String key : keys) {
+          jgen.writeStringField(key, traceInfoMap.get(key));
         }
         jgen.writeEndObject();
       }
