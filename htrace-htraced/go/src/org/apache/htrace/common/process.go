@@ -24,6 +24,8 @@ import (
 	"org/apache/htrace/conf"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"syscall"
 )
 
@@ -51,17 +53,52 @@ func InstallSignalHandlers(cnf *conf.Config) {
 		syscall.SIGBUS,
 		syscall.SIGFPE,
 		syscall.SIGILL,
-		syscall.SIGQUIT,
 		syscall.SIGSEGV,
 		syscall.SIGTERM,
 	}
-	sigChan := make(chan os.Signal, len(fatalSigs))
-	signal.Notify(sigChan, fatalSigs...)
-	lg := NewLogger("exit", cnf)
+	fatalSigChan := make(chan os.Signal, 1)
+	signal.Notify(fatalSigChan, fatalSigs...)
+	lg := NewLogger("signal", cnf)
 	go func() {
-		sig := <-sigChan
+		sig := <-fatalSigChan
 		lg.Errorf("Terminating on signal: %v\n", sig)
 		lg.Close()
 		os.Exit(1)
+	}()
+
+	sigQuitChan := make(chan os.Signal, 1)
+	signal.Notify(sigQuitChan, syscall.SIGQUIT)
+	go func() {
+		bufSize := 1<<20
+		buf := make([]byte, bufSize)
+		for {
+			<-sigQuitChan
+			neededBytes := runtime.Stack(buf, true)
+			if neededBytes > bufSize {
+				bufSize = neededBytes
+				buf = make([]byte, bufSize)
+				runtime.Stack(buf, true)
+			}
+			lg.Info("=== received SIGQUIT ===\n")
+			lg.Info("=== GOROUTINE STACKS ===\n")
+			lg.Info(string(buf[:neededBytes]))
+			lg.Info("\n=== END GOROUTINE STACKS ===\n")
+			gcs := debug.GCStats{}
+			debug.ReadGCStats(&gcs)
+			lg.Info("=== GC STATISTICS ===\n")
+			lg.Infof("LastGC: %s\n", gcs.LastGC.UTC().String())
+			lg.Infof("NumGC: %d\n", gcs.NumGC)
+			lg.Infof("PauseTotal: %v\n", gcs.PauseTotal)
+			if gcs.Pause != nil {
+				pauseStr := ""
+				prefix := ""
+				for p := range gcs.Pause {
+					pauseStr += prefix + gcs.Pause[p].String()
+					prefix = ", "
+				}
+				lg.Infof("Pause History: %s\n", pauseStr)
+			}
+			lg.Info("=== END GC STATISTICS ===\n")
+		}
 	}()
 }
