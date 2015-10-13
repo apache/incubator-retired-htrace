@@ -210,7 +210,12 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		if span.TracerId == "" {
 			span.TracerId = msg.DefaultTrid
 		}
-		hand.store.WriteSpan(span)
+		spanIdProblem := span.Id.FindProblem()
+		if spanIdProblem != "" {
+			hand.lg.Warnf(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
+		} else {
+			hand.store.WriteSpan(span)
+		}
 	}
 }
 

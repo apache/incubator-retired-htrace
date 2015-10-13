@@ -26,8 +26,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -43,8 +41,6 @@ import org.eclipse.jetty.http.HttpStatus;
 
 class RestBufferManager implements BufferManager {
   private static final Log LOG = LogFactory.getLog(RestBufferManager.class);
-  private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-  private static ObjectWriter JSON_WRITER = OBJECT_MAPPER.writer();
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final byte COMMA_BYTE = (byte)0x2c;
   private static final int MAX_PREQUEL_LENGTH = 512;
@@ -133,7 +129,7 @@ class RestBufferManager implements BufferManager {
 
   @Override
   public void writeSpan(Span span) throws IOException {
-    byte[] spanJsonBytes = JSON_WRITER.writeValueAsBytes(span);
+    byte[] spanJsonBytes = span.toString().getBytes(UTF8);
     if ((spans.capacity() - spans.position()) < (spanJsonBytes.length + 1)) {
       // Make sure we have enough space for the span JSON and a comma.
       throw new IOException("Not enough space remaining in span buffer.");
