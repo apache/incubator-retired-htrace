@@ -203,6 +203,9 @@ of dependencies that are NOT Apache Licensed.
    See the License for the specific language governing permissions and
    limitations under the License.
 
+The HTrace Owl logo is from http://www.clker.com/clipart-13653.html.  It is
+public domain.
+
 D3, a javascript library for manipulating data, used by htrace-hbase
 is Copyright 2010-2014, Michael Bostock and BSD licensed:
 https://github.com/mbostock/d3/blob/master/LICENSE
