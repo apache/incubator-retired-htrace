@@ -204,3 +204,32 @@ func TestDumpAll(t *testing.T) {
 		t.Fatalf("got dump error %s\n", dumpErr.Error())
 	}
 }
+
+const EXAMPLE_CONF_KEY = "example.conf.key"
+const EXAMPLE_CONF_VALUE = "foo.bar.baz"
+
+func TestClientGetServerConf(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerConf",
+		Cnf: map[string]string {
+			EXAMPLE_CONF_KEY: EXAMPLE_CONF_VALUE,
+		},
+		DataDirs: make([]string, 2)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf())
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+	serverCnf, err2 := hcl.GetServerConf()
+	if err2 != nil {
+		t.Fatalf("failed to call GetServerConf: %s", err2.Error())
+	}
+	if serverCnf[EXAMPLE_CONF_KEY] != EXAMPLE_CONF_VALUE {
+		t.Fatalf("unexpected value for %s: %s",
+				EXAMPLE_CONF_KEY, EXAMPLE_CONF_VALUE)
+	}
+}

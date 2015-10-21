@@ -266,3 +266,15 @@ func (cnf *Config) Clone(args ...string) *Config {
 	}
 	return ncnf
 }
+
+// Export the configuration as a map
+func (cnf *Config) Export() map[string]string {
+	m := make(map[string]string)
+	for k, v := range cnf.defaults {
+		m[k] = v
+	}
+	for k, v := range cnf.settings {
+		m[k] = v
+	}
+	return m
+}

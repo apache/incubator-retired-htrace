@@ -82,6 +82,21 @@ func (hcl *Client) GetServerStats() (*common.ServerStats, error) {
 	return &stats, nil
 }
 
+// Get the htraced server statistics.
+func (hcl *Client) GetServerConf() (map[string]string, error) {
+	buf, _, err := hcl.makeGetRequest("server/conf")
+	if err != nil {
+		return nil, err
+	}
+	cnf := make(map[string]string)
+	err = json.Unmarshal(buf, &cnf)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error: error unmarshalling response "+
+			"body %s: %s", string(buf), err.Error()))
+	}
+	return cnf, nil
+}
+
 // Get information about a trace span.  Returns nil, nil if the span was not found.
 func (hcl *Client) FindSpan(sid common.SpanId) (*common.Span, error) {
 	buf, rc, err := hcl.makeGetRequest(fmt.Sprintf("span/%s", sid.String()))

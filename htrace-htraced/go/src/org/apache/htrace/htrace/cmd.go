@@ -65,6 +65,7 @@ func main() {
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
 	serverStats := app.Command("serverStats", "Print statistics retrieved from the htraced server.")
 	serverStatsJson := serverStats.Flag("json", "Display statistics as raw JSON.").Default("false").Bool()
+	serverConf := app.Command("serverConf", "Print the server configuration retrieved from the htraced server.")
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
 	findSpanId := findSpan.Arg("id", "Span ID to find. Example: be305e54-4534-2110-a0b2-e06b9effe112").Required().String()
 	findChildren := app.Command("findChildren", "Print out the span IDs that are children of a given span ID.")
@@ -131,6 +132,8 @@ func main() {
 		} else {
 			os.Exit(printServerStats(hcl))
 		}
+	case serverConf.FullCommand():
+		os.Exit(printServerConfJson(hcl))
 	case findSpan.FullCommand():
 		var id *common.SpanId
 		id.FromString(*findSpanId)
@@ -215,6 +218,22 @@ func printServerStatsJson(hcl *htrace.Client) int {
 	buf, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
 		fmt.Printf("Error marshalling server stats: %s", err.Error())
+		return EXIT_FAILURE
+	}
+	fmt.Printf("%s\n", string(buf))
+	return EXIT_SUCCESS
+}
+
+// Print information retrieved from an htraced server via /server/conf as JSON
+func printServerConfJson(hcl *htrace.Client) int {
+	cnf, err := hcl.GetServerConf()
+	if err != nil {
+		fmt.Println(err.Error())
+		return EXIT_FAILURE
+	}
+	buf, err := json.MarshalIndent(cnf, "", "  ")
+	if err != nil {
+		fmt.Printf("Error marshalling server conf: %s", err.Error())
 		return EXIT_FAILURE
 	}
 	fmt.Printf("%s\n", string(buf))

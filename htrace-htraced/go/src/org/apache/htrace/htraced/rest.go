@@ -88,6 +88,25 @@ func (hand *serverStatsHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 	w.Write(buf)
 }
 
+type serverConfHandler struct {
+	cnf *conf.Config
+	lg *common.Logger
+}
+
+func (hand *serverConfHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
+	hand.lg.Debugf("serverConfHandler\n")
+	cnfMap := hand.cnf.Export()
+	buf, err := json.Marshal(&cnfMap)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("error marshalling serverConf: %s\n", err.Error()))
+		return
+	}
+	hand.lg.Debugf("Returned server configuration %s\n", string(buf))
+	w.Write(buf)
+}
+
 type dataStoreHandler struct {
 	lg    *common.Logger
 	store *dataStore
@@ -294,6 +313,9 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	serverStatsH := &serverStatsHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}
 	r.Handle("/server/stats", serverStatsH).Methods("GET")
+
+	serverConfH := &serverConfHandler{cnf: cnf, lg: rsv.lg}
+	r.Handle("/server/conf", serverConfH).Methods("GET")
 
 	writeSpansH := &writeSpansHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}
