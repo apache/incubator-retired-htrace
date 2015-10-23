@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>log.level</name>
+    <value>TRACE</value>
+  </property>
+  <property>
+    <name>log.path</name>
+    <value>/tmp/htraced.log</value>
+  </property>
+  <property>
+    <name>web.address</name>
+    <value>localhost:9095</value>
+  </property>
+  <property>
+    <name>data.store.directories</name>
+    <value>/tmp/htraced1:/tmp/htraced2</value>
+  </property>
+  <property>
+    <name>data.store.clear</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>data.store.span.buffer.size</name>
+    <value>100</value>
+  </property>
+  <property>
+    <name>metrics.heartbeat.period.ms</name>
+    <value>60000</value>
+  </property>
+</configuration>
