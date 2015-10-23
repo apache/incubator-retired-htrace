@@ -69,7 +69,7 @@ func InstallSignalHandlers(cnf *conf.Config) {
 	sigQuitChan := make(chan os.Signal, 1)
 	signal.Notify(sigQuitChan, syscall.SIGQUIT)
 	go func() {
-		bufSize := 1<<20
+		bufSize := 1 << 20
 		buf := make([]byte, bufSize)
 		for {
 			<-sigQuitChan

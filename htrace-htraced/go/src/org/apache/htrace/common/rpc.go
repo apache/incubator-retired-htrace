@@ -38,8 +38,10 @@ const MAX_HRPC_BODY_LENGTH = 64 * 1024 * 1024
 
 // A request to write spans to htraced.
 type WriteSpansReq struct {
-	DefaultTrid string `json:",omitempty"`
-	Spans       []*Span
+	Addr          string // This gets filled in by the RPC layer.
+	DefaultTrid   string `json:",omitempty"`
+	Spans         []*Span
+	ClientDropped uint64 `json:",omitempty"`
 }
 
 // Info returned by /server/info
@@ -53,22 +55,6 @@ type ServerInfo struct {
 
 // A response to a WriteSpansReq
 type WriteSpansResp struct {
-}
-
-// Info returned by /server/stats
-type ServerStats struct {
-	Shards []ShardStats
-}
-
-type ShardStats struct {
-	Path string
-
-	// The approximate number of spans present in this shard.  This may be an
-	// underestimate.
-	ApproxNumSpans uint64
-
-	// leveldb.stats information
-	LevelDbStats string
 }
 
 // The header which is sent over the wire for HRPC
@@ -103,4 +89,40 @@ func HrpcMethodNameToId(name string) uint32 {
 	default:
 		return METHOD_ID_NONE
 	}
+}
+
+type SpanMetrics struct {
+	// The total number of spans written to HTraced.
+	Written uint64
+
+	// The total number of spans dropped by the server.
+	ServerDropped uint64
+
+	// The total number of spans dropped by the client.  Note that this number
+	// is tracked on the client itself and doesn't get updated if the client
+	// can't contact the server.
+	ClientDropped uint64
+}
+
+// A map from network address strings to SpanMetrics structures.
+type SpanMetricsMap map[string]*SpanMetrics
+
+// Info returned by /server/stats
+type ServerStats struct {
+	// Statistics for each shard (directory)
+	Dirs []StorageDirectoryStats
+
+	// Per-host Span Metrics
+	HostSpanMetrics SpanMetricsMap
+}
+
+type StorageDirectoryStats struct {
+	Path string
+
+	// The approximate number of spans present in this shard.  This may be an
+	// underestimate.
+	ApproxNumSpans uint64
+
+	// leveldb.stats information
+	LevelDbStats string
 }

@@ -31,6 +31,7 @@ import (
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -196,14 +197,28 @@ func printServerStats(hcl *htrace.Client) int {
 		fmt.Println(err.Error())
 		return EXIT_FAILURE
 	}
-	fmt.Printf("HTraced server stats:\n")
-	fmt.Printf("%d leveldb shards.\n", len(stats.Shards))
-	for i := range stats.Shards {
-		shard := stats.Shards[i]
-		fmt.Printf("==== %s ===\n", shard.Path)
-		fmt.Printf("Approximate number of spans: %d\n", shard.ApproxNumSpans)
-		stats := strings.Replace(shard.LevelDbStats, "\\n", "\n", -1)
+	fmt.Printf("HTRACED SERVER STATS:\n")
+	fmt.Printf("%d leveldb directories.\n", len(stats.Dirs))
+	for i := range stats.Dirs {
+		dir := stats.Dirs[i]
+		fmt.Printf("==== %s ===\n", dir.Path)
+		fmt.Printf("Approximate number of spans: %d\n", dir.ApproxNumSpans)
+		stats := strings.Replace(dir.LevelDbStats, "\\n", "\n", -1)
 		fmt.Printf("%s\n", stats)
+	}
+	fmt.Printf("HOST SPAN METRICS:\n")
+	mtxMap := stats.HostSpanMetrics
+	keys := make(sort.StringSlice, len(mtxMap))
+	i := 0
+	for k, _ := range mtxMap {
+		keys[i] = k
+		i++
+	}
+	sort.Sort(keys)
+	for k := range keys {
+		mtx := mtxMap[keys[k]]
+		fmt.Printf("%s: written: %d, server dropped %d, client dropped %d\n",
+			keys[k], mtx.Written, mtx.ServerDropped, mtx.ClientDropped)
 	}
 	return EXIT_SUCCESS
 }

@@ -73,10 +73,13 @@ var SIMPLE_TEST_SPANS []common.Span = []common.Span{
 
 func createSpans(spans []common.Span, store *dataStore) {
 	for idx := range spans {
-		store.WriteSpan(&spans[idx])
+		store.WriteSpan(&IncomingSpan{
+			Addr: "127.0.0.1:1234",
+			Span: &spans[idx],
+		})
 	}
 	// Wait the spans to be created
-	for i := 0; i < 3; i++ {
+	for i := 0; i < len(spans); i++ {
 		<-store.WrittenSpans
 	}
 }
@@ -85,6 +88,9 @@ func createSpans(spans []common.Span, store *dataStore) {
 func TestDatastoreWriteAndRead(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestDatastoreWriteAndRead",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -92,9 +98,13 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
+
 	span := ht.Store.FindSpan(common.TestId("00000000000000000000000000000001"))
 	if span == nil {
 		t.Fatal()
@@ -147,6 +157,9 @@ func testQuery(t *testing.T, ht *MiniHTraced, query *common.Query,
 func TestSimpleQuery(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestSimpleQuery",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -154,9 +167,12 @@ func TestSimpleQuery(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
+
 	testQuery(t, ht, &common.Query{
 		Predicates: []common.Predicate{
 			common.Predicate{
@@ -172,6 +188,9 @@ func TestSimpleQuery(t *testing.T) {
 func TestQueries2(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestQueries2",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -179,9 +198,11 @@ func TestQueries2(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
 	testQuery(t, ht, &common.Query{
 		Predicates: []common.Predicate{
 			common.Predicate{
@@ -224,6 +245,9 @@ func TestQueries2(t *testing.T) {
 func TestQueries3(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestQueries3",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -231,9 +255,11 @@ func TestQueries3(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
 	testQuery(t, ht, &common.Query{
 		Predicates: []common.Predicate{
 			common.Predicate{
@@ -276,6 +302,9 @@ func TestQueries3(t *testing.T) {
 func TestQueries4(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestQueries4",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -283,9 +312,11 @@ func TestQueries4(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
 	testQuery(t, ht, &common.Query{
 		Predicates: []common.Predicate{
 			common.Predicate{
@@ -320,6 +351,9 @@ func TestQueries4(t *testing.T) {
 
 func BenchmarkDatastoreWrites(b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "BenchmarkDatastoreWrites",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, b.N)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -331,22 +365,28 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	// Write many random spans.
 	for n := 0; n < b.N; n++ {
 		span := test.NewRandomSpan(rnd, allSpans[0:n])
-		ht.Store.WriteSpan(span)
+		ht.Store.WriteSpan(&IncomingSpan{
+			Addr: "127.0.0.1:1234",
+			Span: span,
+		})
 		allSpans[n] = span
 	}
 	// Wait for all the spans to be written.
 	for n := 0; n < b.N; n++ {
 		<-ht.Store.WrittenSpans
 	}
-	spansWritten := ht.Store.GetStatistics().NumSpansWritten
-	if spansWritten < uint64(b.N) {
-		b.Fatal("incorrect statistics: expected %d spans to be written, but only got %d",
-			b.N, spansWritten)
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(b.N), // should be less than?
+		},
+	})
 }
 
 func TestReloadDataStore(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestReloadDataStore",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		DataDirs: make([]string, 2), KeepDataDirsOnClose: true}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -444,6 +484,9 @@ func TestReloadDataStore(t *testing.T) {
 func TestQueriesWithContinuationTokens1(t *testing.T) {
 	t.Parallel()
 	htraceBld := &MiniHTracedBuilder{Name: "TestQueriesWithContinuationTokens1",
+		Cnf: map[string]string{
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+		},
 		WrittenSpans: make(chan *common.Span, 100)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -451,9 +494,11 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 	}
 	defer ht.Close()
 	createSpans(SIMPLE_TEST_SPANS, ht.Store)
-	if ht.Store.GetStatistics().NumSpansWritten < uint64(len(SIMPLE_TEST_SPANS)) {
-		t.Fatal()
-	}
+	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
+		"127.0.0.1:1234": &common.SpanMetrics{
+			Written: uint64(len(SIMPLE_TEST_SPANS)),
+		},
+	})
 	// Adding a prev value to this query excludes the first result that we
 	// would normally get.
 	testQuery(t, ht, &common.Query{

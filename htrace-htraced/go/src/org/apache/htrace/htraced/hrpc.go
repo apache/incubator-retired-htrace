@@ -32,6 +32,7 @@ import (
 	"net/rpc"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
+	"reflect"
 )
 
 // Handles HRPC calls
@@ -109,9 +110,10 @@ func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 }
 
 func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
+	remoteAddr := cdc.conn.RemoteAddr()
 	if cdc.lg.TraceEnabled() {
 		cdc.lg.Tracef("Reading HRPC %d-byte request body from %s\n",
-			cdc.length, cdc.conn.RemoteAddr())
+			cdc.length, remoteAddr)
 	}
 	mh := new(codec.MsgpackHandle)
 	mh.WriteExt = true
@@ -119,11 +121,16 @@ func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
 	err := dec.Decode(body)
 	if err != nil {
 		return createErrAndWarn(cdc.lg, fmt.Sprintf("Failed to read request "+
-			"body from %s: %s", cdc.conn.RemoteAddr(), err.Error()))
+			"body from %s: %s", remoteAddr, err.Error()))
 	}
 	if cdc.lg.TraceEnabled() {
 		cdc.lg.Tracef("Read body from %s: %s\n",
-			cdc.conn.RemoteAddr(), asJson(&body))
+			remoteAddr, asJson(&body))
+	}
+	val := reflect.ValueOf(body)
+	addr := val.Elem().FieldByName("Addr")
+	if addr.IsValid() {
+		addr.SetString(remoteAddr.String())
 	}
 	return nil
 }
@@ -203,7 +210,10 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 		if hand.lg.TraceEnabled() {
 			hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())
 		}
-		hand.store.WriteSpan(span)
+		hand.store.WriteSpan(&IncomingSpan{
+			Addr: req.Addr,
+			Span: span,
+		})
 	}
 	return nil
 }

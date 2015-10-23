@@ -31,7 +31,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync/atomic"
 )
 
 //
@@ -77,19 +76,12 @@ const DURATION_INDEX_PREFIX = 'd'
 const PARENT_ID_INDEX_PREFIX = 'p'
 const INVALID_INDEX_PREFIX = 0
 
-type Statistics struct {
-	NumSpansWritten uint64
-}
+type IncomingSpan struct {
+	// The address that the span was sent from.
+	Addr string
 
-func (stats *Statistics) IncrementWrittenSpans() {
-	atomic.AddUint64(&stats.NumSpansWritten, 1)
-}
-
-// Make a copy of the statistics structure, using atomic operations.
-func (stats *Statistics) Copy() *Statistics {
-	return &Statistics{
-		NumSpansWritten: atomic.LoadUint64(&stats.NumSpansWritten),
-	}
+	// The span.
+	*common.Span
 }
 
 // A single directory containing a levelDB instance.
@@ -104,27 +96,48 @@ type shard struct {
 	path string
 
 	// Incoming requests to write Spans.
-	incoming chan *common.Span
+	incoming chan *IncomingSpan
+
+	// A channel for incoming heartbeats
+	heartbeats chan interface{}
 
 	// The channel we will send a bool to when we exit.
 	exited chan bool
+
+	// Per-address metrics
+	mtxMap ServerSpanMetricsMap
+
+	// The maximum number of metrics to allow in our map
+	maxMtx int
 }
 
 // Process incoming spans for a shard.
 func (shd *shard) processIncoming() {
 	lg := shd.store.lg
+	defer func() {
+		lg.Infof("Shard processor for %s exiting.\n", shd.path)
+		shd.exited <- true
+	}()
 	for {
-		span := <-shd.incoming
-		if span == nil {
-			lg.Infof("Shard processor for %s exiting.\n", shd.path)
-			shd.exited <- true
-			return
-		}
-		err := shd.writeSpan(span)
-		if err != nil {
-			lg.Errorf("Shard processor for %s got fatal error %s.\n", shd.path, err.Error())
-		} else {
-			lg.Tracef("Shard processor for %s wrote span %s.\n", shd.path, span.ToJson())
+		select {
+		case span := <-shd.incoming:
+			if span == nil {
+				return
+			}
+			err := shd.writeSpan(span)
+			if err != nil {
+				lg.Errorf("Shard processor for %s got fatal error %s.\n", shd.path, err.Error())
+			} else {
+				lg.Tracef("Shard processor for %s wrote span %s.\n", shd.path, span.ToJson())
+			}
+		case <-shd.heartbeats:
+			lg.Tracef("Shard processor for %s handling heartbeat.\n", shd.path)
+			mtxMap := make(ServerSpanMetricsMap)
+			for addr, mtx := range shd.mtxMap {
+				mtxMap[addr] = mtx.Clone()
+				mtx.Clear()
+			}
+			shd.store.msink.UpdateMetrics(mtxMap)
 		}
 	}
 }
@@ -150,15 +163,19 @@ func u64toSlice(val uint64) []byte {
 		byte(0xff & (val >> 0))}
 }
 
-func (shd *shard) writeSpan(span *common.Span) error {
+func (shd *shard) writeSpan(ispan *IncomingSpan) error {
 	batch := levigo.NewWriteBatch()
 	defer batch.Close()
 
 	// Add SpanData to batch.
 	spanDataBuf := new(bytes.Buffer)
 	spanDataEnc := gob.NewEncoder(spanDataBuf)
+	span := ispan.Span
 	err := spanDataEnc.Encode(span.SpanData)
 	if err != nil {
+		shd.store.lg.Errorf("Error encoding span %s: %s\n",
+			span.String(), err.Error())
+		shd.mtxMap.IncrementDropped(ispan.Addr, shd.maxMtx, shd.store.lg)
 		return err
 	}
 	primaryKey :=
@@ -185,9 +202,12 @@ func (shd *shard) writeSpan(span *common.Span) error {
 
 	err = shd.ldb.Write(shd.store.writeOpts, batch)
 	if err != nil {
+		shd.store.lg.Errorf("Error writing span %s to leveldb at %s: %s\n",
+			span.String(), shd.path, err.Error())
+		shd.mtxMap.IncrementDropped(ispan.Addr, shd.maxMtx, shd.store.lg)
 		return err
 	}
-	shd.store.stats.IncrementWrittenSpans()
+	shd.mtxMap.IncrementWritten(ispan.Addr, shd.maxMtx, shd.store.lg)
 	if shd.store.WrittenSpans != nil {
 		shd.store.WrittenSpans <- span
 	}
@@ -238,9 +258,6 @@ type dataStore struct {
 	// The shards which manage our LevelDB instances.
 	shards []*shard
 
-	// I/O statistics for all shards.
-	stats Statistics
-
 	// The read options to use for LevelDB.
 	readOpts *levigo.ReadOptions
 
@@ -250,6 +267,12 @@ type dataStore struct {
 	// If non-null, a channel we will send spans to once we finish writing them.  This is only used
 	// for testing.
 	WrittenSpans chan *common.Span
+
+	// The metrics sink.
+	msink *MetricsSink
+
+	// The heartbeater which periodically asks shards to update the MetricsSink.
+	hb *Heartbeater
 }
 
 func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataStore, error) {
@@ -286,10 +309,23 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 		}
 		store.shards = append(store.shards, shd)
 	}
+	store.msink = NewMetricsSink(cnf)
 	for idx := range store.shards {
 		shd := store.shards[idx]
 		shd.exited = make(chan bool, 1)
+		shd.heartbeats = make(chan interface{}, 1)
+		shd.mtxMap = make(ServerSpanMetricsMap)
+		shd.maxMtx = store.msink.maxMtx
 		go shd.processIncoming()
+	}
+	store.hb = NewHeartbeater("DatastoreHeartbeater",
+		cnf.GetInt64(conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS), lg)
+	for shdIdx := range store.shards {
+		shd := store.shards[shdIdx]
+		store.hb.AddHeartbeatTarget(&HeartbeatTarget{
+			name:       fmt.Sprintf("shard(%s)", shd.path),
+			targetChan: shd.heartbeats,
+		})
 	}
 	return store, nil
 }
@@ -372,7 +408,7 @@ func CreateShard(store *dataStore, cnf *conf.Config, path string,
 	}
 	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
 	shd = &shard{store: store, ldb: ldb, path: path,
-		incoming: make(chan *common.Span, spanBufferSize)}
+		incoming: make(chan *IncomingSpan, spanBufferSize)}
 	return shd, nil
 }
 
@@ -406,15 +442,23 @@ func writeDataStoreVersion(store *dataStore, ldb *levigo.DB, v uint32) error {
 	return ldb.Put(store.writeOpts, []byte{VERSION_KEY}, w.Bytes())
 }
 
-func (store *dataStore) GetStatistics() *Statistics {
-	return store.stats.Copy()
+func (store *dataStore) GetSpanMetrics() common.SpanMetricsMap {
+	return store.msink.AccessTotals()
 }
 
 // Close the DataStore.
 func (store *dataStore) Close() {
+	if store.hb != nil {
+		store.hb.Shutdown()
+		store.hb = nil
+	}
 	for idx := range store.shards {
 		store.shards[idx].Close()
 		store.shards[idx] = nil
+	}
+	if store.msink != nil {
+		store.msink.Shutdown()
+		store.msink = nil
 	}
 	if store.readOpts != nil {
 		store.readOpts.Close()
@@ -435,7 +479,7 @@ func (store *dataStore) getShardIndex(sid common.SpanId) int {
 	return int(sid.Hash32() % uint32(len(store.shards)))
 }
 
-func (store *dataStore) WriteSpan(span *common.Span) {
+func (store *dataStore) WriteSpan(span *IncomingSpan) {
 	store.shards[store.getShardIndex(span.Id)].incoming <- span
 }
 
@@ -954,11 +998,11 @@ func (store *dataStore) HandleQuery(query *common.Query) ([]*common.Span, error)
 
 func (store *dataStore) ServerStats() *common.ServerStats {
 	serverStats := common.ServerStats{
-		Shards: make([]common.ShardStats, len(store.shards)),
+		Dirs: make([]common.StorageDirectoryStats, len(store.shards)),
 	}
 	for shardIdx := range store.shards {
 		shard := store.shards[shardIdx]
-		serverStats.Shards[shardIdx].Path = shard.path
+		serverStats.Dirs[shardIdx].Path = shard.path
 		r := levigo.Range{
 			Start: append([]byte{SPAN_ID_INDEX_PREFIX},
 				common.INVALID_SPAN_ID.Val()...),
@@ -966,11 +1010,12 @@ func (store *dataStore) ServerStats() *common.ServerStats {
 				common.INVALID_SPAN_ID.Val()...),
 		}
 		vals := shard.ldb.GetApproximateSizes([]levigo.Range{r})
-		serverStats.Shards[shardIdx].ApproxNumSpans = vals[0]
-		serverStats.Shards[shardIdx].LevelDbStats =
+		serverStats.Dirs[shardIdx].ApproxNumSpans = vals[0]
+		serverStats.Dirs[shardIdx].LevelDbStats =
 			shard.ldb.PropertyValue("leveldb.stats")
 		store.lg.Infof("shard.ldb.PropertyValue(leveldb.stats)=%s\n",
 			shard.ldb.PropertyValue("leveldb.stats"))
 	}
+	serverStats.HostSpanMetrics = store.msink.AccessTotals()
 	return &serverStats
 }

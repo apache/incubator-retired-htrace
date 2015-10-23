@@ -68,6 +68,13 @@ const HTRACE_LOG_PATH = "log.path"
 // The log level to use for the logs in htrace.
 const HTRACE_LOG_LEVEL = "log.level"
 
+// The period between metrics heartbeats.  This is the approximate interval at which we will
+// update global metrics.
+const HTRACE_METRICS_HEARTBEAT_PERIOD_MS = "metrics.heartbeat.period.ms"
+
+// The maximum number of addresses for which we will maintain metrics.
+const HTRACE_METRICS_MAX_ADDR_ENTRIES = "metrics.max.addr.entries"
+
 // A host:port pair to send information to on startup.  This is used in unit
 // tests to determine the (random) port of the htraced process that has been
 // started.
@@ -83,4 +90,15 @@ var DEFAULTS = map[string]string{
 	HTRACE_DATA_STORE_SPAN_BUFFER_SIZE: "100",
 	HTRACE_LOG_PATH:                    "",
 	HTRACE_LOG_LEVEL:                   "INFO",
+	HTRACE_METRICS_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
+	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
+}
+
+// Values to be used when creating test configurations
+func TEST_VALUES() map[string]string {
+	return map[string]string{
+		HTRACE_HRPC_ADDRESS: ":0",    // use a random port for the HRPC server
+		HTRACE_LOG_LEVEL:    "TRACE", // show all log messages in tests
+		HTRACE_WEB_ADDRESS:  ":0",    // use a random port for the REST server
+	}
 }

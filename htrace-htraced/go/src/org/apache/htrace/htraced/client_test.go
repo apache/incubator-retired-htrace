@@ -210,7 +210,7 @@ const EXAMPLE_CONF_VALUE = "foo.bar.baz"
 
 func TestClientGetServerConf(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerConf",
-		Cnf: map[string]string {
+		Cnf: map[string]string{
 			EXAMPLE_CONF_KEY: EXAMPLE_CONF_VALUE,
 		},
 		DataDirs: make([]string, 2)}
@@ -230,6 +230,6 @@ func TestClientGetServerConf(t *testing.T) {
 	}
 	if serverCnf[EXAMPLE_CONF_KEY] != EXAMPLE_CONF_VALUE {
 		t.Fatalf("unexpected value for %s: %s",
-				EXAMPLE_CONF_KEY, EXAMPLE_CONF_VALUE)
+			EXAMPLE_CONF_KEY, EXAMPLE_CONF_VALUE)
 	}
 }

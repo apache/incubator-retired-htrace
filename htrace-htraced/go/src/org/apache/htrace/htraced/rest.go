@@ -90,7 +90,7 @@ func (hand *serverStatsHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 
 type serverConfHandler struct {
 	cnf *conf.Config
-	lg *common.Logger
+	lg  *common.Logger
 }
 
 func (hand *serverConfHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -233,9 +233,13 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 		if spanIdProblem != "" {
 			hand.lg.Warnf(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
 		} else {
-			hand.store.WriteSpan(span)
+			hand.store.WriteSpan(&IncomingSpan{
+				Addr: req.RemoteAddr,
+				Span: span,
+			})
 		}
 	}
+	hand.store.msink.UpdateClientDropped(req.RemoteAddr, msg.ClientDropped)
 }
 
 type queryHandler struct {

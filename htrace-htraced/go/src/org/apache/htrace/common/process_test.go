@@ -42,7 +42,7 @@ func TestSignals(t *testing.T) {
 		os.Exit(0)
 	}
 	helper := exec.Command(os.Args[0], "-test.run=TestSignals", "--")
-	helper.Env = []string { HTRACED_TEST_HELPER_PROCESS + "=1" }
+	helper.Env = []string{HTRACED_TEST_HELPER_PROCESS + "=1"}
 	stdoutPipe, err := helper.StdoutPipe()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open pipe to process stdout: %s",
@@ -77,7 +77,7 @@ func TestSignals(t *testing.T) {
 		}
 		t.Logf("Saw 'Terminating on signal: SIGINT'.  " +
 			"Helper goroutine exiting.\n")
-		done<-nil
+		done <- nil
 	}()
 	scanner := bufio.NewScanner(stderrPipe)
 	for scanner.Scan() {
@@ -97,9 +97,9 @@ func TestSignals(t *testing.T) {
 
 // Run the helper process which TestSignals spawns.
 func runHelperProcess() {
-	cnfMap := map[string]string {
+	cnfMap := map[string]string{
 		conf.HTRACE_LOG_LEVEL: "TRACE",
-		conf.HTRACE_LOG_PATH: "", // log to stdout
+		conf.HTRACE_LOG_PATH:  "", // log to stdout
 	}
 	cnfBld := conf.Builder{Values: cnfMap, Defaults: conf.DEFAULTS}
 	cnf, err := cnfBld.Build()

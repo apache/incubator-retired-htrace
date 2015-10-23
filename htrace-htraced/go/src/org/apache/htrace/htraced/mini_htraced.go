@@ -90,11 +90,15 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 			}
 		}
 	}
+	// Copy the default test configuration values.
+	for k, v := range conf.TEST_VALUES() {
+		_, hasVal := bld.Cnf[k]
+		if !hasVal {
+			bld.Cnf[k] = v
+		}
+	}
 	bld.Cnf[conf.HTRACE_DATA_STORE_DIRECTORIES] =
 		strings.Join(bld.DataDirs, conf.PATH_LIST_SEP)
-	bld.Cnf[conf.HTRACE_WEB_ADDRESS] = ":0"  // use a random port for the REST server
-	bld.Cnf[conf.HTRACE_HRPC_ADDRESS] = ":0" // use a random port for the HRPC server
-	bld.Cnf[conf.HTRACE_LOG_LEVEL] = "TRACE"
 	cnfBld := conf.Builder{Values: bld.Cnf, Defaults: conf.DEFAULTS}
 	cnf, err := cnfBld.Build()
 	if err != nil {
