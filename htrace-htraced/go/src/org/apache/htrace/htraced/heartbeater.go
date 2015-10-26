@@ -22,6 +22,7 @@ package main
 import (
 	"org/apache/htrace/common"
 	"time"
+	"sync"
 )
 
 type Heartbeater struct {
@@ -40,6 +41,8 @@ type Heartbeater struct {
 	// Incoming requests to the heartbeater.  When this is closed, the
 	// heartbeater will exit.
 	req chan *HeartbeatTarget
+
+	wg sync.WaitGroup
 }
 
 type HeartbeatTarget struct {
@@ -62,6 +65,7 @@ func NewHeartbeater(name string, periodMs int64, lg *common.Logger) *Heartbeater
 		targets:  make([]HeartbeatTarget, 0, 4),
 		req:      make(chan *HeartbeatTarget),
 	}
+	hb.wg.Add(1)
 	go hb.run()
 	return hb
 }
@@ -72,6 +76,7 @@ func (hb *Heartbeater) AddHeartbeatTarget(tgt *HeartbeatTarget) {
 
 func (hb *Heartbeater) Shutdown() {
 	close(hb.req)
+	hb.wg.Wait()
 }
 
 func (hb *Heartbeater) String() string {
@@ -94,6 +99,7 @@ func (hb *Heartbeater) run() {
 			select {
 			case tgt, open := <-hb.req:
 				if !open {
+					defer hb.wg.Done()
 					hb.lg.Debugf("%s: exiting.\n", hb.String())
 					return
 				}
