@@ -75,6 +75,12 @@ const HTRACE_METRICS_HEARTBEAT_PERIOD_MS = "metrics.heartbeat.period.ms"
 // The maximum number of addresses for which we will maintain metrics.
 const HTRACE_METRICS_MAX_ADDR_ENTRIES = "metrics.max.addr.entries"
 
+// The number of milliseconds we should keep spans before discarding them.
+const HTRACE_SPAN_EXPIRY_MS = "span.expiry.ms"
+
+// The period between updates to the span reaper
+const HTRACE_REAPER_HEARTBEAT_PERIOD_MS = "reaper.heartbeat.period.ms"
+
 // A host:port pair to send information to on startup.  This is used in unit
 // tests to determine the (random) port of the htraced process that has been
 // started.
@@ -92,6 +98,8 @@ var DEFAULTS = map[string]string{
 	HTRACE_LOG_LEVEL:                   "INFO",
 	HTRACE_METRICS_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
 	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
+	HTRACE_SPAN_EXPIRY_MS:              fmt.Sprintf("%d", 3*24*60*60*1000),
+	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  fmt.Sprintf("%d", 90*1000),
 }
 
 // Values to be used when creating test configurations

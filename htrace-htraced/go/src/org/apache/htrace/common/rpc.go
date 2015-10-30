@@ -114,6 +114,16 @@ type ServerStats struct {
 
 	// Per-host Span Metrics
 	HostSpanMetrics SpanMetricsMap
+
+	// The time (in UTC milliseconds since the epoch) when the
+	// datastore was last started.
+	LastStartMs int64
+
+	// The current time (in UTC milliseconds since the epoch) on the server.
+	CurMs int64
+
+	// The total number of spans which have been reaped.
+	ReapedSpans uint64
 }
 
 type StorageDirectoryStats struct {

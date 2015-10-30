@@ -33,6 +33,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 )
 
@@ -197,8 +198,17 @@ func printServerStats(hcl *htrace.Client) int {
 		fmt.Println(err.Error())
 		return EXIT_FAILURE
 	}
-	fmt.Printf("HTRACED SERVER STATS:\n")
-	fmt.Printf("%d leveldb directories.\n", len(stats.Dirs))
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
+	fmt.Fprintf(w, "HTRACED SERVER STATS\n")
+	fmt.Fprintf(w, "Datastore Start\t%s\n",
+		common.UnixMsToTime(stats.LastStartMs).Format(time.RFC3339))
+	fmt.Fprintf(w, "Server Time\t%s\n",
+		common.UnixMsToTime(stats.CurMs).Format(time.RFC3339))
+	fmt.Fprintf(w, "Spans reaped\t%d\n", stats.ReapedSpans)
+	fmt.Fprintf(w, "Number of leveldb directories\t%d\n", len(stats.Dirs))
+	w.Flush()
+	fmt.Println("")
 	for i := range stats.Dirs {
 		dir := stats.Dirs[i]
 		fmt.Printf("==== %s ===\n", dir.Path)
@@ -206,7 +216,9 @@ func printServerStats(hcl *htrace.Client) int {
 		stats := strings.Replace(dir.LevelDbStats, "\\n", "\n", -1)
 		fmt.Printf("%s\n", stats)
 	}
-	fmt.Printf("HOST SPAN METRICS:\n")
+	w = new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
+	fmt.Fprintf(w, "HOST SPAN METRICS\n")
 	mtxMap := stats.HostSpanMetrics
 	keys := make(sort.StringSlice, len(mtxMap))
 	i := 0
@@ -217,9 +229,10 @@ func printServerStats(hcl *htrace.Client) int {
 	sort.Sort(keys)
 	for k := range keys {
 		mtx := mtxMap[keys[k]]
-		fmt.Printf("%s: written: %d, server dropped %d, client dropped %d\n",
+		fmt.Fprintf(w, "%s\twritten: %d\tserver dropped: %d\tclient dropped: %d\n",
 			keys[k], mtx.Written, mtx.ServerDropped, mtx.ClientDropped)
 	}
+	w.Flush()
 	return EXIT_SUCCESS
 }
 

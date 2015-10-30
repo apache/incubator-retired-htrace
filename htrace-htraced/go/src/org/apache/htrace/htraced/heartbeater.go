@@ -21,8 +21,8 @@ package main
 
 import (
 	"org/apache/htrace/common"
-	"time"
 	"sync"
+	"time"
 )
 
 type Heartbeater struct {
@@ -84,6 +84,10 @@ func (hb *Heartbeater) String() string {
 }
 
 func (hb *Heartbeater) run() {
+	defer func() {
+		hb.lg.Debugf("%s: exiting.\n", hb.String())
+		hb.wg.Done()
+	}()
 	period := time.Duration(hb.periodMs) * time.Millisecond
 	for {
 		periodEnd := time.Now().Add(period)
@@ -99,8 +103,6 @@ func (hb *Heartbeater) run() {
 			select {
 			case tgt, open := <-hb.req:
 				if !open {
-					defer hb.wg.Done()
-					hb.lg.Debugf("%s: exiting.\n", hb.String())
 					return
 				}
 				hb.targets = append(hb.targets, *tgt)

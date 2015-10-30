@@ -31,6 +31,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 //
@@ -138,8 +141,81 @@ func (shd *shard) processIncoming() {
 				mtx.Clear()
 			}
 			shd.store.msink.UpdateMetrics(mtxMap)
+			shd.pruneExpired()
 		}
 	}
+}
+
+func (shd *shard) pruneExpired() {
+	lg := shd.store.rpr.lg
+	src, err := CreateReaperSource(shd)
+	if err != nil {
+		lg.Errorf("Error creating reaper source for shd(%s): %s\n",
+			shd.path, err.Error())
+		return
+	}
+	var totalReaped uint64
+	defer func() {
+		src.Close()
+		if totalReaped > 0 {
+			atomic.AddUint64(&shd.store.rpr.ReapedSpans, totalReaped)
+		}
+	}()
+	urdate := s2u64(shd.store.rpr.GetReaperDate())
+	for {
+		span := src.next()
+		if span == nil {
+			lg.Debugf("After reaping %d span(s), no more found in shard %s "+
+				"to reap.\n", totalReaped, shd.path)
+			return
+		}
+		begin := s2u64(span.Begin)
+		if begin >= urdate {
+			lg.Debugf("After reaping %d span(s), the remaining spans in "+
+				"shard %s are new enough to be kept\n",
+				totalReaped, shd.path)
+			return
+		}
+		err = shd.DeleteSpan(span)
+		if err != nil {
+			lg.Errorf("Error deleting span %s from shd(%s): %s\n",
+				span.String(), shd.path, err.Error())
+			return
+		}
+		if lg.TraceEnabled() {
+			lg.Tracef("Reaped span %s from shard %s\n", span.String(), shd.path)
+		}
+		totalReaped++
+	}
+}
+
+// Delete a span from the shard.  Note that leveldb may retain the data until
+// compaction(s) remove it.
+func (shd *shard) DeleteSpan(span *common.Span) error {
+	batch := levigo.NewWriteBatch()
+	defer batch.Close()
+	primaryKey :=
+		append([]byte{SPAN_ID_INDEX_PREFIX}, span.Id.Val()...)
+	batch.Delete(primaryKey)
+	for parentIdx := range span.Parents {
+		key := append(append([]byte{PARENT_ID_INDEX_PREFIX},
+			span.Parents[parentIdx].Val()...), span.Id.Val()...)
+		batch.Delete(key)
+	}
+	beginTimeKey := append(append([]byte{BEGIN_TIME_INDEX_PREFIX},
+		u64toSlice(s2u64(span.Begin))...), span.Id.Val()...)
+	batch.Delete(beginTimeKey)
+	endTimeKey := append(append([]byte{END_TIME_INDEX_PREFIX},
+		u64toSlice(s2u64(span.End))...), span.Id.Val()...)
+	batch.Delete(endTimeKey)
+	durationKey := append(append([]byte{DURATION_INDEX_PREFIX},
+		u64toSlice(s2u64(span.Duration()))...), span.Id.Val()...)
+	batch.Delete(durationKey)
+	err := shd.ldb.Write(shd.store.writeOpts, batch)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Convert a signed 64-bit number into an unsigned 64-bit number.  We flip the
@@ -251,6 +327,107 @@ func (shd *shard) Close() {
 	lg.Infof("Closed %s...\n", shd.path)
 }
 
+type Reaper struct {
+	// The logger used by the reaper
+	lg *common.Logger
+
+	// The number of milliseconds to keep spans around, in milliseconds.
+	spanExpiryMs int64
+
+	// The oldest date for which we'll keep spans.
+	reaperDate int64
+
+	// A channel used to send heartbeats to the reaper
+	heartbeats chan interface{}
+
+	// A channel used to block until the reaper goroutine has exited.
+	exited chan interface{}
+
+	// The lock protecting reaper data.
+	lock sync.Mutex
+
+	// The reaper heartbeater
+	hb *Heartbeater
+
+	// The total number of spans which have been reaped.
+	ReapedSpans uint64
+}
+
+func NewReaper(cnf *conf.Config) *Reaper {
+	rpr := &Reaper{
+		lg:           common.NewLogger("reaper", cnf),
+		spanExpiryMs: cnf.GetInt64(conf.HTRACE_SPAN_EXPIRY_MS),
+		heartbeats:   make(chan interface{}, 1),
+		exited:       make(chan interface{}),
+	}
+	rpr.hb = NewHeartbeater("ReaperHeartbeater",
+		cnf.GetInt64(conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS), rpr.lg)
+	go rpr.run()
+	rpr.hb.AddHeartbeatTarget(&HeartbeatTarget{
+		name:       "reaper",
+		targetChan: rpr.heartbeats,
+	})
+	return rpr
+}
+
+func (rpr *Reaper) run() {
+	defer func() {
+		rpr.lg.Info("Exiting Reaper goroutine.\n")
+		rpr.exited <- nil
+	}()
+
+	for {
+		_, isOpen := <-rpr.heartbeats
+		if !isOpen {
+			return
+		}
+		rpr.handleHeartbeat()
+	}
+}
+
+func (rpr *Reaper) handleHeartbeat() {
+	// TODO: check dataStore fullness
+	now := common.TimeToUnixMs(time.Now().UTC())
+	d, updated := func() (int64, bool) {
+		rpr.lock.Lock()
+		defer rpr.lock.Unlock()
+		newReaperDate := now - rpr.spanExpiryMs
+		if newReaperDate > rpr.reaperDate {
+			rpr.reaperDate = newReaperDate
+			return rpr.reaperDate, true
+		} else {
+			return rpr.reaperDate, false
+		}
+	}()
+	if rpr.lg.DebugEnabled() {
+		if updated {
+			rpr.lg.Debugf("Updating UTC reaper date to %s.\n",
+				common.UnixMsToTime(d).Format(time.RFC3339))
+		} else {
+			rpr.lg.Debugf("Not updating previous reaperDate of %s.\n",
+				common.UnixMsToTime(d).Format(time.RFC3339))
+		}
+	}
+}
+
+func (rpr *Reaper) GetReaperDate() int64 {
+	rpr.lock.Lock()
+	defer rpr.lock.Unlock()
+	return rpr.reaperDate
+}
+
+func (rpr *Reaper) SetReaperDate(rdate int64) {
+	rpr.lock.Lock()
+	defer rpr.lock.Unlock()
+	rpr.reaperDate = rdate
+}
+
+func (rpr *Reaper) Shutdown() {
+	rpr.hb.Shutdown()
+	close(rpr.heartbeats)
+	<-rpr.exited
+}
+
 // The Data Store.
 type dataStore struct {
 	lg *common.Logger
@@ -273,6 +450,12 @@ type dataStore struct {
 
 	// The heartbeater which periodically asks shards to update the MetricsSink.
 	hb *Heartbeater
+
+	// The reaper for this datastore
+	rpr *Reaper
+
+	// When this datastore was started (in UTC milliseconds since the epoch)
+	startMs int64
 }
 
 func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataStore, error) {
@@ -327,6 +510,8 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 			targetChan: shd.heartbeats,
 		})
 	}
+	store.rpr = NewReaper(cnf)
+	store.startMs = common.TimeToUnixMs(time.Now().UTC())
 	return store, nil
 }
 
@@ -456,6 +641,10 @@ func (store *dataStore) Close() {
 		store.shards[idx].Close()
 		store.shards[idx] = nil
 	}
+	if store.rpr != nil {
+		store.rpr.Shutdown()
+		store.rpr = nil
+	}
 	if store.msink != nil {
 		store.msink.Shutdown()
 		store.msink = nil
@@ -502,8 +691,8 @@ func (shd *shard) FindSpan(sid common.SpanId) *common.Span {
 	var span *common.Span
 	span, err = shd.decodeSpan(sid, buf)
 	if err != nil {
-		lg.Errorf("Shard(%s): FindSpan(%s) decode error: %s\n",
-			shd.path, sid.String(), err.Error())
+		lg.Errorf("Shard(%s): FindSpan(%s) decode error: %s decoding [%s]\n",
+			shd.path, sid.String(), err.Error(), hex.EncodeToString(buf))
 		return nil
 	}
 	return span
@@ -704,6 +893,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 	var ret *source
 	src := source{store: store,
 		pred:      pred,
+		shards:    make([]*shard, len(store.shards)),
 		iters:     make([]*levigo.Iterator, 0, len(store.shards)),
 		nexts:     make([]*common.Span, len(store.shards)),
 		numRead:   make([]int, len(store.shards)),
@@ -720,6 +910,7 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 	}()
 	for shardIdx := range store.shards {
 		shd := store.shards[shardIdx]
+		src.shards[shardIdx] = shd
 		src.iters = append(src.iters, shd.ldb.NewIterator(store.readOpts))
 	}
 	var searchKey []byte
@@ -804,10 +995,39 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 type source struct {
 	store     *dataStore
 	pred      *predicateData
+	shards    []*shard
 	iters     []*levigo.Iterator
 	nexts     []*common.Span
 	numRead   []int
 	keyPrefix byte
+}
+
+func CreateReaperSource(shd *shard) (*source, error) {
+	store := shd.store
+	p := &common.Predicate{
+		Op:    common.GREATER_THAN_OR_EQUALS,
+		Field: common.BEGIN_TIME,
+		Val:   common.INVALID_SPAN_ID.String(),
+	}
+	pred, err := loadPredicateData(p)
+	if err != nil {
+		return nil, err
+	}
+	src := &source{
+		store:     store,
+		pred:      pred,
+		shards:    []*shard{shd},
+		iters:     make([]*levigo.Iterator, 1),
+		nexts:     make([]*common.Span, 1),
+		numRead:   make([]int, 1),
+		keyPrefix: pred.getIndexPrefix(),
+	}
+	iter := shd.ldb.NewIterator(store.readOpts)
+	src.iters[0] = iter
+	searchKey := append(append([]byte{src.keyPrefix}, pred.key...),
+		pred.key...)
+	iter.Seek(searchKey)
+	return src, nil
 }
 
 // Return true if this operation may require skipping the first result we get back from leveldb.
@@ -834,24 +1054,25 @@ func (src *source) populateNextFromShard(shardIdx int) {
 	lg := src.store.lg
 	var err error
 	iter := src.iters[shardIdx]
+	shdPath := src.shards[shardIdx].path
 	if iter == nil {
-		lg.Debugf("Can't populate: No more entries in shard %d\n", shardIdx)
+		lg.Debugf("Can't populate: No more entries in shard %s\n", shdPath)
 		return // There are no more entries in this shard.
 	}
 	if src.nexts[shardIdx] != nil {
-		lg.Debugf("No need to populate shard %d\n", shardIdx)
+		lg.Debugf("No need to populate shard %s\n", shdPath)
 		return // We already have a valid entry for this shard.
 	}
 	for {
 		if !iter.Valid() {
-			lg.Debugf("Can't populate: Iterator for shard %d is no longer valid.\n", shardIdx)
+			lg.Debugf("Can't populate: Iterator for shard %s is no longer valid.\n", shdPath)
 			break // Can't read past end of DB
 		}
 		src.numRead[shardIdx]++
 		key := iter.Key()
 		if !bytes.HasPrefix(key, []byte{src.keyPrefix}) {
-			lg.Debugf("Can't populate: Iterator for shard %d does not have prefix %s\n",
-				shardIdx, string(src.keyPrefix))
+			lg.Debugf("Can't populate: Iterator for shard %s does not have prefix %s\n",
+				shdPath, string(src.keyPrefix))
 			break // Can't read past end of indexed section
 		}
 		var span *common.Span
@@ -859,19 +1080,19 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		if src.keyPrefix == SPAN_ID_INDEX_PREFIX {
 			// The span id maps to the span itself.
 			sid = common.SpanId(key[1:17])
-			span, err = src.store.shards[shardIdx].decodeSpan(sid, iter.Value())
+			span, err = src.shards[shardIdx].decodeSpan(sid, iter.Value())
 			if err != nil {
-				lg.Debugf("Internal error decoding span %s in shard %d: %s\n",
-					sid.String(), shardIdx, err.Error())
+				lg.Debugf("Internal error decoding span %s in shard %s: %s\n",
+					sid.String(), shdPath, err.Error())
 				break
 			}
 		} else {
 			// With a secondary index, we have to look up the span by id.
 			sid = common.SpanId(key[9:25])
-			span = src.store.shards[shardIdx].FindSpan(sid)
+			span = src.shards[shardIdx].FindSpan(sid)
 			if span == nil {
-				lg.Debugf("Internal error rehydrating span %s in shard %d\n",
-					sid.String(), shardIdx)
+				lg.Debugf("Internal error rehydrating span %s in shard %s\n",
+					sid.String(), shdPath)
 				break
 			}
 		}
@@ -881,12 +1102,12 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			iter.Next()
 		}
 		if src.pred.satisfiedBy(span) {
-			lg.Debugf("Populated valid span %v from shard %d.\n", sid, shardIdx)
+			lg.Debugf("Populated valid span %v from shard %s.\n", sid, shdPath)
 			src.nexts[shardIdx] = span // Found valid entry
 			return
 		} else {
-			lg.Debugf("Span %s from shard %d does not satisfy the predicate.\n",
-				sid.String(), shardIdx)
+			lg.Debugf("Span %s from shard %s does not satisfy the predicate.\n",
+				sid.String(), shdPath)
 			if src.numRead[shardIdx] <= 1 && mayRequireOneSkip(src.pred.Op) {
 				continue
 			}
@@ -894,13 +1115,13 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			break
 		}
 	}
-	lg.Debugf("Closing iterator for shard %d.\n", shardIdx)
+	lg.Debugf("Closing iterator for shard %s.\n", shdPath)
 	iter.Close()
 	src.iters[shardIdx] = nil
 }
 
 func (src *source) next() *common.Span {
-	for shardIdx := range src.iters {
+	for shardIdx := range src.shards {
 		src.populateNextFromShard(shardIdx)
 	}
 	var best *common.Span
@@ -1017,5 +1238,8 @@ func (store *dataStore) ServerStats() *common.ServerStats {
 			shard.ldb.PropertyValue("leveldb.stats"))
 	}
 	serverStats.HostSpanMetrics = store.msink.AccessTotals()
+	serverStats.LastStartMs = store.startMs
+	serverStats.CurMs = common.TimeToUnixMs(time.Now().UTC())
+	serverStats.ReapedSpans = atomic.LoadUint64(&store.rpr.ReapedSpans)
 	return &serverStats
 }
