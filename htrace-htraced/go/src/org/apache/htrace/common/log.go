@@ -194,7 +194,7 @@ func parseConf(faculty string, cnf *conf.Config) (string, Level) {
 	} else {
 		facultyLogPath = cnf.Get(conf.HTRACE_LOG_PATH)
 	}
-	facultyLogLevelKey := faculty + conf.HTRACE_LOG_LEVEL
+	facultyLogLevelKey := faculty + "." + conf.HTRACE_LOG_LEVEL
 	var facultyLogLevelStr string
 	if cnf.Contains(facultyLogLevelKey) {
 		facultyLogLevelStr = cnf.Get(facultyLogLevelKey)

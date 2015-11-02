@@ -120,3 +120,51 @@ func TestMultipleFileLogs(t *testing.T) {
 	fooLg.Close()
 	barLg.Close()
 }
+
+func TestLogLevelEnabled(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "TestLogLevelEnabled")
+	if err != nil {
+		panic(fmt.Sprintf("error creating tempdir: %s\n", err.Error()))
+	}
+	defer os.RemoveAll(tempDir)
+	// set log level to DEBUG for facility "foo"
+	logPath := tempDir + conf.PATH_SEP + "log"
+	lg := newLogger("foo", "log.level", "DEBUG",
+		"foo.log.level", "INFO",
+		"log.path", logPath)
+	if lg.TraceEnabled() {
+		t.Fatalf("foo logger has TraceEnabled")
+	}
+	if lg.DebugEnabled() {
+		t.Fatalf("foo logger have DebugEnabled")
+	}
+	if !lg.InfoEnabled() {
+		t.Fatalf("foo logger does not have InfoEnabled")
+	}
+	if !lg.WarnEnabled() {
+		t.Fatalf("foo logger does not have WarnEnabled")
+	}
+	if !lg.ErrorEnabled() {
+		t.Fatalf("foo logger does not have ErrorEnabled")
+	}
+	lg.Close()
+	lg = newLogger("foo", "log.level", "WARN",
+		"foo.log.level", "INFO",
+		"log.path", logPath)
+	if lg.TraceEnabled() {
+		t.Fatalf("foo logger has TraceEnabled")
+	}
+	if lg.DebugEnabled() {
+		t.Fatalf("foo logger has DebugEnabled")
+	}
+	if !lg.InfoEnabled() {
+		t.Fatalf("foo logger does not have InfoEnabled")
+	}
+	if !lg.WarnEnabled() {
+		t.Fatalf("foo logger does not have WarnEnabled")
+	}
+	if !lg.ErrorEnabled() {
+		t.Fatalf("foo logger does not have ErrorEnabled")
+	}
+	lg.Close()
+}
