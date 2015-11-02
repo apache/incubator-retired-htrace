@@ -271,23 +271,23 @@ func (lg *Logger) Write(level Level, str string) {
 //
 
 func (lg *Logger) TraceEnabled() bool {
-	return lg.Level >= TRACE
+	return lg.Level <= TRACE
 }
 
 func (lg *Logger) DebugEnabled() bool {
-	return lg.Level >= DEBUG
+	return lg.Level <= DEBUG
 }
 
 func (lg *Logger) InfoEnabled() bool {
-	return lg.Level >= INFO
+	return lg.Level <= INFO
 }
 
 func (lg *Logger) WarnEnabled() bool {
-	return lg.Level >= WARN
+	return lg.Level <= WARN
 }
 
 func (lg *Logger) ErrorEnabled() bool {
-	return lg.Level >= ERROR
+	return lg.Level <= ERROR
 }
 
 func (lg *Logger) Close() {
