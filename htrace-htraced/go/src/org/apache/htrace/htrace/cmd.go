@@ -43,7 +43,7 @@ var GIT_VERSION string
 const EXIT_SUCCESS = 0
 const EXIT_FAILURE = 1
 
-var verbose *bool
+var verbose bool
 
 const USAGE = `The Apache HTrace command-line tool.  This tool retrieves and modifies settings and
 other data on a running htraced daemon.
@@ -68,7 +68,7 @@ func main() {
 	app.Flag("Dmy.key", "Set configuration key 'my.key' to 'my.value'.  Replace 'my.key' "+
 		"with any key you want to set.").Default("my.value").String()
 	addr := app.Flag("addr", "Server address.").String()
-	verbose = app.Flag("verbose", "Verbose.").Default("false").Bool()
+	verbose = *app.Flag("verbose", "Verbose.").Default("false").Bool()
 	version := app.Command("version", "Print the version of this program.")
 	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
 	serverStats := app.Command("serverStats", "Print statistics retrieved from the htraced server.")
@@ -100,7 +100,7 @@ func main() {
 	queryArg := query.Arg("query", "The query string to send.  Query strings have the format "+
 		"[TYPE] [OPERATOR] [CONST], joined by AND statements.").Required().String()
 	rawQuery := app.Command("rawQuery", "Send a raw JSON query to htraced.")
-	rawQueryArg := query.Arg("json", "The query JSON to send.").Required().String()
+	rawQueryArg := rawQuery.Arg("json", "The query JSON to send.").Required().String()
 	cmd := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	// Add the command-line settings into the configuration.
@@ -327,7 +327,7 @@ func doLoadSpans(hcl *htrace.Client, reader io.Reader) int {
 		}
 		spans = append(spans, &span)
 	}
-	if *verbose {
+	if verbose {
 		fmt.Printf("Writing ")
 		prefix := ""
 		for i := range spans {
@@ -390,7 +390,7 @@ func doDumpAll(hcl *htrace.Client, outPath string, lim int) error {
 		if err == nil {
 			_, err = fmt.Fprintf(w, "%s\n", span.ToJson())
 		}
-		if *verbose {
+		if verbose {
 			numSpans++
 			now := time.Now()
 			if !now.Before(nextLogTime) {

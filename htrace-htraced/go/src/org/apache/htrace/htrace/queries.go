@@ -36,12 +36,12 @@ func tokenize(str string) []string {
 		switch {
 		case c == prevQuote:
 			prevQuote = rune(0)
-			return false
+			return true
 		case prevQuote != rune(0):
 			return false
 		case unicode.In(c, unicode.Quotation_Mark):
 			prevQuote = c
-			return false
+			return true
 		default:
 			return unicode.IsSpace(c)
 		}
@@ -57,7 +57,7 @@ type predicateParser struct {
 }
 
 func (ps *predicateParser) Parse() (*common.Predicate, error) {
-	if ps.curToken > len(ps.tokens) {
+	if ps.curToken >= len(ps.tokens) {
 		return nil, nil
 	}
 	if ps.curToken > 0 {
@@ -72,7 +72,7 @@ func (ps *predicateParser) Parse() (*common.Predicate, error) {
 				"token %d", ps.curToken))
 		}
 	}
-	field := common.Field(ps.tokens[ps.curToken])
+	field := common.Field(strings.ToLower(ps.tokens[ps.curToken]))
 	if !field.IsValid() {
 		return nil, errors.New(fmt.Sprintf("Invalid field specifier at token %d.  "+
 			"Can't understand %s.  Valid field specifiers are %v", ps.curToken,
@@ -83,7 +83,7 @@ func (ps *predicateParser) Parse() (*common.Predicate, error) {
 		return nil, errors.New(fmt.Sprintf("Nothing found after field specifier "+
 			"at token %d", ps.curToken))
 	}
-	op := common.Op(ps.tokens[ps.curToken])
+	op := common.Op(strings.ToLower(ps.tokens[ps.curToken]))
 	if !op.IsValid() {
 		return nil, errors.New(fmt.Sprintf("Invalid operation specifier at token %d.  "+
 			"Can't understand %s.  Valid operation specifiers are %v", ps.curToken,
@@ -95,20 +95,31 @@ func (ps *predicateParser) Parse() (*common.Predicate, error) {
 			"at token %d", ps.curToken))
 	}
 	val := ps.tokens[ps.curToken]
+	ps.curToken++
 	return &common.Predicate{Op: op, Field: field, Val: val}, nil
 }
 
 func parseQueryString(str string) ([]common.Predicate, error) {
 	ps := predicateParser{tokens: tokenize(str)}
+	if verbose {
+		fmt.Printf("Running query [ ")
+		prefix := ""
+		for tokenIdx := range(ps.tokens) {
+			fmt.Printf("%s'%s'", prefix, ps.tokens[tokenIdx])
+			prefix = ", "
+		}
+		fmt.Printf(" ]\n")
+	}
 	preds := make([]common.Predicate, 0)
 	for {
 		pred, err := ps.Parse()
-		if pred == nil {
-			break
-		}
 		if err != nil {
 			return nil, err
 		}
+		if pred == nil {
+			break
+		}
+		preds = append(preds, *pred)
 	}
 	if len(preds) == 0 {
 		return nil, errors.New("Empty query string")
@@ -140,7 +151,7 @@ func doRawQuery(hcl *htrace.Client, str string) error {
 
 // Send a query.
 func doQuery(hcl *htrace.Client, query *common.Query) error {
-	if *verbose {
+	if verbose {
 		qbytes, err := json.Marshal(*query)
 		if err != nil {
 			qbytes = []byte("marshaling error: " + err.Error())
@@ -151,7 +162,7 @@ func doQuery(hcl *htrace.Client, query *common.Query) error {
 	if err != nil {
 		return err
 	}
-	if *verbose {
+	if verbose {
 		fmt.Printf("%d results...\n", len(spans))
 	}
 	for i := range spans {
