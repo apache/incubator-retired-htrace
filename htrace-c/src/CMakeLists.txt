@@ -120,8 +120,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 # The production version of the library, which exposes only the public API.
 add_library(htrace SHARED ${SRC_ALL})
 target_link_libraries(htrace ${DEPS_ALL})
-set(HTRACE_VERSION_MAJOR "3")
-set(HTRACE_VERSION_MINOR "2")
+# Set version 4.1.0
+set(HTRACE_VERSION_MAJOR "4")
+set(HTRACE_VERSION_MINOR "1")
 set(HTRACE_VERSION_PATCH "0")
 set(HTRACE_VERSION_STRING
     "${HTRACE_VERSION_MAJOR}.${HTRACE_VERSION_MINOR}.${HTRACE_VERSION_PATCH}")
