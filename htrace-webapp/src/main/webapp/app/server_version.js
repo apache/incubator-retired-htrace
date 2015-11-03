@@ -17,15 +17,14 @@
  * under the License.
  */
 
-// htraced ServerInfo sent back from /serverInfo.
-// See rest.go.
-htrace.ServerInfo = Backbone.Model.extend({
+// htraced server version information.  See rest.go.
+htrace.ServerVersion = Backbone.Model.extend({
   defaults: {
     "ReleaseVersion": "unknown",
     "GitVersion": "unknown",
   },
 
   url: function() {
-    return "server/info";
+    return "server/version";
   }
 });

@@ -255,9 +255,9 @@ class HTracedProcess extends Process {
       "htraced");
   }
 
-  public String getServerInfoJson() throws Exception {
+  public String getServerVersionJson() throws Exception {
     ContentResponse response = httpClient.GET(
-        new URI(String.format("http://%s/server/info", httpAddr)));
+        new URI(String.format("http://%s/server/version", httpAddr)));
     Assert.assertEquals("application/json", response.getMediaType());
     Assert.assertEquals(HttpStatus.OK_200, response.getStatus());
     return response.getContentAsString();

@@ -44,8 +44,8 @@ type WriteSpansReq struct {
 	ClientDropped uint64 `json:",omitempty"`
 }
 
-// Info returned by /server/info
-type ServerInfo struct {
+// Info returned by /server/version
+type ServerVersion struct {
 	// The server release version.
 	ReleaseVersion string
 

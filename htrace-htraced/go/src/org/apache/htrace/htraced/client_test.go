@@ -30,8 +30,8 @@ import (
 	"time"
 )
 
-func TestClientGetServerInfo(t *testing.T) {
-	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerInfo",
+func TestClientGetServerVersion(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerVersion",
 		DataDirs: make([]string, 2)}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -43,9 +43,9 @@ func TestClientGetServerInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
-	_, err = hcl.GetServerInfo()
+	_, err = hcl.GetServerVersion()
 	if err != nil {
-		t.Fatalf("failed to call GetServerInfo: %s", err.Error())
+		t.Fatalf("failed to call GetServerVersion: %s", err.Error())
 	}
 }
 

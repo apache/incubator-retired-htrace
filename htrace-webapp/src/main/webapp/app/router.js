@@ -23,6 +23,7 @@ htrace.HTraceRouter = Backbone.Router.extend({
   "routes": {
     "": "empty",
     "about": "about",
+    "serverInfo": "serverInfo",
     "search": "search",
     "*unknown": "unknown"
   },
@@ -34,18 +35,40 @@ htrace.HTraceRouter = Backbone.Router.extend({
 
   about: function() {
     console.log("Visiting #about.");
-    serverInfo = new htrace.ServerInfo();
     var router = this;
-    serverInfo.fetch({
-        "success": function(model, response, options) {
-          router.switchView(new htrace.AboutView({model: serverInfo, el: "#app"}));
-          router.activateNavBarEntry("about")
-        },
-        "error": function(model, response, options) {
-          window.alert("Failed to fetch htraced server info via GET " +
-                       "/server/info: " + JSON.stringify(response));
-        }
-      });
+    router.switchView(new htrace.AboutView({el: "#app"}));
+    router.activateNavBarEntry("about")
+  },
+
+  serverInfo: function() {
+    console.log("Visiting #serverInfo.");
+    var version = new htrace.ServerVersion();
+    var router = this;
+    version.fetch({
+      "error": function(model, response, options) {
+        window.alert("Failed to fetch htraced server version: " +
+                     JSON.stringify(response));
+      },
+      "success": function(model, response, options) {
+        stats = new htrace.ServerStats();
+        stats.fetch({
+          "error": function(model, response, options) {
+            window.alert("Failed to fetch htraced server stats: " +
+                         JSON.stringify(response));
+          },
+          "success": function(model, response, options) {
+            router.switchView(new htrace.ServerInfoView({
+              model: {
+                "version": version,
+                "stats": stats
+              },
+              el: "#app"
+            }))
+            router.activateNavBarEntry("serverInfo")
+          }
+        })
+      }
+    })
   },
 
   search: function() {

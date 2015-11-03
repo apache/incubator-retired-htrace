@@ -50,22 +50,22 @@ func writeError(lg *common.Logger, w http.ResponseWriter, errCode int,
 	w.Write([]byte(`{ "error" : "` + str + `"}`))
 }
 
-type serverInfoHandler struct {
+type serverVersionHandler struct {
 	lg *common.Logger
 }
 
-func (hand *serverInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (hand *serverVersionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
-	version := common.ServerInfo{ReleaseVersion: RELEASE_VERSION,
+	version := common.ServerVersion{ReleaseVersion: RELEASE_VERSION,
 		GitVersion: GIT_VERSION}
 	buf, err := json.Marshal(&version)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusInternalServerError,
-			fmt.Sprintf("error marshalling ServerInfo: %s\n", err.Error()))
+			fmt.Sprintf("error marshalling ServerVersion: %s\n", err.Error()))
 		return
 	}
 	if hand.lg.DebugEnabled() {
-		hand.lg.Debugf("Returned serverInfo %s\n", string(buf))
+		hand.lg.Debugf("Returned ServerVersion %s\n", string(buf))
 	}
 	w.Write(buf)
 }
@@ -303,7 +303,8 @@ func CreateRestServer(cnf *conf.Config, store *dataStore,
 
 	r := mux.NewRouter().StrictSlash(false)
 
-	r.Handle("/server/info", &serverInfoHandler{lg: rsv.lg}).Methods("GET")
+	r.Handle("/server/info", &serverVersionHandler{lg: rsv.lg}).Methods("GET")
+	r.Handle("/server/version", &serverVersionHandler{lg: rsv.lg}).Methods("GET")
 
 	serverStatsH := &serverStatsHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}

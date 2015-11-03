@@ -30,6 +30,7 @@
           <a class="navbar-brand" href="#">HTrace</a>
           <ul class="nav navbar-nav">
             <li id="about"><a href="#about">About</a></li>
+            <li id="serverInfo"><a href="#serverInfo">ServerInfo</a></li>
             <li id="search"><a href="#search">Search</a></li>
           </ul>
         </div>
@@ -40,16 +41,58 @@
     <footer></footer>
 
     <script id="about-view-template" type="text/template">
+      <div class="row" align="center">
+        <h1>Welcome to <a href="http://htrace.incubator.apache.org/">Apache HTrace</a></h1>
+      </div>
+      <div class="row" align="center">
+        <img src="image/owl.png" width="40%"><p/><p/>
+      </div>
+    </script>
+
+    <script id="server-info-view-template" type="text/template">
       <div class="row">
         <div class="col-md-1">
         </div>
         <div class="col-md-10">
-          <h1>Welcome to HTrace</h1>
-          <img src="image/owl.png" width="15%">
-          <h2>Server Version</h2>
-          <%= model.get("ReleaseVersion") %>
-          <h2>Server Git Hash</h2>
-          <%= model.get("GitVersion") %>
+          <h2>HTraced at <%= window.location.host %></h2>
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <div class="panel-title">Version</div>
+            </div>
+            <table class="table table-striped">
+            <tr>
+              <td>Server Release Version</td>
+              <td><%= model.version.get("ReleaseVersion") %></td>
+            </tr>
+            <tr>
+              <td>Server Git Hash</td>
+              <td><%= model.version.get("GitVersion") %></td>
+            </tr>
+            </table>
+          </div>
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <div class="panel-title">Global Metrics</div>
+            </div>
+            <table class="table table-striped">
+            <tr>
+              <td>Spans Reaped</td>
+              <td><%= model.stats.get("ReapedSpans") %></td>
+            </tr>
+            </tr>
+              <td>Datastore Start Time</td>
+              <td><%= htrace.dateToString(model.stats.get("LastStartMs")) %></td>
+            </tr>
+            </tr>
+              <td>Current Server Time</td>
+              <td><%= htrace.dateToString(model.stats.get("CurMs")) %></td>
+            </tr>
+            </table>
+          </div>
+          <div class="panel panel-info">
+            <%= view.getServerStatsTableHtml() %>
+          </div>
+          <button type="button" class="btn btn-info serverConfigurationButton">Server Configuration</button>
         </div>
         <div class="col-md-1">
         </div>
@@ -232,13 +275,16 @@
     <script src="app/span_widget.js" type="text/javascript"></script>
     <script src="app/search_results.js" type="text/javascript"></script>
     <script src="app/about_view.js" type="text/javascript"></script>
+    <script src="app/server_info_view.js" type="text/javascript"></script>
     <script src="app/modal.js" type="text/javascript"></script>
     <script src="app/predicate.js" type="text/javascript"></script>
     <script src="app/predicate_view.js" type="text/javascript"></script>
     <script src="app/query_results.js" type="text/javascript"></script>
     <script src="app/search_results_view.js" type="text/javascript"></script>
     <script src="app/search_view.js" type="text/javascript"></script>
-    <script src="app/server_info.js" type="text/javascript"></script>
+    <script src="app/server_configuration.js" type="text/javascript"></script>
+    <script src="app/server_stats.js" type="text/javascript"></script>
+    <script src="app/server_version.js" type="text/javascript"></script>
 
     <script src="app/router.js" type="text/javascript"></script>
   </body>

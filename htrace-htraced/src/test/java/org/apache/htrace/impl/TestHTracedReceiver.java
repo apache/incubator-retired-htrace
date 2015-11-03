@@ -64,10 +64,10 @@ public class TestHTracedReceiver {
   };
 
   @Test(timeout = 60000)
-  public void testGetServerInfoJson() throws Exception {
+  public void testGetServerVersionJson() throws Exception {
     HTracedProcess ht = new HTracedProcess.Builder().build();
     try {
-      String response = ht.getServerInfoJson();
+      String response = ht.getServerVersionJson();
       assertTrue(response.contains("ReleaseVersion"));
     } finally {
       ht.destroy();

@@ -52,13 +52,13 @@ type Client struct {
 	hcr *hClient
 }
 
-// Get the htraced server information.
-func (hcl *Client) GetServerInfo() (*common.ServerInfo, error) {
+// Get the htraced server version information.
+func (hcl *Client) GetServerVersion() (*common.ServerVersion, error) {
 	buf, _, err := hcl.makeGetRequest("server/info")
 	if err != nil {
 		return nil, err
 	}
-	var info common.ServerInfo
+	var info common.ServerVersion
 	err = json.Unmarshal(buf, &info)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error: error unmarshalling response "+

@@ -70,7 +70,7 @@ func main() {
 	addr := app.Flag("addr", "Server address.").String()
 	verbose = *app.Flag("verbose", "Verbose.").Default("false").Bool()
 	version := app.Command("version", "Print the version of this program.")
-	serverInfo := app.Command("serverInfo", "Print information retrieved from an htraced server.")
+	serverVersion := app.Command("serverVersion", "Print the version of the htraced server.")
 	serverStats := app.Command("serverStats", "Print statistics retrieved from the htraced server.")
 	serverStatsJson := serverStats.Flag("json", "Display statistics as raw JSON.").Default("false").Bool()
 	serverConf := app.Command("serverConf", "Print the server configuration retrieved from the htraced server.")
@@ -132,8 +132,8 @@ func main() {
 	switch cmd {
 	case version.FullCommand():
 		os.Exit(printVersion())
-	case serverInfo.FullCommand():
-		os.Exit(printServerInfo(hcl))
+	case serverVersion.FullCommand():
+		os.Exit(printServerVersion(hcl))
 	case serverStats.FullCommand():
 		if *serverStatsJson {
 			os.Exit(printServerStatsJson(hcl))
@@ -187,13 +187,13 @@ func printVersion() int {
 }
 
 // Print information retrieved from an htraced server via /server/info
-func printServerInfo(hcl *htrace.Client) int {
-	info, err := hcl.GetServerInfo()
+func printServerVersion(hcl *htrace.Client) int {
+	ver, err := hcl.GetServerVersion()
 	if err != nil {
 		fmt.Println(err.Error())
 		return EXIT_FAILURE
 	}
-	fmt.Printf("HTraced server version %s (%s)\n", info.ReleaseVersion, info.GitVersion)
+	fmt.Printf("HTraced server version %s (%s)\n", ver.ReleaseVersion, ver.GitVersion)
 	return EXIT_SUCCESS
 }
 
