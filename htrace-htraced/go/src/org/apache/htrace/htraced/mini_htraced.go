@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
@@ -126,10 +127,20 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 	if err != nil {
 		return nil, err
 	}
-	rsv, err = CreateRestServer(cnf, store)
+	rstListener, listenErr := net.Listen("tcp", cnf.Get(conf.HTRACE_WEB_ADDRESS))
+	if listenErr != nil {
+		return nil, listenErr
+	}
+	defer func() {
+		if rstListener != nil {
+			rstListener.Close()
+		}
+	}()
+	rsv, err = CreateRestServer(cnf, store, rstListener)
 	if err != nil {
 		return nil, err
 	}
+	rstListener = nil
 	hsv, err = CreateHrpcServer(cnf, store)
 	if err != nil {
 		return nil, err

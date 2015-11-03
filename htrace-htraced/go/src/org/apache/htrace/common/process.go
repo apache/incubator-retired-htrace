@@ -20,7 +20,6 @@
 package common
 
 import (
-	"bufio"
 	"org/apache/htrace/conf"
 	"os"
 	"os/signal"
@@ -28,20 +27,6 @@ import (
 	"runtime/debug"
 	"syscall"
 )
-
-func LoadApplicationConfig() *conf.Config {
-	cnf, dlog := conf.LoadApplicationConfig()
-	lg := NewLogger("conf", cnf)
-	defer lg.Close()
-	if lg.Level <= DEBUG {
-		// Print out the debug information from loading the configuration.
-		scanner := bufio.NewScanner(dlog)
-		for scanner.Scan() {
-			lg.Debugf(scanner.Text() + "\n")
-		}
-	}
-	return cnf
-}
 
 func InstallSignalHandlers(cnf *conf.Config) {
 	fatalSigs := []os.Signal{

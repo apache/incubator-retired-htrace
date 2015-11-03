@@ -66,6 +66,10 @@ type Builder struct {
 
 	// If non-nil, the command-line arguments to use.
 	Argv []string
+
+	// The name of the application.  Configuration keys that start with this
+	// string will be converted to their unprefixed forms.
+	AppPrefix string
 }
 
 func getDefaultHTracedConfDir() string {
@@ -86,7 +90,7 @@ func getHTracedConfDirs(dlog io.Writer) []string {
 
 // Load a configuration from the application's argv, configuration file, and the standard
 // defaults.
-func LoadApplicationConfig() (*Config, io.Reader) {
+func LoadApplicationConfig(appPrefix string) (*Config, io.Reader) {
 	dlog := new(bytes.Buffer)
 	reader := openFile(CONFIG_FILE_NAME, getHTracedConfDirs(dlog), dlog)
 	bld := Builder{}
@@ -96,6 +100,7 @@ func LoadApplicationConfig() (*Config, io.Reader) {
 	}
 	bld.Argv = os.Args[1:]
 	bld.Defaults = DEFAULTS
+	bld.AppPrefix = appPrefix
 	cnf, err := bld.Build()
 	if err != nil {
 		log.Fatal("Error building configuration: " + err.Error())
@@ -106,9 +111,12 @@ func LoadApplicationConfig() (*Config, io.Reader) {
 		keys = append(keys, k)
 	}
 	sort.Sort(keys)
+	prefix := ""
+	io.WriteString(dlog, "Read configuration: ")
 	for i := range keys {
-		io.WriteString(dlog, fmt.Sprintf("%s = %s\n",
-			keys[i], cnf.settings[keys[i]]))
+		io.WriteString(dlog, fmt.Sprintf(`%s%s = "%s"`,
+			prefix, keys[i], cnf.settings[keys[i]]))
+		prefix = ", "
 	}
 	return cnf, dlog
 }
@@ -184,7 +192,21 @@ func (bld *Builder) Build() (*Config, error) {
 			i++
 		}
 	}
+	cnf.settings = bld.removeApplicationPrefixes(cnf.settings)
+	cnf.defaults = bld.removeApplicationPrefixes(cnf.defaults)
 	return &cnf, nil
+}
+
+func (bld *Builder) removeApplicationPrefixes(in map[string]string) map[string]string {
+	out := make(map[string]string)
+	for k, v := range(in) {
+		if strings.HasPrefix(k, bld.AppPrefix) {
+			out[k[len(bld.AppPrefix):]] = v
+		} else {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // Returns true if the configuration has a non-default value for the given key.

@@ -1234,8 +1234,8 @@ func (store *dataStore) ServerStats() *common.ServerStats {
 		serverStats.Dirs[shardIdx].ApproxNumSpans = vals[0]
 		serverStats.Dirs[shardIdx].LevelDbStats =
 			shard.ldb.PropertyValue("leveldb.stats")
-		store.lg.Infof("shard.ldb.PropertyValue(leveldb.stats)=%s\n",
-			shard.ldb.PropertyValue("leveldb.stats"))
+		store.lg.Infof("levedb.stats for %s: %s\n",
+			shard.path, shard.ldb.PropertyValue("leveldb.stats"))
 	}
 	serverStats.HostSpanMetrics = store.msink.AccessTotals()
 	serverStats.LastStartMs = store.startMs

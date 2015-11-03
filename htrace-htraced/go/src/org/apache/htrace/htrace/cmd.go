@@ -55,7 +55,13 @@ the defaults will be used.
 
 func main() {
 	// Load htraced configuration
-	cnf := common.LoadApplicationConfig()
+	cnf, cnfLog := conf.LoadApplicationConfig("htrace.tool.")
+	lg := common.NewLogger("conf", cnf)
+	defer lg.Close()
+	scanner := bufio.NewScanner(cnfLog)
+	for scanner.Scan() {
+		lg.Debugf(scanner.Text() + "\n")
+	}
 
 	// Parse argv
 	app := kingpin.New(os.Args[0], USAGE)

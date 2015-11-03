@@ -295,19 +295,10 @@ type RestServer struct {
 	lg       *common.Logger
 }
 
-func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
+func CreateRestServer(cnf *conf.Config, store *dataStore,
+		listener net.Listener) (*RestServer, error) {
 	var err error
 	rsv := &RestServer{}
-	rsv.listener, err = net.Listen("tcp", cnf.Get(conf.HTRACE_WEB_ADDRESS))
-	if err != nil {
-		return nil, err
-	}
-	var success bool
-	defer func() {
-		if !success {
-			rsv.Close()
-		}
-	}()
 	rsv.lg = common.NewLogger("rest", cnf)
 
 	r := mux.NewRouter().StrictSlash(false)
@@ -340,22 +331,20 @@ func CreateRestServer(cnf *conf.Config, store *dataStore) (*RestServer, error) {
 	webdir := os.Getenv("HTRACED_WEB_DIR")
 	if webdir == "" {
 		webdir, err = filepath.Abs(filepath.Join(filepath.Dir(os.Args[0]), "..", "web"))
-
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	rsv.lg.Infof("Serving static files from %s\n.", webdir)
+	rsv.lg.Infof(`Serving static files from "%s"\n`, webdir)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webdir))).Methods("GET")
 
 	// Log an error message for unknown non-GET requests.
 	r.PathPrefix("/").Handler(&logErrorHandler{lg: rsv.lg})
 
+	rsv.listener = listener
 	go http.Serve(rsv.listener, r)
-
-	rsv.lg.Infof("Started REST server on %s...\n", rsv.listener.Addr().String())
-	success = true
+	rsv.lg.Infof("Started REST server on %s\n", rsv.listener.Addr().String())
 	return rsv, nil
 }
 

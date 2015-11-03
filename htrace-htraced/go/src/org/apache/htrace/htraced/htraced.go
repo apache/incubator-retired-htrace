@@ -20,6 +20,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -63,17 +64,41 @@ func main() {
 			os.Exit(0)
 		}
 	}
-	cnf := common.LoadApplicationConfig()
-	common.InstallSignalHandlers(cnf)
+
+	// Load the htraced configuration.
+	cnf, cnfLog := conf.LoadApplicationConfig("htraced.")
+
+	// Open the HTTP port.
+	// We want to do this first, before initializing the datastore or setting up
+	// logging.  That way, if someone accidentally starts two daemons with the
+	// same config file, the second invocation will exit with a "port in use"
+	// error rather than potentially disrupting the first invocation.
+	rstListener, listenErr := net.Listen("tcp", cnf.Get(conf.HTRACE_WEB_ADDRESS))
+	if listenErr != nil {
+		fmt.Fprintf(os.Stderr, "Error opening HTTP port: %s\n",
+			listenErr.Error())
+		os.Exit(1)
+	}
+
+	// Print out the startup banner and information about the daemon
+	// configuration.
 	lg := common.NewLogger("main", cnf)
 	defer lg.Close()
+	lg.Infof("*** Starting htraced ***\n")
+	scanner := bufio.NewScanner(cnfLog)
+	for scanner.Scan() {
+		lg.Infof(scanner.Text() + "\n")
+	}
+	common.InstallSignalHandlers(cnf)
+
+	// Initialize the datastore.
 	store, err := CreateDataStore(cnf, nil)
 	if err != nil {
 		lg.Errorf("Error creating datastore: %s\n", err.Error())
 		os.Exit(1)
 	}
 	var rsv *RestServer
-	rsv, err = CreateRestServer(cnf, store)
+	rsv, err = CreateRestServer(cnf, store, rstListener)
 	if err != nil {
 		lg.Errorf("Error creating REST server: %s\n", err.Error())
 		os.Exit(1)

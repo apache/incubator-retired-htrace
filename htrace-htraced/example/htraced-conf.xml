@@ -18,11 +18,11 @@
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>log.level</name>
+    <name>htraced.log.level</name>
     <value>TRACE</value>
   </property>
   <property>
-    <name>log.path</name>
+    <name>htraced.log.path</name>
     <value>/tmp/htraced.log</value>
   </property>
   <property>
