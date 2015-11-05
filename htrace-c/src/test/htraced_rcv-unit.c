@@ -66,7 +66,7 @@ static int htraced_rcv_test(struct rtest *rt)
     while (1) {
         int nspans;
 
-        // This uses the bin/htrace program to dump the spans to a json file.
+        // This uses the bin/htracedTool program to dump the spans to a json file.
         mini_htraced_dump_spans(ht, err, err_len, json_path);
         EXPECT_STR_EQ("", err);
         st = span_table_alloc();

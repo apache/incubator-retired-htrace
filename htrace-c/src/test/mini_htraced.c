@@ -488,7 +488,7 @@ void mini_htraced_dump_spans(struct mini_htraced *ht,
         return;
     }
     ht->num_htrace_commands_run++;
-    pid = mini_htraced_launch(ht, HTRACE_ABSPATH, err, err_len, 0,
+    pid = mini_htraced_launch(ht, HTRACED_TOOL_ABSPATH, err, err_len, 0,
                 addr, log_path, "dumpAll", path, NULL);
     free(addr);
     free(log_path);
@@ -501,7 +501,7 @@ void mini_htraced_dump_spans(struct mini_htraced *ht,
     }
     if (ret != EXIT_SUCCESS) {
         snprintf(err, err_len, "%s returned non-zero exit status %d\n",
-                 HTRACE_ABSPATH, ret);
+                 HTRACED_TOOL_ABSPATH, ret);
         return;
     }
 }

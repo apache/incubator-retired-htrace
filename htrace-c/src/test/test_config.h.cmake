@@ -19,8 +19,8 @@
 #ifndef APACHE_HTRACE_TEST_TEST_CONFIG_H
 #define APACHE_HTRACE_TEST_TEST_CONFIG_H
 
-// The absolute path to the htrace binary, for use in unit tests.
-#cmakedefine HTRACE_ABSPATH "@HTRACE_ABSPATH@"
+// The absolute path to the htracedTool binary, for use in unit tests.
+#cmakedefine HTRACED_TOOL_ABSPATH "@HTRACED_TOOL_ABSPATH@"
 
 // The absolute path to the htraced binary, for use in unit tests.
 #cmakedefine HTRACED_ABSPATH "@HTRACED_ABSPATH@"
