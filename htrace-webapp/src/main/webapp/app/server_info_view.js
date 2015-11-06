@@ -61,7 +61,7 @@ htrace.ServerInfoView = Backbone.View.extend({
     }
     remotes = remotes.sort()
     for (var i = 0; i < remotes.length; i++) {
-      var remote = remotes[0];
+      var remote = remotes[i];
       var smtx = spanMetrics[remote];
       out = out + "<tr>" + 
         "<td>" + remote + "</td>" +
