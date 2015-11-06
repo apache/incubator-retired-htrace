@@ -28,6 +28,7 @@ language governing permissions and limitations under the License. -->
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <git.version></git.version>
     <leveldb.prefix></leveldb.prefix>
   </properties>
   <build>
@@ -111,6 +112,7 @@ language governing permissions and limitations under the License. -->
                 <exec executable="./gobuild.sh"
                       dir="${basedir}//go/"
                       failonerror="true">
+                  <env key="GIT_VERSION" value="${git.version}"/>
                   <env key="RELEASE_VERSION" value="${project.version}"/>
                   <env key="LEVELDB_PREFIX" value="${leveldb.prefix}"/>
                 </exec>

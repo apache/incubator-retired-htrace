@@ -49,7 +49,7 @@ if [ $# -gt 0 ]; then
     ACTION="${1}"
     shift
 fi
-RELEASE_VERSION=${RELEASE_VERSION:-unknown}
+RELEASE_VERSION=${RELEASE_VERSION:-unknown_release}
 
 # Set up directories.  The build/ directory is where build dependencies and
 # build binaries should go.
@@ -122,10 +122,15 @@ install)
     popd &> /dev/null
 
     # Discover the git version
-    GIT_VERSION=$(git rev-parse HEAD)
-    [ $? -eq 0 ] || GIT_VERSION="unknown"
+    if [ "x${GIT_VERSION}" == "x" ]; then
+        pushd "${SCRIPT_DIR}" &> /dev/null || die "failed to cd to ${SCRIPT_DIR}"
+        GIT_VERSION=$(git rev-parse HEAD)
+        [ $? -eq 0 ] || GIT_VERSION="unknown_git"
+        popd &> /dev/null
+    fi
 
     # Inject the release and git version into the htraced ldflags.
+    echo "Building ${RELEASE_VERSION} [${GIT_VERSION}]"
     FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
     go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@" \
         || die "go install failed."

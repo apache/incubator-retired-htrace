@@ -182,7 +182,7 @@ func main() {
 
 // Print the version of the htrace binary.
 func printVersion() int {
-	fmt.Printf("Running htrace command version %s.\n", RELEASE_VERSION)
+	fmt.Printf("Running htracedTool %s [%s].\n", RELEASE_VERSION, GIT_VERSION)
 	return EXIT_SUCCESS
 }
 
