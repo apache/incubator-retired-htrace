@@ -145,6 +145,32 @@ htrace.Span = Backbone.Model.extend({
     return obj;
   },
 
+  reifyParentsRecursive: function(depth) {
+    var rootDeferred = jQuery.Deferred();
+    var span = this;
+    span.reifyParents().done(function(err) {
+      if ((err != "") || (depth <= 0)) {
+        rootDeferred.resolve(err);
+        return;
+      }
+      var recursivePromises = [];
+      var reifiedParents = span.get("reifiedParents");
+      for (var j = 0; j < reifiedParents.length; j++) {
+        recursivePromises.push(reifiedParents[j].reifyParentsRecursive(depth - 1));
+      }
+      $.when.apply($, recursivePromises).then(function() {
+        for (var i = 0; i < arguments.length; i++) {
+          if (arguments[i] != "") {
+            rootDeferred.resolve(arguments[i]);
+            return;
+          }
+        }
+        rootDeferred.resolve("");
+      });
+    });
+    return rootDeferred.promise();
+  },
+
   //
   // Although the parent IDs are always present in the 'parents' field of the
   // span, sometimes we need the actual parent span models.  In that case we
@@ -189,6 +215,32 @@ htrace.Span = Backbone.Model.extend({
           " to " + htrace.spanModelsToString (reifiedParents));
       span.set("reifiedParents", reifiedParents);
       rootDeferred.resolve("");
+    });
+    return rootDeferred.promise();
+  },
+
+  reifyChildrenRecursive: function(depth) {
+    var rootDeferred = jQuery.Deferred();
+    var span = this;
+    span.reifyChildren().done(function(err) {
+      if ((err != "") || (depth <= 0)) {
+        rootDeferred.resolve(err);
+        return;
+      }
+      var recursivePromises = [];
+      var reifiedChildren = span.get("reifiedChildren");
+      for (var j = 0; j < reifiedChildren.length; j++) {
+        recursivePromises.push(reifiedChildren[j].reifyChildrenRecursive(depth - 1));
+      }
+      $.when.apply($, recursivePromises).then(function() {
+        for (var i = 0; i < arguments.length; i++) {
+          if (arguments[i] != "") {
+            rootDeferred.resolve(arguments[i]);
+            return;
+          }
+        }
+        rootDeferred.resolve("");
+      });
     });
     return rootDeferred.promise();
   },

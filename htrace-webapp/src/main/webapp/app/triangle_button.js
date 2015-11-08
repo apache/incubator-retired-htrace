@@ -79,7 +79,7 @@ htrace.TriangleButton = function(params) {
         return false;
       case "mouseUp":
         if (this.selected) {
-          this.callback();
+          this.callback(e);
           this.selected = false;
         }
         this.manager.unregister("mouseUp", this);

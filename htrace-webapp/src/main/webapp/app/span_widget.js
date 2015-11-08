@@ -270,16 +270,18 @@ htrace.SpanWidget = function(params) {
       xF: this.xB + (this.xDB / 2) - 2,
       y0: this.y0 + 2,
       yF: this.yF - 2,
-      callback: function() {
-        $.when(widget.span.reifyParents()).done(function (result) {
-          console.log("reifyParents: result was '" + result + "'");
+      callback: function(e) {
+        var depth = (e.raw.ctrlKey) ? 100 : 0;
+        $.when(widget.span.reifyParentsRecursive(depth)).done(function(result) {
+          console.log("reifyParentsRecursive(" + depth + "): result was '" +
+              result + "'");
           if (result != "") {
             alert(result);
           } else {
             widget.manager.searchResultsView.render();
           }
         });
-      },
+      }
     });
   }
   if ((this.span.get("reifiedChildren") == null) && (this.allowDownButton)) {
@@ -291,16 +293,18 @@ htrace.SpanWidget = function(params) {
       xF: this.xD - 2,
       y0: this.y0 + 2,
       yF: this.yF - 2,
-      callback: function() {
-        $.when(widget.span.reifyChildren()).done(function (result) {
-          console.log("reifyChildren: result was '" + result + "'");
+      callback: function(e) {
+        var depth = (e.raw.ctrlKey) ? 100 : 0;
+        $.when(widget.span.reifyChildrenRecursive(depth)).done(function (result) {
+          console.log("reifyChildrenRecursive(" + depth + "): result was '" +
+              result + "'");
           if (result != "") {
             alert(result);
           } else {
             widget.manager.searchResultsView.render();
           }
         });
-      },
+      }
     });
   }
   this.manager.register("mouseDown", this);
