@@ -98,7 +98,7 @@ var DEFAULTS = map[string]string{
 	HTRACE_LOG_LEVEL:                   "INFO",
 	HTRACE_METRICS_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
 	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
-	HTRACE_SPAN_EXPIRY_MS:              fmt.Sprintf("%d", 3*24*60*60*1000),
+	HTRACE_SPAN_EXPIRY_MS:              "0",
 	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  fmt.Sprintf("%d", 90*1000),
 }
 
@@ -108,5 +108,6 @@ func TEST_VALUES() map[string]string {
 		HTRACE_HRPC_ADDRESS: ":0",    // use a random port for the HRPC server
 		HTRACE_LOG_LEVEL:    "TRACE", // show all log messages in tests
 		HTRACE_WEB_ADDRESS:  ":0",    // use a random port for the REST server
+		HTRACE_SPAN_EXPIRY_MS:"0",    // never time out spans (unless testing the reaper)
 	}
 }

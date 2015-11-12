@@ -79,6 +79,10 @@ const DURATION_INDEX_PREFIX = 'd'
 const PARENT_ID_INDEX_PREFIX = 'p'
 const INVALID_INDEX_PREFIX = 0
 
+// The maximum span expiry time, in milliseconds.
+// For all practical purposes this is "never" since it's more than a million years.
+const MAX_SPAN_EXPIRY_MS = 0x7ffffffffffffff
+
 type IncomingSpan struct {
 	// The address that the span was sent from.
 	Addr string
@@ -360,6 +364,11 @@ func NewReaper(cnf *conf.Config) *Reaper {
 		heartbeats:   make(chan interface{}, 1),
 		exited:       make(chan interface{}),
 	}
+	if rpr.spanExpiryMs >= MAX_SPAN_EXPIRY_MS {
+		rpr.spanExpiryMs = MAX_SPAN_EXPIRY_MS
+	} else if rpr.spanExpiryMs <= 0 {
+		rpr.spanExpiryMs = MAX_SPAN_EXPIRY_MS
+	}
 	rpr.hb = NewHeartbeater("ReaperHeartbeater",
 		cnf.GetInt64(conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS), rpr.lg)
 	go rpr.run()
@@ -367,6 +376,13 @@ func NewReaper(cnf *conf.Config) *Reaper {
 		name:       "reaper",
 		targetChan: rpr.heartbeats,
 	})
+	var when string
+	if rpr.spanExpiryMs >= MAX_SPAN_EXPIRY_MS {
+		when = "never"
+	} else {
+		when = "after " + time.Duration(rpr.spanExpiryMs).String()
+	}
+	rpr.lg.Infof("Initializing span reaper: span time out = %s.\n", when)
 	return rpr
 }
 
