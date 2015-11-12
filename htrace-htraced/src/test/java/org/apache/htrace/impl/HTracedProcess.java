@@ -28,6 +28,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.file.Paths;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -143,6 +144,18 @@ class HTracedProcess extends Process {
         "-Ddata.store.clear=true",
         "-Dstartup.notification.address=localhost:" + listener.getLocalPort(),
         "-Ddata.store.directories=" + dataDir.get().getAbsolutePath());
+
+      // Set HTRACED_CONF_DIR to the temporary directory we just created, to
+      // ensure that it doesn't pull in any other configuration file that might
+      // be on this test machine.
+      Map<String, String> env = pb.environment();
+      env.put("HTRACED_CONF_DIR", dataDir.get().getAbsolutePath());
+
+      // Remove any HTRACED_WEB_DIR variable that might be set, to ensure that
+      // we use the default value (which finds the local web files by relative
+      // path).
+      env.remove("HTRACED_WEB_DIR");
+
       pb.redirectErrorStream(true);
       // Inherit STDERR/STDOUT i/o; dumps on console for now.  Can add logs later.
       pb.inheritIO();
