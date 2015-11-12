@@ -134,7 +134,7 @@ func (shd *shard) processIncoming() {
 			err := shd.writeSpan(span)
 			if err != nil {
 				lg.Errorf("Shard processor for %s got fatal error %s.\n", shd.path, err.Error())
-			} else {
+			} else if lg.TraceEnabled() {
 				lg.Tracef("Shard processor for %s wrote span %s.\n", shd.path, span.ToJson())
 			}
 		case <-shd.heartbeats:
@@ -950,9 +950,11 @@ func (pred *predicateData) createSource(store *dataStore, prev *common.Span) (*s
 				// But for some reason someone is asking for another result.
 				// We modify the query to search for the illegal 0 span ID,
 				// which will never be present.
-				lg.Debugf("Attempted to use a continuation token with an EQUALS "+
-					"SPAN_ID query. %s.  Setting search id = 0",
-					pred.Predicate.String())
+				if lg.DebugEnabled() {
+					lg.Debugf("Attempted to use a continuation token with an EQUALS "+
+						"SPAN_ID query. %s.  Setting search id = 0",
+						pred.Predicate.String())
+				}
 				startId = common.INVALID_SPAN_ID
 			} else {
 				// When doing an EQUALS search on a secondary index, the
@@ -1083,8 +1085,10 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		src.numRead[shardIdx]++
 		key := iter.Key()
 		if !bytes.HasPrefix(key, []byte{src.keyPrefix}) {
-			lg.Debugf("Can't populate: Iterator for shard %s does not have prefix %s\n",
-				shdPath, string(src.keyPrefix))
+			if lg.DebugEnabled() {
+				lg.Debugf("Can't populate: Iterator for shard %s does not have prefix %s\n",
+					shdPath, string(src.keyPrefix))
+			}
 			break // Can't read past end of indexed section
 		}
 		var span *common.Span
@@ -1094,8 +1098,10 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			sid = common.SpanId(key[1:17])
 			span, err = src.shards[shardIdx].decodeSpan(sid, iter.Value())
 			if err != nil {
-				lg.Debugf("Internal error decoding span %s in shard %s: %s\n",
-					sid.String(), shdPath, err.Error())
+				if lg.DebugEnabled() {
+					lg.Debugf("Internal error decoding span %s in shard %s: %s\n",
+						sid.String(), shdPath, err.Error())
+				}
 				break
 			}
 		} else {
@@ -1103,8 +1109,10 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			sid = common.SpanId(key[9:25])
 			span = src.shards[shardIdx].FindSpan(sid)
 			if span == nil {
-				lg.Debugf("Internal error rehydrating span %s in shard %s\n",
-					sid.String(), shdPath)
+				if lg.DebugEnabled() {
+					lg.Debugf("Internal error rehydrating span %s in shard %s\n",
+						sid.String(), shdPath)
+				}
 				break
 			}
 		}
@@ -1118,8 +1126,10 @@ func (src *source) populateNextFromShard(shardIdx int) {
 			src.nexts[shardIdx] = span // Found valid entry
 			return
 		} else {
-			lg.Debugf("Span %s from shard %s does not satisfy the predicate.\n",
-				sid.String(), shdPath)
+			if lg.DebugEnabled() {
+				lg.Debugf("Span %s from shard %s does not satisfy the predicate.\n",
+					sid.String(), shdPath)
+			}
 			if src.numRead[shardIdx] <= 1 && mayRequireOneSkip(src.pred.Op) {
 				continue
 			}
@@ -1200,7 +1210,9 @@ func (store *dataStore) HandleQuery(query *common.Query) ([]*common.Span, error)
 		return nil, err
 	}
 	defer src.Close()
-	lg.Debugf("HandleQuery %s: preds = %s, src = %v\n", query, preds, src)
+	if lg.DebugEnabled() {
+		lg.Debugf("HandleQuery %s: preds = %s, src = %v\n", query, preds, src)
+	}
 
 	// Filter the spans through the remaining predicates.
 	ret := make([]*common.Span, 0, 32)

@@ -352,7 +352,8 @@ func TestQueries4(t *testing.T) {
 func BenchmarkDatastoreWrites(b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "BenchmarkDatastoreWrites",
 		Cnf: map[string]string{
-			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "15000",
+			conf.HTRACE_LOG_LEVEL: "INFO",
 		},
 		WrittenSpans: make(chan *common.Span, b.N)}
 	ht, err := htraceBld.Build()
@@ -362,21 +363,27 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	defer ht.Close()
 	rnd := rand.New(rand.NewSource(1))
 	allSpans := make([]*common.Span, b.N)
+	for n := range(allSpans) {
+		allSpans[n] = test.NewRandomSpan(rnd, allSpans[0:n])
+	}
+
+	// Reset the timer to avoid including the time required to create new
+	// random spans in the benchmark total.
+	b.ResetTimer()
+
 	// Write many random spans.
 	for n := 0; n < b.N; n++ {
-		span := test.NewRandomSpan(rnd, allSpans[0:n])
 		ht.Store.WriteSpan(&IncomingSpan{
-			Addr: "127.0.0.1:1234",
-			Span: span,
+			Addr: "127.0.0.1",
+			Span: allSpans[n],
 		})
-		allSpans[n] = span
 	}
 	// Wait for all the spans to be written.
 	for n := 0; n < b.N; n++ {
 		<-ht.Store.WrittenSpans
 	}
 	waitForMetrics(ht.Store.msink, common.SpanMetricsMap{
-		"127.0.0.1:1234": &common.SpanMetrics{
+		"127.0.0.1": &common.SpanMetrics{
 			Written: uint64(b.N), // should be less than?
 		},
 	})
