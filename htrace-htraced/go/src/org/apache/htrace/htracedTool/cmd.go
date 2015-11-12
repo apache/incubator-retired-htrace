@@ -212,13 +212,19 @@ func printServerStats(hcl *htrace.Client) int {
 	fmt.Fprintf(w, "Server Time\t%s\n",
 		common.UnixMsToTime(stats.CurMs).Format(time.RFC3339))
 	fmt.Fprintf(w, "Spans reaped\t%d\n", stats.ReapedSpans)
+	fmt.Fprintf(w, "Spans ingested\t%d\n", stats.IngestedSpans)
+	fmt.Fprintf(w, "Spans dropped by clients\t%d\n", stats.ClientDroppedSpans)
+	dur := time.Millisecond * time.Duration(stats.AverageWriteSpansLatencyMs)
+	fmt.Fprintf(w, "Average WriteSpan Latency\t%s\n", dur.String())
+	dur = time.Millisecond * time.Duration(stats.MaxWriteSpansLatencyMs)
+	fmt.Fprintf(w, "Maximum WriteSpan Latency\t%s\n", dur.String())
 	fmt.Fprintf(w, "Number of leveldb directories\t%d\n", len(stats.Dirs))
 	w.Flush()
 	fmt.Println("")
 	for i := range stats.Dirs {
 		dir := stats.Dirs[i]
 		fmt.Printf("==== %s ===\n", dir.Path)
-		fmt.Printf("Approximate number of spans: %d\n", dir.ApproxNumSpans)
+		fmt.Printf("Approximate number of bytes: %d\n", dir.ApproximateBytes)
 		stats := strings.Replace(dir.LevelDbStats, "\\n", "\n", -1)
 		fmt.Printf("%s\n", stats)
 	}

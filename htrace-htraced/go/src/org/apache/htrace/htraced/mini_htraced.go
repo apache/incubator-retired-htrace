@@ -165,6 +165,13 @@ func (ht *MiniHTraced) ClientConf() *conf.Config {
 		conf.HTRACE_HRPC_ADDRESS, ht.Hsv.Addr().String())
 }
 
+// Return a Config object that clients can use to connect to this MiniHTraceD
+// by HTTP only (no HRPC).
+func (ht *MiniHTraced) RestOnlyClientConf() *conf.Config {
+	return ht.Cnf.Clone(conf.HTRACE_WEB_ADDRESS, ht.Rsv.Addr().String(),
+		conf.HTRACE_HRPC_ADDRESS, "")
+}
+
 func (ht *MiniHTraced) Close() {
 	ht.Lg.Infof("Closing MiniHTraced %s\n", ht.Name)
 	ht.Rsv.Close()

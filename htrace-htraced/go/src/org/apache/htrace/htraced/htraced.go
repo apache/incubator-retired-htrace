@@ -23,10 +23,12 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/jmhodges/levigo"
 	"net"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -84,12 +86,15 @@ func main() {
 	// configuration.
 	lg := common.NewLogger("main", cnf)
 	defer lg.Close()
-	lg.Infof("*** Starting htraced ***\n")
+	lg.Infof("*** Starting htraced %s [%s]***\n", RELEASE_VERSION, GIT_VERSION)
 	scanner := bufio.NewScanner(cnfLog)
 	for scanner.Scan() {
 		lg.Infof(scanner.Text() + "\n")
 	}
 	common.InstallSignalHandlers(cnf)
+	lg.Infof("GOMAXPROCS=%d\n", runtime.GOMAXPROCS(0))
+	lg.Infof("leveldb version=%d.%d\n",
+		levigo.GetLevelDBMajorVersion(), levigo.GetLevelDBMinorVersion())
 
 	// Initialize the datastore.
 	store, err := CreateDataStore(cnf, nil)

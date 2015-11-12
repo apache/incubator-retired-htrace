@@ -20,7 +20,10 @@
 // htraced server statistics.  See rest.go.
 htrace.ServerStats = Backbone.Model.extend({
   defaults: {
-    "ReapedSpans": "(unknown)",
+    "LastStartMs": "0",
+    "CurMs": "0",
+    "IngestedSpans": "(unknown)",
+    "ReapedSpans": "(unknown)"
   },
 
   url: function() {

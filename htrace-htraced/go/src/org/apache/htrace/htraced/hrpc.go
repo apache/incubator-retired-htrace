@@ -33,6 +33,7 @@ import (
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"reflect"
+	"time"
 )
 
 // Handles HRPC calls
@@ -195,9 +196,15 @@ func (cdc *HrpcServerCodec) Close() error {
 }
 
 func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
-	resp *common.WriteSpansResp) (err error) {
+		resp *common.WriteSpansResp) (err error) {
+	startTime := time.Now()
 	hand.lg.Debugf("hrpc writeSpansHandler: received %d span(s).  "+
 		"defaultTrid = %s\n", len(req.Spans), req.DefaultTrid)
+	client, _, err := net.SplitHostPort(req.Addr)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Failed to split host and port " +
+			"for %s: %s\n", req.Addr, err.Error()))
+	}
 	for i := range req.Spans {
 		span := req.Spans[i]
 		spanIdProblem := span.Id.FindProblem()
@@ -211,10 +218,13 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 			hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())
 		}
 		hand.store.WriteSpan(&IncomingSpan{
-			Addr: req.Addr,
+			Addr: client,
 			Span: span,
 		})
 	}
+	endTime := time.Now()
+	hand.store.msink.Update(client, req.ClientDropped, len(req.Spans),
+			endTime.Sub(startTime))
 	return nil
 }
 

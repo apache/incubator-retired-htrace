@@ -34,6 +34,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Set the response headers.
@@ -198,7 +199,15 @@ type writeSpansHandler struct {
 }
 
 func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	startTime := time.Now()
 	setResponseHeaders(w.Header())
+	client, _, serr := net.SplitHostPort(req.RemoteAddr)
+	if serr != nil {
+		writeError(hand.lg, w, http.StatusBadRequest,
+			fmt.Sprintf("Failed to split host and port for %s: %s\n",
+				req.RemoteAddr, serr.Error()))
+		return
+	}
 	var dec *json.Decoder
 	if hand.lg.TraceEnabled() {
 		b, err := ioutil.ReadAll(req.Body)
@@ -234,12 +243,14 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 			hand.lg.Warnf(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
 		} else {
 			hand.store.WriteSpan(&IncomingSpan{
-				Addr: req.RemoteAddr,
+				Addr: client,
 				Span: span,
 			})
 		}
 	}
-	hand.store.msink.UpdateClientDropped(req.RemoteAddr, msg.ClientDropped)
+	endTime := time.Now()
+	hand.store.msink.Update(client, msg.ClientDropped, len(msg.Spans),
+			endTime.Sub(startTime))
 }
 
 type queryHandler struct {
@@ -291,6 +302,7 @@ func (hand *logErrorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 }
 
 type RestServer struct {
+	http.Server
 	listener net.Listener
 	lg       *common.Logger
 }
@@ -337,14 +349,16 @@ func CreateRestServer(cnf *conf.Config, store *dataStore,
 		}
 	}
 
-	rsv.lg.Infof(`Serving static files from "%s"\n`, webdir)
+	rsv.lg.Infof(`Serving static files from "%s"` + "\n", webdir)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webdir))).Methods("GET")
 
 	// Log an error message for unknown non-GET requests.
 	r.PathPrefix("/").Handler(&logErrorHandler{lg: rsv.lg})
 
 	rsv.listener = listener
-	go http.Serve(rsv.listener, r)
+	rsv.Handler = r
+	rsv.ErrorLog = rsv.lg.Wrap("[REST] ", common.INFO)
+	go rsv.Serve(rsv.listener)
 	rsv.lg.Infof("Started REST server on %s\n", rsv.listener.Addr().String())
 	return rsv, nil
 }

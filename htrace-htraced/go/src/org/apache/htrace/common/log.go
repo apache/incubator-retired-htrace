@@ -22,6 +22,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"log"
 	"org/apache/htrace/conf"
 	"os"
 	"path/filepath"
@@ -293,4 +294,35 @@ func (lg *Logger) ErrorEnabled() bool {
 func (lg *Logger) Close() {
 	lg.sink.Unref()
 	lg.sink = nil
+}
+
+// Wraps an htrace logger in a golang standard logger.
+//
+// This is a bit messy because of the difference in interfaces between the
+// golang standard logger and the htrace logger.  The golang standard logger
+// doesn't support log levels directly, so you must choose up front what htrace
+// log level all messages should be treated as.  Golang standard loggers expect
+// to be able to write to an io.Writer, but make no guarantees about whether
+// they will break messages into multiple Write() calls (although this does
+// not seem to be a major problem in practice.)
+//
+// Despite these limitations, it's still useful to have this method to be able
+// to log things that come out of the go HTTP server and other standard library
+// systems.
+type WrappedLogger struct {
+	lg *Logger
+	level Level
+}
+
+func (lg *Logger) Wrap(prefix string, level Level) *log.Logger {
+	wlg := &WrappedLogger {
+		lg: lg,
+		level: level,
+	}
+	return log.New(wlg, prefix, 0)
+}
+
+func (wlg *WrappedLogger) Write(p []byte) (int, error) {
+	wlg.lg.Write(wlg.level, string(p))
+	return len(p), nil
 }

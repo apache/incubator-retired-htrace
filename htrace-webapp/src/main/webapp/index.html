@@ -79,6 +79,22 @@
               <td>Spans Reaped</td>
               <td><%= model.stats.get("ReapedSpans") %></td>
             </tr>
+            <tr>
+              <td>Spans Ingested</td>
+              <td><%= model.stats.get("IngestedSpans") %></td>
+            </tr>
+            <tr>
+              <td>Client Dropped Spans</td>
+              <td><%= model.stats.get("ClientDroppedSpans") %></td>
+            </tr>
+            <tr>
+              <td>Maximum WriteSpans Latency (ms)</td>
+              <td><%= model.stats.get("MaxWriteSpansLatencyMs") %></td>
+            </tr>
+            <tr>
+              <td>Average WriteSpans Latency (ms)</td>
+              <td><%= model.stats.get("AverageWriteSpansLatencyMs") %></td>
+            </tr>
             </tr>
               <td>Datastore Start Time</td>
               <td><%= htrace.dateToString(model.stats.get("LastStartMs")) %></td>
@@ -93,6 +109,9 @@
             <%= view.getServerStatsTableHtml() %>
           </div>
           <button type="button" class="btn btn-info serverConfigurationButton">Server Configuration</button>
+          <button type="button" class="btn btn-success storageDirectoryStatsButton">Storage Directory Stats</button>
+          <br/>
+          <p/>
         </div>
         <div class="col-md-1">
         </div>

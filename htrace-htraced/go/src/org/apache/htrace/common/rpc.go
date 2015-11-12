@@ -124,14 +124,28 @@ type ServerStats struct {
 
 	// The total number of spans which have been reaped.
 	ReapedSpans uint64
+
+	// The total number of spans which have been ingested since the server started, by WriteSpans
+	// requests.  This number counts spans that didn't get written to persistent storage as well as
+	// those that did.
+	IngestedSpans uint64
+
+	// The total number of spans which have been dropped by clients since the server started,
+	// as reported by WriteSpans requests.
+	ClientDroppedSpans uint64
+
+	// The maximum latency of a writeSpans request, in milliseconds.
+	MaxWriteSpansLatencyMs uint32
+
+	// The average latency of a writeSpans request, in milliseconds.
+	AverageWriteSpansLatencyMs uint32
 }
 
 type StorageDirectoryStats struct {
 	Path string
 
-	// The approximate number of spans present in this shard.  This may be an
-	// underestimate.
-	ApproxNumSpans uint64
+	// The approximate number of bytes on disk present in this shard.
+	ApproximateBytes uint64
 
 	// leveldb.stats information
 	LevelDbStats string

@@ -21,9 +21,11 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"sync"
+	"time"
 )
 
 //
@@ -35,6 +37,8 @@ import (
 // were dropped because of a high sampling rates, we need to know which part of the system dropped
 // them so that we can adjust the sampling rate there.
 //
+
+const LATENCY_CIRC_BUF_SIZE = 4096
 
 type ServerSpanMetrics struct {
 	// The total number of spans written to HTraced.
@@ -131,12 +135,8 @@ type MetricsSink struct {
 	// The maximum number of metrics totals we will maintain.
 	maxMtx int
 
-	// The number of spans which each client has self-reported that it has
-	// dropped.
-	clientDroppedMap map[string]uint64
-
-	// Lock protecting clientDropped
-	clientDroppedLock sync.Mutex
+	// Metrics about WriteSpans requests
+	wsm WriteSpanMetrics
 }
 
 func NewMetricsSink(cnf *conf.Config) *MetricsSink {
@@ -147,7 +147,10 @@ func NewMetricsSink(cnf *conf.Config) *MetricsSink {
 		exited:           make(chan interface{}),
 		lg:               common.NewLogger("metrics", cnf),
 		maxMtx:           cnf.GetInt(conf.HTRACE_METRICS_MAX_ADDR_ENTRIES),
-		clientDroppedMap: make(map[string]uint64),
+		wsm: WriteSpanMetrics {
+			clientDroppedMap: make(map[string]uint64),
+			latencyCircBuf: NewCircBufU32(LATENCY_CIRC_BUF_SIZE),
+		},
 	}
 	go mcl.run()
 	return &mcl
@@ -187,21 +190,16 @@ func (msink *MetricsSink) run() {
 
 func (msink *MetricsSink) handleAccessReq(accessReq *AccessReq) {
 	msink.lg.Debug("MetricsSink: accessing global metrics.\n")
-	msink.clientDroppedLock.Lock()
-	defer func() {
-		msink.clientDroppedLock.Unlock()
-		close(accessReq.done)
-	}()
+	defer close(accessReq.done)
 	for addr, smtx := range msink.smtxMap {
 		accessReq.mtxMap[addr] = &common.SpanMetrics{
 			Written:       smtx.Written,
 			ServerDropped: smtx.ServerDropped,
-			ClientDropped: msink.clientDroppedMap[addr],
 		}
 	}
 }
 
-func (msink *MetricsSink) AccessTotals() common.SpanMetricsMap {
+func (msink *MetricsSink) AccessServerTotals() common.SpanMetricsMap {
 	accessReq := &AccessReq{
 		mtxMap: make(common.SpanMetricsMap),
 		done:   make(chan interface{}),
@@ -220,15 +218,123 @@ func (msink *MetricsSink) Shutdown() {
 	<-msink.exited
 }
 
-func (msink *MetricsSink) UpdateClientDropped(client string, clientDropped uint64) {
-	msink.clientDroppedLock.Lock()
-	defer msink.clientDroppedLock.Unlock()
-	msink.clientDroppedMap[client] = clientDropped
-	if len(msink.clientDroppedMap) >= msink.maxMtx {
+type WriteSpanMetrics struct {
+	// Lock protecting WriteSpanMetrics
+	lock sync.Mutex
+
+	// The number of spans which each client has self-reported that it has
+	// dropped.
+	clientDroppedMap map[string]uint64
+
+	// The total number of new span writes we've gotten since startup.
+	ingestedSpans uint64
+
+	// The total number of spans all clients have dropped since startup.
+	clientDroppedSpans uint64
+
+	// The last few writeSpan latencies
+	latencyCircBuf *CircBufU32
+}
+
+type WriteSpanMetricsData struct {
+	clientDroppedMap map[string]uint64
+	ingestedSpans uint64
+	clientDroppedSpans uint64
+	latencyMax uint32
+	latencyAverage uint32
+}
+
+func (msink *MetricsSink) Update(client string, clientDropped uint64, clientWritten int,
+		wsLatency time.Duration) {
+	wsLatencyNs := wsLatency.Nanoseconds() / 1000000
+	var wsLatency32 uint32
+	if wsLatencyNs > math.MaxUint32 {
+		wsLatency32 = math.MaxUint32
+	} else {
+		wsLatency32 = uint32(wsLatencyNs)
+	}
+	msink.wsm.update(msink.maxMtx, client, clientDropped, clientWritten, wsLatency32)
+}
+
+func (wsm *WriteSpanMetrics) update(maxMtx int, client string, clientDropped uint64,
+		clientWritten int, wsLatency uint32) {
+	wsm.lock.Lock()
+	defer wsm.lock.Unlock()
+	wsm.clientDroppedMap[client] = clientDropped
+	if len(wsm.clientDroppedMap) >= maxMtx {
 		// Delete a random entry
-		for k := range msink.clientDroppedMap {
-			delete(msink.clientDroppedMap, k)
+		for k := range wsm.clientDroppedMap {
+			delete(wsm.clientDroppedMap, k)
 			return
 		}
+	}
+	wsm.ingestedSpans += uint64(clientWritten)
+	wsm.clientDroppedSpans += uint64(clientDropped)
+	wsm.latencyCircBuf.Append(wsLatency)
+}
+
+func (wsm *WriteSpanMetrics) GetData() *WriteSpanMetricsData {
+	wsm.lock.Lock()
+	defer wsm.lock.Unlock()
+	clientDroppedMap := make(map[string]uint64)
+	for k, v := range wsm.clientDroppedMap {
+		clientDroppedMap[k] = v
+	}
+	return &WriteSpanMetricsData {
+		clientDroppedMap: clientDroppedMap,
+		ingestedSpans: wsm.ingestedSpans,
+		clientDroppedSpans: wsm.clientDroppedSpans,
+		latencyMax: wsm.latencyCircBuf.Max(),
+		latencyAverage: wsm.latencyCircBuf.Average(),
+	}
+}
+
+// A circular buffer of uint32s which supports appending and taking the
+// average, and some other things.
+type CircBufU32 struct {
+	// The next slot to fill
+	slot int
+
+	// The number of slots which are in use.  This number only ever
+	// increases until the buffer is full.
+	slotsUsed int
+
+	// The buffer
+	buf []uint32
+}
+
+func NewCircBufU32(size int) *CircBufU32 {
+	return &CircBufU32 {
+		slotsUsed: -1,
+		buf: make([]uint32, size),
+	}
+}
+
+func (cbuf *CircBufU32) Max() uint32 {
+	var max uint32
+	for bufIdx := 0; bufIdx < cbuf.slotsUsed; bufIdx++ {
+		if cbuf.buf[bufIdx] > max {
+			max = cbuf.buf[bufIdx]
+		}
+	}
+	return max
+}
+
+func (cbuf *CircBufU32) Average() uint32 {
+	var total uint64
+	for bufIdx := 0; bufIdx < cbuf.slotsUsed; bufIdx++ {
+		total += uint64(cbuf.buf[bufIdx])
+	}
+	return uint32(total / uint64(cbuf.slotsUsed))
+}
+
+func (cbuf *CircBufU32) Append(val uint32) {
+	cbuf.buf[cbuf.slot] = val
+	cbuf.slot++
+	if cbuf.slotsUsed < cbuf.slot {
+		cbuf.slotsUsed = cbuf.slot
+	}
+	if cbuf.slot >= len(cbuf.buf) {
+		cbuf.slot = 0
 	}
 }

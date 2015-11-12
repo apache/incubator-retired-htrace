@@ -47,9 +47,11 @@ type Client struct {
 
 	// HRPC address of the htraced server.
 	hrpcAddr string
+}
 
-	// The HRPC client, or null if it is not enabled.
-	hcr *hClient
+// Disable HRPC
+func (hcl *Client) DisableHrpc() {
+	hcl.hrpcAddr = ""
 }
 
 // Get the htraced server version information.
@@ -243,9 +245,6 @@ func (hcl *Client) DumpAll(lim int, out chan *common.Span) error {
 }
 
 func (hcl *Client) Close() {
-	if hcl.hcr != nil {
-		hcl.hcr.Close()
-	}
 	hcl.restAddr = ""
-	hcl.hcr = nil
+	hcl.hrpcAddr = ""
 }

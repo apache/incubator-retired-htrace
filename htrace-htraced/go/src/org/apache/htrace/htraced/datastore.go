@@ -643,10 +643,6 @@ func writeDataStoreVersion(store *dataStore, ldb *levigo.DB, v uint32) error {
 	return ldb.Put(store.writeOpts, []byte{VERSION_KEY}, w.Bytes())
 }
 
-func (store *dataStore) GetSpanMetrics() common.SpanMetricsMap {
-	return store.msink.AccessTotals()
-}
-
 // Close the DataStore.
 func (store *dataStore) Close() {
 	if store.hb != nil {
@@ -1241,21 +1237,32 @@ func (store *dataStore) ServerStats() *common.ServerStats {
 		shard := store.shards[shardIdx]
 		serverStats.Dirs[shardIdx].Path = shard.path
 		r := levigo.Range{
-			Start: append([]byte{SPAN_ID_INDEX_PREFIX},
-				common.INVALID_SPAN_ID.Val()...),
-			Limit: append([]byte{SPAN_ID_INDEX_PREFIX + 1},
-				common.INVALID_SPAN_ID.Val()...),
+			Start: []byte{0},
+			Limit: []byte{0xff},
 		}
 		vals := shard.ldb.GetApproximateSizes([]levigo.Range{r})
-		serverStats.Dirs[shardIdx].ApproxNumSpans = vals[0]
+		serverStats.Dirs[shardIdx].ApproximateBytes = vals[0]
 		serverStats.Dirs[shardIdx].LevelDbStats =
 			shard.ldb.PropertyValue("leveldb.stats")
-		store.lg.Infof("levedb.stats for %s: %s\n",
+		store.msink.lg.Debugf("levedb.stats for %s: %s\n",
 			shard.path, shard.ldb.PropertyValue("leveldb.stats"))
 	}
-	serverStats.HostSpanMetrics = store.msink.AccessTotals()
 	serverStats.LastStartMs = store.startMs
 	serverStats.CurMs = common.TimeToUnixMs(time.Now().UTC())
 	serverStats.ReapedSpans = atomic.LoadUint64(&store.rpr.ReapedSpans)
+	wsData := store.msink.wsm.GetData()
+	serverStats.HostSpanMetrics = store.msink.AccessServerTotals()
+	for k, v := range wsData.clientDroppedMap {
+		smtx := serverStats.HostSpanMetrics[k]
+		if smtx == nil {
+			smtx = &common.SpanMetrics {}
+			serverStats.HostSpanMetrics[k] = smtx
+		}
+		smtx.ClientDropped = v
+	}
+	serverStats.IngestedSpans = wsData.ingestedSpans
+	serverStats.ClientDroppedSpans = wsData.clientDroppedSpans
+	serverStats.MaxWriteSpansLatencyMs = wsData.latencyMax
+	serverStats.AverageWriteSpansLatencyMs = wsData.latencyAverage
 	return &serverStats
 }

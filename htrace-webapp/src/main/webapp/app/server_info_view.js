@@ -22,6 +22,7 @@ var htrace = htrace || {};
 htrace.ServerInfoView = Backbone.View.extend({
   events: {
     "click .serverConfigurationButton": "showServerConfigurationModal",
+    "click .storageDirectoryStatsButton": "showStorageDirectoryStatsModal",
   },
 
   render: function() {
@@ -110,5 +111,18 @@ htrace.ServerInfoView = Backbone.View.extend({
             {title: "HTraced Server Configuration", body: out}));
       }
     })
+  },
+
+  showStorageDirectoryStatsModal: function() {
+    var dirs = this.model.stats.get("Dirs");
+    var out = "";
+    for (var dirIdx = 0; dirIdx < dirs.length; dirIdx++) {
+      var dir = dirs[dirIdx];
+      out += "<h3>" + dir.Path + "</h3>";
+      out += "Approximate size in bytes: " + dir.ApproximateBytes + "<br/>";
+      out += "<pre>" + dir.LevelDbStats + "</pre></pre><br/><p/>";
+    }
+    htrace.showModal(_.template($("#modal-table-template").html())(
+          {title: "HTraced Storage Directory Statistics", body: out}));
   }
 });
