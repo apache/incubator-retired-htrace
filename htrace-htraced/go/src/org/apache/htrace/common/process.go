@@ -20,6 +20,8 @@
 package common
 
 import (
+	"bytes"
+	"fmt"
 	"org/apache/htrace/conf"
 	"os"
 	"os/signal"
@@ -54,36 +56,46 @@ func InstallSignalHandlers(cnf *conf.Config) {
 	sigQuitChan := make(chan os.Signal, 1)
 	signal.Notify(sigQuitChan, syscall.SIGQUIT)
 	go func() {
-		bufSize := 1 << 20
-		buf := make([]byte, bufSize)
+		stackTraceBuf := make([]byte, 1 << 20)
 		for {
 			<-sigQuitChan
-			neededBytes := runtime.Stack(buf, true)
-			if neededBytes > bufSize {
-				bufSize = neededBytes
-				buf = make([]byte, bufSize)
-				runtime.Stack(buf, true)
-			}
+			GetStackTraces(&stackTraceBuf)
 			lg.Info("=== received SIGQUIT ===\n")
 			lg.Info("=== GOROUTINE STACKS ===\n")
-			lg.Info(string(buf[:neededBytes]))
+			lg.Info(string(stackTraceBuf))
 			lg.Info("\n=== END GOROUTINE STACKS ===\n")
-			gcs := debug.GCStats{}
-			debug.ReadGCStats(&gcs)
 			lg.Info("=== GC STATISTICS ===\n")
-			lg.Infof("LastGC: %s\n", gcs.LastGC.UTC().String())
-			lg.Infof("NumGC: %d\n", gcs.NumGC)
-			lg.Infof("PauseTotal: %v\n", gcs.PauseTotal)
-			if gcs.Pause != nil {
-				pauseStr := ""
-				prefix := ""
-				for p := range gcs.Pause {
-					pauseStr += prefix + gcs.Pause[p].String()
-					prefix = ", "
-				}
-				lg.Infof("Pause History: %s\n", pauseStr)
-			}
+			lg.Info(GetGCStats())
 			lg.Info("=== END GC STATISTICS ===\n")
 		}
 	}()
+}
+
+func GetStackTraces(buf *[]byte) {
+	*buf = (*buf)[0:cap(*buf)]
+	neededBytes := runtime.Stack(*buf, true)
+	for ;neededBytes > len(*buf); {
+		*buf = make([]byte, neededBytes)
+		runtime.Stack(*buf, true)
+	}
+	*buf = (*buf)[0:neededBytes]
+}
+
+func GetGCStats() string {
+	gcs := debug.GCStats{}
+	debug.ReadGCStats(&gcs)
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("LastGC: %s\n", gcs.LastGC.UTC().String()))
+	buf.WriteString(fmt.Sprintf("NumGC: %d\n", gcs.NumGC))
+	buf.WriteString(fmt.Sprintf("PauseTotal: %v\n", gcs.PauseTotal))
+	if gcs.Pause != nil {
+		pauseStr := ""
+		prefix := ""
+		for p := range gcs.Pause {
+			pauseStr += prefix + gcs.Pause[p].String()
+			prefix = ", "
+		}
+		buf.WriteString(fmt.Sprintf("Pause History: %s\n", pauseStr))
+	}
+	return buf.String()
 }

@@ -71,6 +71,28 @@ func (hand *serverVersionHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 	w.Write(buf)
 }
 
+type serverDebugInfoHandler struct {
+	lg *common.Logger
+}
+
+func (hand *serverDebugInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	setResponseHeaders(w.Header())
+	buf := make([]byte, 1 << 20)
+	common.GetStackTraces(&buf)
+	resp := common.ServerDebugInfo{
+		StackTraces: string(buf),
+		GCStats: common.GetGCStats(),
+	}
+	buf, err := json.Marshal(&resp)
+	if err != nil {
+		writeError(hand.lg, w, http.StatusInternalServerError,
+			fmt.Sprintf("error marshalling ServerDebugInfo: %s\n", err.Error()))
+		return
+	}
+	w.Write(buf)
+	hand.lg.Info("Returned ServerDebugInfo\n")
+}
+
 type serverStatsHandler struct {
 	dataStoreHandler
 }
@@ -317,6 +339,7 @@ func CreateRestServer(cnf *conf.Config, store *dataStore,
 
 	r.Handle("/server/info", &serverVersionHandler{lg: rsv.lg}).Methods("GET")
 	r.Handle("/server/version", &serverVersionHandler{lg: rsv.lg}).Methods("GET")
+	r.Handle("/server/debugInfo", &serverDebugInfoHandler{lg: rsv.lg}).Methods("GET")
 
 	serverStatsH := &serverStatsHandler{dataStoreHandler: dataStoreHandler{
 		store: store, lg: rsv.lg}}

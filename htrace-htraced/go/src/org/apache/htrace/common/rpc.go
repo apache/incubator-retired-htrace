@@ -150,3 +150,14 @@ type StorageDirectoryStats struct {
 	// leveldb.stats information
 	LevelDbStats string
 }
+
+type ServerDebugInfoReq struct {
+}
+
+type ServerDebugInfo struct {
+	// Stack traces from all goroutines
+	StackTraces string
+
+	// Garbage collection statistics
+	GCStats string
+}

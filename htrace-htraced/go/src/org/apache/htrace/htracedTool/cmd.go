@@ -73,6 +73,7 @@ func main() {
 	serverVersion := app.Command("serverVersion", "Print the version of the htraced server.")
 	serverStats := app.Command("serverStats", "Print statistics retrieved from the htraced server.")
 	serverStatsJson := serverStats.Flag("json", "Display statistics as raw JSON.").Default("false").Bool()
+	serverDebugInfo := app.Command("serverDebugInfo", "Print the debug info of the htraced server.")
 	serverConf := app.Command("serverConf", "Print the server configuration retrieved from the htraced server.")
 	findSpan := app.Command("findSpan", "Print information about a trace span with a given ID.")
 	findSpanId := findSpan.Arg("id", "Span ID to find. Example: be305e54-4534-2110-a0b2-e06b9effe112").Required().String()
@@ -140,6 +141,8 @@ func main() {
 		} else {
 			os.Exit(printServerStats(hcl))
 		}
+	case serverDebugInfo.FullCommand():
+		os.Exit(printServerDebugInfo(hcl))
 	case serverConf.FullCommand():
 		os.Exit(printServerConfJson(hcl))
 	case findSpan.FullCommand():
@@ -261,6 +264,22 @@ func printServerStatsJson(hcl *htrace.Client) int {
 		return EXIT_FAILURE
 	}
 	fmt.Printf("%s\n", string(buf))
+	return EXIT_SUCCESS
+}
+
+// Print information retrieved from an htraced server via /server/debugInfo
+func printServerDebugInfo(hcl *htrace.Client) int {
+	stats, err := hcl.GetServerDebugInfo()
+	if err != nil {
+		fmt.Println(err.Error())
+		return EXIT_FAILURE
+	}
+	fmt.Println("=== GOROUTINE STACKS ===")
+	fmt.Print(stats.StackTraces)
+	fmt.Println("=== END GOROUTINE STACKS ===")
+	fmt.Println("=== GC STATISTICS ===")
+	fmt.Print(stats.GCStats)
+	fmt.Println("=== END GC STATISTICS ===")
 	return EXIT_SUCCESS
 }
 

@@ -49,6 +49,32 @@ func TestClientGetServerVersion(t *testing.T) {
 	}
 }
 
+func TestClientGetServerDebugInfo(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestClientGetServerDebugInfo",
+		DataDirs: make([]string, 2)}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf())
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+	defer hcl.Close()
+	debugInfo, err := hcl.GetServerDebugInfo()
+	if err != nil {
+		t.Fatalf("failed to call GetServerDebugInfo: %s", err.Error())
+	}
+	if debugInfo.StackTraces == "" {
+		t.Fatalf(`debugInfo.StackTraces == ""`)
+	}
+	if debugInfo.GCStats == "" {
+		t.Fatalf(`debugInfo.GCStats == ""`)
+	}
+}
+
 func createRandomTestSpans(amount int) common.SpanSlice {
 	rnd := rand.New(rand.NewSource(2))
 	allSpans := make(common.SpanSlice, amount)

@@ -69,6 +69,21 @@ func (hcl *Client) GetServerVersion() (*common.ServerVersion, error) {
 	return &info, nil
 }
 
+// Get the htraced server debug information.
+func (hcl *Client) GetServerDebugInfo() (*common.ServerDebugInfo, error) {
+	buf, _, err := hcl.makeGetRequest("server/debugInfo")
+	if err != nil {
+		return nil, err
+	}
+	var debugInfo common.ServerDebugInfo
+	err = json.Unmarshal(buf, &debugInfo)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error: error unmarshalling response "+
+			"body %s: %s", string(buf), err.Error()))
+	}
+	return &debugInfo, nil
+}
+
 // Get the htraced server statistics.
 func (hcl *Client) GetServerStats() (*common.ServerStats, error) {
 	buf, _, err := hcl.makeGetRequest("server/stats")

@@ -23,6 +23,7 @@ htrace.ServerInfoView = Backbone.View.extend({
   events: {
     "click .serverConfigurationButton": "showServerConfigurationModal",
     "click .storageDirectoryStatsButton": "showStorageDirectoryStatsModal",
+    "click .debugInfoButton": "showDebugInfoModal",
   },
 
   render: function() {
@@ -124,5 +125,25 @@ htrace.ServerInfoView = Backbone.View.extend({
     }
     htrace.showModal(_.template($("#modal-table-template").html())(
           {title: "HTraced Storage Directory Statistics", body: out}));
+  },
+
+  showDebugInfoModal: function() {
+    var config = new htrace.ServerDebugInfo();
+    var view = this;
+    config.fetch({
+      "error": function(model, response, options) {
+        window.alert("Failed to fetch htraced server debug info: " +
+                     JSON.stringify(response));
+      },
+      "success": function(model, response, options) {
+        var out = "";
+        out += "<h2>Stack Traces</h2>";
+        out += "<pre>" + model.get("StackTraces") + "</pre>";
+        out += "<h2>GC Stats</h2>";
+        out += "<pre>" + model.get("GCStats") + "</pre>";
+        htrace.showModal(_.template($("#modal-table-template").html())(
+            {title: "HTraced Debug Info", body: out}));
+      }
+    })
   }
 });
