@@ -509,6 +509,7 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 		store.shards = append(store.shards, shd)
 	}
 	store.msink = NewMetricsSink(cnf)
+	store.rpr = NewReaper(cnf)
 	for idx := range store.shards {
 		shd := store.shards[idx]
 		shd.exited = make(chan bool, 1)
@@ -526,7 +527,6 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 			targetChan: shd.heartbeats,
 		})
 	}
-	store.rpr = NewReaper(cnf)
 	store.startMs = common.TimeToUnixMs(time.Now().UTC())
 	return store, nil
 }
