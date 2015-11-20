@@ -53,8 +53,8 @@ type MiniHTracedBuilder struct {
 	// If true, we will keep the data dirs around after MiniHTraced#Close
 	KeepDataDirsOnClose bool
 
-	// If non-null, the WrittenSpans channel to use when creating the DataStore.
-	WrittenSpans chan *common.Span
+	// If non-null, the WrittenSpans semaphore to use when creating the DataStore.
+	WrittenSpans *common.Semaphore
 
 	// The test hooks to use for the HRPC server
 	HrpcTestHooks *hrpcTestHooks

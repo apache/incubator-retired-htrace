@@ -108,8 +108,8 @@ type shard struct {
 	// A channel for incoming heartbeats
 	heartbeats chan interface{}
 
-	// The channel we will send a bool to when we exit.
-	exited chan bool
+	// Tracks whether the shard goroutine has exited.
+	exited sync.WaitGroup
 
 	// Per-address metrics
 	mtxMap ServerSpanMetricsMap
@@ -123,7 +123,7 @@ func (shd *shard) processIncoming() {
 	lg := shd.store.lg
 	defer func() {
 		lg.Infof("Shard processor for %s exiting.\n", shd.path)
-		shd.exited <- true
+		shd.exited.Done()
 	}()
 	for {
 		select {
@@ -289,8 +289,7 @@ func (shd *shard) writeSpan(ispan *IncomingSpan) error {
 	}
 	shd.mtxMap.IncrementWritten(ispan.Addr, shd.maxMtx, shd.store.lg)
 	if shd.store.WrittenSpans != nil {
-		shd.store.lg.Errorf("WATERMELON: Sending span to shd.store.WrittenSpans\n")
-		shd.store.WrittenSpans <- span
+		shd.store.WrittenSpans.Post()
 	}
 	return nil
 }
@@ -325,9 +324,7 @@ func (shd *shard) Close() {
 	lg := shd.store.lg
 	shd.incoming <- nil
 	lg.Infof("Waiting for %s to exit...\n", shd.path)
-	if shd.exited != nil {
-		<-shd.exited
-	}
+	shd.exited.Wait()
 	shd.ldb.Close()
 	lg.Infof("Closed %s...\n", shd.path)
 }
@@ -345,8 +342,8 @@ type Reaper struct {
 	// A channel used to send heartbeats to the reaper
 	heartbeats chan interface{}
 
-	// A channel used to block until the reaper goroutine has exited.
-	exited chan interface{}
+	// Tracks whether the reaper goroutine has exited
+	exited sync.WaitGroup
 
 	// The lock protecting reaper data.
 	lock sync.Mutex
@@ -363,7 +360,6 @@ func NewReaper(cnf *conf.Config) *Reaper {
 		lg:           common.NewLogger("reaper", cnf),
 		spanExpiryMs: cnf.GetInt64(conf.HTRACE_SPAN_EXPIRY_MS),
 		heartbeats:   make(chan interface{}, 1),
-		exited:       make(chan interface{}),
 	}
 	if rpr.spanExpiryMs >= MAX_SPAN_EXPIRY_MS {
 		rpr.spanExpiryMs = MAX_SPAN_EXPIRY_MS
@@ -372,6 +368,7 @@ func NewReaper(cnf *conf.Config) *Reaper {
 	}
 	rpr.hb = NewHeartbeater("ReaperHeartbeater",
 		cnf.GetInt64(conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS), rpr.lg)
+	rpr.exited.Add(1)
 	go rpr.run()
 	rpr.hb.AddHeartbeatTarget(&HeartbeatTarget{
 		name:       "reaper",
@@ -390,7 +387,7 @@ func NewReaper(cnf *conf.Config) *Reaper {
 func (rpr *Reaper) run() {
 	defer func() {
 		rpr.lg.Info("Exiting Reaper goroutine.\n")
-		rpr.exited <- nil
+		rpr.exited.Done()
 	}()
 
 	for {
@@ -442,7 +439,6 @@ func (rpr *Reaper) SetReaperDate(rdate int64) {
 func (rpr *Reaper) Shutdown() {
 	rpr.hb.Shutdown()
 	close(rpr.heartbeats)
-	<-rpr.exited
 }
 
 // The Data Store.
@@ -458,9 +454,9 @@ type dataStore struct {
 	// The write options to use for LevelDB.
 	writeOpts *levigo.WriteOptions
 
-	// If non-null, a channel we will send spans to once we finish writing them.  This is only used
-	// for testing.
-	WrittenSpans chan *common.Span
+	// If non-null, a semaphore we will increment once for each span we receive.
+	// Used for testing.
+	WrittenSpans *common.Semaphore
 
 	// The metrics sink.
 	msink *MetricsSink
@@ -475,7 +471,7 @@ type dataStore struct {
 	startMs int64
 }
 
-func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataStore, error) {
+func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataStore, error) {
 	// Get the configuration.
 	clearStored := cnf.GetBool(conf.HTRACE_DATA_STORE_CLEAR)
 	dirsStr := cnf.Get(conf.HTRACE_DATA_STORE_DIRECTORIES)
@@ -513,10 +509,10 @@ func CreateDataStore(cnf *conf.Config, writtenSpans chan *common.Span) (*dataSto
 	store.rpr = NewReaper(cnf)
 	for idx := range store.shards {
 		shd := store.shards[idx]
-		shd.exited = make(chan bool, 1)
 		shd.heartbeats = make(chan interface{}, 1)
 		shd.mtxMap = make(ServerSpanMetricsMap)
 		shd.maxMtx = store.msink.maxMtx
+		shd.exited.Add(1)
 		go shd.processIncoming()
 	}
 	store.hb = NewHeartbeater("DatastoreHeartbeater",

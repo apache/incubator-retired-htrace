@@ -45,7 +45,7 @@ func TestReapingOldSpans(t *testing.T) {
 			conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  "1",
 			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
 		},
-		WrittenSpans: make(chan *common.Span, NUM_TEST_SPANS),
+		WrittenSpans: common.NewSemaphore(0),
 		DataDirs:     make([]string, 2),
 	}
 	ht, err := htraceBld.Build()
@@ -54,14 +54,12 @@ func TestReapingOldSpans(t *testing.T) {
 	}
 	for i := range testSpans {
 		ht.Store.WriteSpan(&IncomingSpan{
-			Addr: "127.0.0.1:1234",
+			Addr: "127.0.0.1",
 			Span: testSpans[i],
 		})
 	}
 	// Wait the spans to be created
-	for i := 0; i < len(testSpans); i++ {
-		<-ht.Store.WrittenSpans
-	}
+	ht.Store.WrittenSpans.Waits(NUM_TEST_SPANS)
 	// Set a reaper date that will remove all the spans except final one.
 	ht.Store.rpr.SetReaperDate(now)
 

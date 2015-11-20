@@ -46,6 +46,7 @@ func TestClientGetServerVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
+	defer hcl.Close()
 	_, err = hcl.GetServerVersion()
 	if err != nil {
 		t.Fatalf("failed to call GetServerVersion: %s", err.Error())
@@ -91,7 +92,9 @@ func createRandomTestSpans(amount int) common.SpanSlice {
 
 func TestClientOperations(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestClientOperations",
-		DataDirs: make([]string, 2)}
+		DataDirs: make([]string, 2),
+		WrittenSpans: common.NewSemaphore(0),
+	}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())
@@ -102,6 +105,7 @@ func TestClientOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
+	defer hcl.Close()
 
 	// Create some random trace spans.
 	NUM_TEST_SPANS := 30
@@ -115,6 +119,7 @@ func TestClientOperations(t *testing.T) {
 		t.Fatalf("WriteSpans(0:%d) failed: %s\n", NUM_TEST_SPANS/2,
 			err.Error())
 	}
+	ht.Store.WrittenSpans.Waits(int64(NUM_TEST_SPANS/2))
 
 	// Look up the first half of the spans.  They should be found.
 	var span *common.Span
@@ -181,7 +186,12 @@ func TestClientOperations(t *testing.T) {
 
 func TestDumpAll(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestDumpAll",
-		DataDirs: make([]string, 2)}
+		DataDirs: make([]string, 2),
+		WrittenSpans: common.NewSemaphore(0),
+		Cnf: map[string]string{
+			conf.HTRACE_LOG_LEVEL: "INFO",
+		},
+	}
 	ht, err := htraceBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create datastore: %s", err.Error())
@@ -192,6 +202,7 @@ func TestDumpAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
+	defer hcl.Close()
 
 	NUM_TEST_SPANS := 100
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
@@ -202,7 +213,8 @@ func TestDumpAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}
-	out := make(chan *common.Span, 50)
+	ht.Store.WrittenSpans.Waits(int64(NUM_TEST_SPANS))
+	out := make(chan *common.Span, NUM_TEST_SPANS)
 	var dumpErr error
 	go func() {
 		dumpErr = hcl.DumpAll(3, out)
@@ -253,6 +265,7 @@ func TestClientGetServerConf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
+	defer hcl.Close()
 	serverCnf, err2 := hcl.GetServerConf()
 	if err2 != nil {
 		t.Fatalf("failed to call GetServerConf: %s", err2.Error())
@@ -293,7 +306,7 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 		Cnf: map[string]string{
 			conf.HTRACE_NUM_HRPC_HANDLERS: fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
 		},
-		WrittenSpans: make(chan *common.Span, TEST_NUM_WRITESPANS),
+		WrittenSpans: common.NewSemaphore(0),
 		HrpcTestHooks: testHooks,
 	}
 	ht, err := htraceBld.Build()
@@ -319,9 +332,7 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 		}(iter)
 	}
 	wg.Wait()
-	for i := 0; i < TEST_NUM_WRITESPANS; i++ {
-		<-ht.Store.WrittenSpans
-	}
+	ht.Store.WrittenSpans.Waits(int64(TEST_NUM_WRITESPANS))
 }
 
 // Tests that HRPC I/O timeouts work.
