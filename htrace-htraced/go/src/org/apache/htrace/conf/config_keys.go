@@ -86,6 +86,16 @@ const HTRACE_REAPER_HEARTBEAT_PERIOD_MS = "reaper.heartbeat.period.ms"
 // started.
 const HTRACE_STARTUP_NOTIFICATION_ADDRESS = "startup.notification.address"
 
+// The maximum number of HRPC handler goroutines we will create at once.  If
+// this is too small, we won't get enough concurrency; if it's too big, we will
+// buffer too much data in memory while waiting for the datastore to process
+// requests.
+const HTRACE_NUM_HRPC_HANDLERS = "num.hrpc.handlers"
+
+// The I/O timeout HRPC will use, in milliseconds.  If it takes longer than
+// this to read or write a message, we will abort the connection.
+const HTRACE_HRPC_IO_TIMEOUT_MS = "hrpc.io.timeout.ms"
+
 // Default values for HTrace configuration keys.
 var DEFAULTS = map[string]string{
 	HTRACE_WEB_ADDRESS:  fmt.Sprintf("0.0.0.0:%d", HTRACE_WEB_ADDRESS_DEFAULT_PORT),
@@ -100,6 +110,8 @@ var DEFAULTS = map[string]string{
 	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
 	HTRACE_SPAN_EXPIRY_MS:              "0",
 	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  fmt.Sprintf("%d", 90*1000),
+	HTRACE_NUM_HRPC_HANDLERS:           "20",
+	HTRACE_HRPC_IO_TIMEOUT_MS:          "60000",
 }
 
 // Values to be used when creating test configurations

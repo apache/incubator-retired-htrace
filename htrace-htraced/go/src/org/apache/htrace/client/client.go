@@ -33,12 +33,24 @@ import (
 
 // A golang client for htraced.
 // TODO: fancier APIs for streaming spans in the background, optimize TCP stuff
-
-func NewClient(cnf *conf.Config) (*Client, error) {
-	hcl := Client{}
+func NewClient(cnf *conf.Config, testHooks *TestHooks) (*Client, error) {
+	hcl := Client{testHooks: testHooks}
 	hcl.restAddr = cnf.Get(conf.HTRACE_WEB_ADDRESS)
-	hcl.hrpcAddr = cnf.Get(conf.HTRACE_HRPC_ADDRESS)
+	if testHooks != nil && testHooks.HrpcDisabled {
+		hcl.hrpcAddr = ""
+	} else {
+		hcl.hrpcAddr = cnf.Get(conf.HTRACE_HRPC_ADDRESS)
+	}
 	return &hcl, nil
+}
+
+type TestHooks struct {
+	// If true, HRPC is disabled.
+	HrpcDisabled bool
+
+	// A function which gets called after we connect to the server and send the
+	// message frame, but before we write the message body.
+	HandleWriteRequestBody func()
 }
 
 type Client struct {
@@ -47,11 +59,9 @@ type Client struct {
 
 	// HRPC address of the htraced server.
 	hrpcAddr string
-}
 
-// Disable HRPC
-func (hcl *Client) DisableHrpc() {
-	hcl.hrpcAddr = ""
+	// The test hooks to use, or nil if test hooks are not enabled.
+	testHooks *TestHooks
 }
 
 // Get the htraced server version information.
@@ -136,7 +146,7 @@ func (hcl *Client) WriteSpans(req *common.WriteSpansReq) error {
 	if hcl.hrpcAddr == "" {
 		return hcl.writeSpansHttp(req)
 	}
-	hcr, err := newHClient(hcl.hrpcAddr)
+	hcr, err := newHClient(hcl.hrpcAddr, hcl.testHooks)
 	if err != nil {
 		return err
 	}

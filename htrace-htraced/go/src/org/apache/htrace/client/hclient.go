@@ -38,6 +38,7 @@ type hClient struct {
 type HrpcClientCodec struct {
 	rwc    io.ReadWriteCloser
 	length uint32
+	testHooks *TestHooks
 }
 
 func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) error {
@@ -71,6 +72,9 @@ func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) erro
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error writing header bytes: %s",
 			err.Error()))
+	}
+	if cdc.testHooks != nil && cdc.testHooks.HandleWriteRequestBody != nil {
+		cdc.testHooks.HandleWriteRequestBody()
 	}
 	_, err = cdc.rwc.Write(buf)
 	if err != nil {
@@ -136,14 +140,17 @@ func (cdc *HrpcClientCodec) Close() error {
 	return cdc.rwc.Close()
 }
 
-func newHClient(hrpcAddr string) (*hClient, error) {
+func newHClient(hrpcAddr string, testHooks *TestHooks) (*hClient, error) {
 	hcr := hClient{}
 	conn, err := net.Dial("tcp", hrpcAddr)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error contacting the HRPC server "+
 			"at %s: %s", hrpcAddr, err.Error()))
 	}
-	hcr.rpcClient = rpc.NewClientWithCodec(&HrpcClientCodec{rwc: conn})
+	hcr.rpcClient = rpc.NewClientWithCodec(&HrpcClientCodec{
+		rwc: conn,
+		testHooks: testHooks,
+	})
 	return &hcr, nil
 }
 

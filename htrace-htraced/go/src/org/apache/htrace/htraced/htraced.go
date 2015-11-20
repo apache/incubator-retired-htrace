@@ -110,7 +110,7 @@ func main() {
 	}
 	var hsv *HrpcServer
 	if cnf.Get(conf.HTRACE_HRPC_ADDRESS) != "" {
-		hsv, err = CreateHrpcServer(cnf, store)
+		hsv, err = CreateHrpcServer(cnf, store, nil)
 		if err != nil {
 			lg.Errorf("Error creating HRPC server: %s\n", err.Error())
 			os.Exit(1)

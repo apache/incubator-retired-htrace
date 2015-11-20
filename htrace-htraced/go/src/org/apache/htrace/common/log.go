@@ -291,6 +291,10 @@ func (lg *Logger) ErrorEnabled() bool {
 	return lg.Level <= ERROR
 }
 
+func (lg *Logger) LevelEnabled(level Level) bool {
+	return lg.Level <= level
+}
+
 func (lg *Logger) Close() {
 	lg.sink.Unref()
 	lg.sink = nil

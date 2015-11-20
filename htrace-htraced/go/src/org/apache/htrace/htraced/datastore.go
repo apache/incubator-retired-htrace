@@ -289,6 +289,7 @@ func (shd *shard) writeSpan(ispan *IncomingSpan) error {
 	}
 	shd.mtxMap.IncrementWritten(ispan.Addr, shd.maxMtx, shd.store.lg)
 	if shd.store.WrittenSpans != nil {
+		shd.store.lg.Errorf("WATERMELON: Sending span to shd.store.WrittenSpans\n")
 		shd.store.WrittenSpans <- span
 	}
 	return nil

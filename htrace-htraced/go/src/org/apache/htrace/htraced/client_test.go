@@ -22,12 +22,15 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	htrace "org/apache/htrace/client"
 	"org/apache/htrace/common"
+	"org/apache/htrace/conf"
 	"org/apache/htrace/test"
 	"sort"
 	"testing"
 	"time"
+	"sync"
+	"sync/atomic"
+	htrace "org/apache/htrace/client"
 )
 
 func TestClientGetServerVersion(t *testing.T) {
@@ -39,7 +42,7 @@ func TestClientGetServerVersion(t *testing.T) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -58,7 +61,7 @@ func TestClientGetServerDebugInfo(t *testing.T) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -95,7 +98,7 @@ func TestClientOperations(t *testing.T) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -185,7 +188,7 @@ func TestDumpAll(t *testing.T) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -246,7 +249,7 @@ func TestClientGetServerConf(t *testing.T) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -258,4 +261,122 @@ func TestClientGetServerConf(t *testing.T) {
 		t.Fatalf("unexpected value for %s: %s",
 			EXAMPLE_CONF_KEY, EXAMPLE_CONF_VALUE)
 	}
+}
+
+const TEST_NUM_HRPC_HANDLERS = 2
+
+const TEST_NUM_WRITESPANS = 4
+
+// Tests that HRPC limits the number of simultaneous connections being processed.
+func TestHrpcAdmissionsControl(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(TEST_NUM_WRITESPANS)
+	var numConcurrentHrpcCalls int32
+	testHooks := &hrpcTestHooks {
+		HandleAdmission: func() {
+			defer wg.Done()
+			n := atomic.AddInt32(&numConcurrentHrpcCalls, 1)
+			if n > TEST_NUM_HRPC_HANDLERS {
+				t.Fatalf("The number of concurrent HRPC calls went above " +
+					"%d: it's at %d\n", TEST_NUM_HRPC_HANDLERS, n)
+			}
+			time.Sleep(1 * time.Millisecond)
+			n = atomic.AddInt32(&numConcurrentHrpcCalls, -1)
+			if n >= TEST_NUM_HRPC_HANDLERS {
+				t.Fatalf("The number of concurrent HRPC calls went above " +
+					"%d: it was at %d\n", TEST_NUM_HRPC_HANDLERS, n + 1)
+			}
+		},
+	}
+	htraceBld := &MiniHTracedBuilder{Name: "TestHrpcAdmissionsControl",
+		DataDirs: make([]string, 2),
+		Cnf: map[string]string{
+			conf.HTRACE_NUM_HRPC_HANDLERS: fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
+		},
+		WrittenSpans: make(chan *common.Span, TEST_NUM_WRITESPANS),
+		HrpcTestHooks: testHooks,
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+	// Create some random trace spans.
+	allSpans := createRandomTestSpans(TEST_NUM_WRITESPANS)
+	for iter := 0; iter < TEST_NUM_WRITESPANS; iter++ {
+		go func(i int) {
+			err = hcl.WriteSpans(&common.WriteSpansReq{
+				Spans: allSpans[i:i+1],
+			})
+			if err != nil {
+				t.Fatalf("WriteSpans failed: %s\n", err.Error())
+			}
+		}(iter)
+	}
+	wg.Wait()
+	for i := 0; i < TEST_NUM_WRITESPANS; i++ {
+		<-ht.Store.WrittenSpans
+	}
+}
+
+// Tests that HRPC I/O timeouts work.
+func TestHrpcIoTimeout(t *testing.T) {
+	htraceBld := &MiniHTracedBuilder{Name: "TestHrpcIoTimeout",
+		DataDirs: make([]string, 2),
+		Cnf: map[string]string{
+			conf.HTRACE_NUM_HRPC_HANDLERS: fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
+			conf.HTRACE_HRPC_IO_TIMEOUT_MS: "1",
+		},
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	finishClient := make(chan interface{})
+	defer func() {
+		// Close the finishClient channel, if it hasn't already been closed. 
+		defer func() {recover()}()
+		close(finishClient)
+	}()
+	testHooks := &htrace.TestHooks {
+		HandleWriteRequestBody: func() {
+			<-finishClient
+		},
+	}
+	hcl, err = htrace.NewClient(ht.ClientConf(), testHooks)
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+	// Create some random trace spans.
+	allSpans := createRandomTestSpans(TEST_NUM_WRITESPANS)
+	var wg sync.WaitGroup
+	wg.Add(TEST_NUM_WRITESPANS)
+	for iter := 0; iter < TEST_NUM_WRITESPANS; iter++ {
+		go func(i int) {
+			defer wg.Done()
+			// Ignore the error return because there are internal retries in
+			// the client which will make this succeed eventually, usually.
+			// Keep in mind that we only block until we have seen
+			// TEST_NUM_WRITESPANS I/O errors in the HRPC server-- after that,
+			// we let requests through so that the test can exit cleanly.
+			hcl.WriteSpans(&common.WriteSpansReq{
+				Spans: allSpans[i:i+1],
+			})
+		}(iter)
+	}
+	for {
+		if ht.Hsv.GetNumIoErrors() >= TEST_NUM_WRITESPANS {
+			break
+		}
+		time.Sleep(1000 * time.Nanosecond)
+	}
+	close(finishClient)
+	wg.Wait()
 }

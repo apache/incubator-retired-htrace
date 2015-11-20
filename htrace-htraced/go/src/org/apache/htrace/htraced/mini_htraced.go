@@ -55,6 +55,9 @@ type MiniHTracedBuilder struct {
 
 	// If non-null, the WrittenSpans channel to use when creating the DataStore.
 	WrittenSpans chan *common.Span
+
+	// The test hooks to use for the HRPC server
+	HrpcTestHooks *hrpcTestHooks
 }
 
 type MiniHTraced struct {
@@ -141,7 +144,7 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 		return nil, err
 	}
 	rstListener = nil
-	hsv, err = CreateHrpcServer(cnf, store)
+	hsv, err = CreateHrpcServer(cnf, store, bld.HrpcTestHooks)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +178,7 @@ func (ht *MiniHTraced) RestOnlyClientConf() *conf.Config {
 func (ht *MiniHTraced) Close() {
 	ht.Lg.Infof("Closing MiniHTraced %s\n", ht.Name)
 	ht.Rsv.Close()
+	ht.Hsv.Close()
 	ht.Store.Close()
 	if !ht.KeepDataDirsOnClose {
 		for idx := range ht.DataDirs {

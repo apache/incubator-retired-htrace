@@ -123,7 +123,7 @@ func main() {
 	}
 
 	// Create HTrace client
-	hcl, err := htrace.NewClient(cnf)
+	hcl, err := htrace.NewClient(cnf, nil)
 	if err != nil {
 		fmt.Printf("Failed to create HTrace client: %s\n", err.Error())
 		os.Exit(EXIT_FAILURE)

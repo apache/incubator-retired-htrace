@@ -410,7 +410,7 @@ func TestReloadDataStore(t *testing.T) {
 		}
 	}()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -444,7 +444,7 @@ func TestReloadDataStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to re-create datastore: %s", err.Error())
 	}
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
 	if err != nil {
 		t.Fatalf("failed to re-create client: %s", err.Error())
 	}

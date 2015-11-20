@@ -205,12 +205,11 @@ func testIngestedSpansMetricsImpl(t *testing.T, usePacked bool) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf())
+	hcl, err = htrace.NewClient(ht.ClientConf(), &htrace.TestHooks {
+		HrpcDisabled: !usePacked,
+	})
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
-	}
-	if !usePacked {
-		hcl.DisableHrpc()
 	}
 
 	NUM_TEST_SPANS := 12
