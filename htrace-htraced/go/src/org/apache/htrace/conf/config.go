@@ -199,7 +199,7 @@ func (bld *Builder) Build() (*Config, error) {
 
 func (bld *Builder) removeApplicationPrefixes(in map[string]string) map[string]string {
 	out := make(map[string]string)
-	for k, v := range(in) {
+	for k, v := range in {
 		if strings.HasPrefix(k, bld.AppPrefix) {
 			out[k[len(bld.AppPrefix):]] = v
 		} else {

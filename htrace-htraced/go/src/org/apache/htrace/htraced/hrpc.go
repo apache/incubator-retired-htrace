@@ -49,31 +49,31 @@ type HrpcHandler struct {
 // The HRPC server
 type HrpcServer struct {
 	*rpc.Server
-	hand     *HrpcHandler
+	hand *HrpcHandler
 
 	// The listener we are using to accept new connections.
 	listener net.Listener
 
 	// A WaitGroup used to block until the HRPC server has exited.
-	exited   sync.WaitGroup
+	exited sync.WaitGroup
 
 	// A channel containing server codecs to use.  This channel is fully
 	// buffered.  The number of entries it initially contains determines how
 	// many concurrent codecs we will have running at once.
-	cdcs     chan *HrpcServerCodec
+	cdcs chan *HrpcServerCodec
 
 	// Used to shut down
 	shutdown chan interface{}
 
 	// The I/O timeout to use when reading requests or sending responses.  This
 	// timeout does not apply to the time we spend processing the message.
-	ioTimeo    time.Duration
+	ioTimeo time.Duration
 
 	// A count of all I/O errors that we have encountered since the server
 	// started.  This counts errors like improperly formatted message frames,
 	// but not errors like properly formatted but invalid messages.
 	// This count is updated from multiple goroutines via sync/atomic.
-	ioErrorCount  uint64
+	ioErrorCount uint64
 
 	// The test hooks to use, or nil during normal operation.
 	testHooks *hrpcTestHooks
@@ -88,13 +88,13 @@ type hrpcTestHooks struct {
 // A codec which encodes HRPC data via JSON.  This structure holds the context
 // for a particular client connection.
 type HrpcServerCodec struct {
-	lg     *common.Logger
+	lg *common.Logger
 
 	// The current connection.
-	conn   net.Conn
+	conn net.Conn
 
 	// The HrpcServer which this connection is part of.
-	hsv    *HrpcServer
+	hsv *HrpcServer
 
 	// The message length we read from the header.
 	length uint32
@@ -117,7 +117,7 @@ func newIoErrorWarn(cdc *HrpcServerCodec, val string) error {
 
 func newIoError(cdc *HrpcServerCodec, val string, level common.Level) error {
 	if cdc.lg.LevelEnabled(level) {
-		cdc.lg.Write(level, cdc.conn.RemoteAddr().String() + ": " + val + "\n")
+		cdc.lg.Write(level, cdc.conn.RemoteAddr().String()+": "+val+"\n")
 	}
 	if level >= common.INFO {
 		atomic.AddUint64(&cdc.hsv.ioErrorCount, 1)
@@ -134,7 +134,7 @@ func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 	err := binary.Read(cdc.conn, binary.LittleEndian, &hdr)
 	if err != nil {
 		if err == io.EOF && cdc.numHandled > 0 {
-			return newIoError(cdc, fmt.Sprintf("Remote closed connection " +
+			return newIoError(cdc, fmt.Sprintf("Remote closed connection "+
 				"after writing %d message(s)", cdc.numHandled), common.DEBUG)
 		}
 		return newIoError(cdc,
@@ -173,7 +173,7 @@ func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
 	dec := codec.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)), mh)
 	err := dec.Decode(body)
 	if err != nil {
-		return newIoErrorWarn(cdc, fmt.Sprintf("Failed to read %d-byte " +
+		return newIoErrorWarn(cdc, fmt.Sprintf("Failed to read %d-byte "+
 			"request body: %s", cdc.length, err.Error()))
 	}
 	if cdc.lg.TraceEnabled() {
@@ -257,13 +257,13 @@ func (cdc *HrpcServerCodec) Close() error {
 }
 
 func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
-		resp *common.WriteSpansResp) (err error) {
+	resp *common.WriteSpansResp) (err error) {
 	startTime := time.Now()
 	hand.lg.Debugf("hrpc writeSpansHandler: received %d span(s).  "+
 		"defaultTrid = %s\n", len(req.Spans), req.DefaultTrid)
 	client, _, err := net.SplitHostPort(req.Addr)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to split host and port " +
+		return errors.New(fmt.Sprintf("Failed to split host and port "+
 			"for %s: %s\n", req.Addr, err.Error()))
 	}
 	ing := hand.store.NewSpanIngestor(hand.lg, client, req.DefaultTrid)
@@ -275,7 +275,7 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 }
 
 func CreateHrpcServer(cnf *conf.Config, store *dataStore,
-		testHooks *hrpcTestHooks) (*HrpcServer, error) {
+	testHooks *hrpcTestHooks) (*HrpcServer, error) {
 	lg := common.NewLogger("hrpc", cnf)
 	numHandlers := cnf.GetInt(conf.HTRACE_NUM_HRPC_HANDLERS)
 	if numHandlers < 1 {
@@ -293,7 +293,7 @@ func CreateHrpcServer(cnf *conf.Config, store *dataStore,
 			lg:    lg,
 			store: store,
 		},
-		cdcs: make(chan *HrpcServerCodec, numHandlers),
+		cdcs:     make(chan *HrpcServerCodec, numHandlers),
 		shutdown: make(chan interface{}),
 		ioTimeo: time.Millisecond *
 			time.Duration(cnf.GetInt64(conf.HTRACE_HRPC_IO_TIMEOUT_MS)),
@@ -301,8 +301,8 @@ func CreateHrpcServer(cnf *conf.Config, store *dataStore,
 	}
 	for i := 0; i < numHandlers; i++ {
 		hsv.cdcs <- &HrpcServerCodec{
-			lg:   lg,
-			hsv:  hsv,
+			lg:  lg,
+			hsv: hsv,
 		}
 	}
 	var err error
@@ -313,7 +313,7 @@ func CreateHrpcServer(cnf *conf.Config, store *dataStore,
 	hsv.Server.Register(hsv.hand)
 	hsv.exited.Add(1)
 	go hsv.run()
-	lg.Infof("Started HRPC server on %s with %d handler routines. " +
+	lg.Infof("Started HRPC server on %s with %d handler routines. "+
 		"ioTimeo=%s.\n", hsv.listener.Addr().String(), numHandlers,
 		hsv.ioTimeo.String())
 	return hsv, nil
@@ -328,11 +328,11 @@ func (hsv *HrpcServer) run() {
 	}()
 	for {
 		select {
-		case cdc:=<-hsv.cdcs:
+		case cdc := <-hsv.cdcs:
 			conn, err := hsv.listener.Accept()
 			if err != nil {
 				lg.Errorf("HrpcServer on %s got accept error: %s\n", srvAddr, err.Error())
-				hsv.cdcs<-cdc // never blocks; there is always sufficient buffer space
+				hsv.cdcs <- cdc // never blocks; there is always sufficient buffer space
 				continue
 			}
 			if lg.TraceEnabled() {

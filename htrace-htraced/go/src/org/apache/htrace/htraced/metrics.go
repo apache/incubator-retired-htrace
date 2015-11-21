@@ -66,18 +66,18 @@ type MetricsSink struct {
 }
 
 func NewMetricsSink(cnf *conf.Config) *MetricsSink {
-	return &MetricsSink {
+	return &MetricsSink{
 		lg:               common.NewLogger("metrics", cnf),
 		maxMtx:           cnf.GetInt(conf.HTRACE_METRICS_MAX_ADDR_ENTRIES),
-		HostSpanMetrics: make(common.SpanMetricsMap),
+		HostSpanMetrics:  make(common.SpanMetricsMap),
 		wsLatencyCircBuf: NewCircBufU32(LATENCY_CIRC_BUF_SIZE),
 	}
 }
 
 // Update the total number of spans which were ingested, as well as other
-// metrics that get updated during span ingest. 
+// metrics that get updated during span ingest.
 func (msink *MetricsSink) UpdateIngested(addr string, totalIngested int,
-		serverDropped int, wsLatency time.Duration) {
+	serverDropped int, wsLatency time.Duration) {
 	msink.lock.Lock()
 	defer msink.lock.Unlock()
 	msink.IngestedSpans += uint64(totalIngested)
@@ -95,7 +95,7 @@ func (msink *MetricsSink) UpdateIngested(addr string, totalIngested int,
 
 // Update the per-host span metrics.  Must be called with the lock held.
 func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
-		serverDropped int) {
+	serverDropped int) {
 	mtx, found := msink.HostSpanMetrics[addr]
 	if !found {
 		// Ensure that the per-host span metrics map doesn't grow too large.
@@ -108,7 +108,7 @@ func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
 				break
 			}
 		}
-		mtx = &common.SpanMetrics { }
+		mtx = &common.SpanMetrics{}
 		msink.HostSpanMetrics[addr] = mtx
 	}
 	mtx.Written += uint64(numWritten)
@@ -117,7 +117,7 @@ func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
 
 // Update the total number of spans which were persisted to disk.
 func (msink *MetricsSink) UpdatePersisted(addr string, totalWritten int,
-		serverDropped int) {
+	serverDropped int) {
 	msink.lock.Lock()
 	defer msink.lock.Unlock()
 	msink.WrittenSpans += uint64(totalWritten)
@@ -135,9 +135,9 @@ func (msink *MetricsSink) PopulateServerStats(stats *common.ServerStats) {
 	stats.MaxWriteSpansLatencyMs = msink.wsLatencyCircBuf.Max()
 	stats.AverageWriteSpansLatencyMs = msink.wsLatencyCircBuf.Average()
 	stats.HostSpanMetrics = make(common.SpanMetricsMap)
-	for k, v := range(msink.HostSpanMetrics) {
-		stats.HostSpanMetrics[k] = &common.SpanMetrics {
-			Written: v.Written,
+	for k, v := range msink.HostSpanMetrics {
+		stats.HostSpanMetrics[k] = &common.SpanMetrics{
+			Written:       v.Written,
 			ServerDropped: v.ServerDropped,
 		}
 	}
@@ -158,9 +158,9 @@ type CircBufU32 struct {
 }
 
 func NewCircBufU32(size int) *CircBufU32 {
-	return &CircBufU32 {
+	return &CircBufU32{
 		slotsUsed: -1,
-		buf: make([]uint32, size),
+		buf:       make([]uint32, size),
 	}
 }
 

@@ -38,9 +38,9 @@ const MAX_HRPC_BODY_LENGTH = 64 * 1024 * 1024
 
 // A request to write spans to htraced.
 type WriteSpansReq struct {
-	Addr          string `json:",omitempty"` // This gets filled in by the RPC layer.
-	DefaultTrid   string `json:",omitempty"`
-	Spans         []*Span
+	Addr        string `json:",omitempty"` // This gets filled in by the RPC layer.
+	DefaultTrid string `json:",omitempty"`
+	Spans       []*Span
 }
 
 // Info returned by /server/version

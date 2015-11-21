@@ -102,24 +102,24 @@ var DEFAULTS = map[string]string{
 	HTRACE_HRPC_ADDRESS: fmt.Sprintf("0.0.0.0:%d", HTRACE_HRPC_ADDRESS_DEFAULT_PORT),
 	HTRACE_DATA_STORE_DIRECTORIES: PATH_SEP + "tmp" + PATH_SEP + "htrace1" +
 		PATH_LIST_SEP + PATH_SEP + "tmp" + PATH_SEP + "htrace2",
-	HTRACE_DATA_STORE_CLEAR:            "false",
-	HTRACE_DATA_STORE_SPAN_BUFFER_SIZE: "100",
-	HTRACE_LOG_PATH:                    "",
-	HTRACE_LOG_LEVEL:                   "INFO",
+	HTRACE_DATA_STORE_CLEAR:              "false",
+	HTRACE_DATA_STORE_SPAN_BUFFER_SIZE:   "100",
+	HTRACE_LOG_PATH:                      "",
+	HTRACE_LOG_LEVEL:                     "INFO",
 	HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
-	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
-	HTRACE_SPAN_EXPIRY_MS:              "0",
-	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  fmt.Sprintf("%d", 90*1000),
-	HTRACE_NUM_HRPC_HANDLERS:           "20",
-	HTRACE_HRPC_IO_TIMEOUT_MS:          "60000",
+	HTRACE_METRICS_MAX_ADDR_ENTRIES:      "100000",
+	HTRACE_SPAN_EXPIRY_MS:                "0",
+	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:    fmt.Sprintf("%d", 90*1000),
+	HTRACE_NUM_HRPC_HANDLERS:             "20",
+	HTRACE_HRPC_IO_TIMEOUT_MS:            "60000",
 }
 
 // Values to be used when creating test configurations
 func TEST_VALUES() map[string]string {
 	return map[string]string{
-		HTRACE_HRPC_ADDRESS: ":0",    // use a random port for the HRPC server
-		HTRACE_LOG_LEVEL:    "TRACE", // show all log messages in tests
-		HTRACE_WEB_ADDRESS:  ":0",    // use a random port for the REST server
-		HTRACE_SPAN_EXPIRY_MS:"0",    // never time out spans (unless testing the reaper)
+		HTRACE_HRPC_ADDRESS:   ":0",    // use a random port for the HRPC server
+		HTRACE_LOG_LEVEL:      "TRACE", // show all log messages in tests
+		HTRACE_WEB_ADDRESS:    ":0",    // use a random port for the REST server
+		HTRACE_SPAN_EXPIRY_MS: "0",     // never time out spans (unless testing the reaper)
 	}
 }

@@ -77,11 +77,11 @@ type serverDebugInfoHandler struct {
 
 func (hand *serverDebugInfoHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	setResponseHeaders(w.Header())
-	buf := make([]byte, 1 << 20)
+	buf := make([]byte, 1<<20)
 	common.GetStackTraces(&buf)
 	resp := common.ServerDebugInfo{
 		StackTraces: string(buf),
-		GCStats: common.GetGCStats(),
+		GCStats:     common.GetGCStats(),
 	}
 	buf, err := json.Marshal(&resp)
 	if err != nil {
@@ -315,7 +315,7 @@ type RestServer struct {
 }
 
 func CreateRestServer(cnf *conf.Config, store *dataStore,
-		listener net.Listener) (*RestServer, error) {
+	listener net.Listener) (*RestServer, error) {
 	var err error
 	rsv := &RestServer{}
 	rsv.lg = common.NewLogger("rest", cnf)
@@ -357,7 +357,7 @@ func CreateRestServer(cnf *conf.Config, store *dataStore,
 		}
 	}
 
-	rsv.lg.Infof(`Serving static files from "%s"` + "\n", webdir)
+	rsv.lg.Infof(`Serving static files from "%s"`+"\n", webdir)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webdir))).Methods("GET")
 
 	// Log an error message for unknown non-GET requests.

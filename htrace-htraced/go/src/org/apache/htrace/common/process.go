@@ -56,7 +56,7 @@ func InstallSignalHandlers(cnf *conf.Config) {
 	sigQuitChan := make(chan os.Signal, 1)
 	signal.Notify(sigQuitChan, syscall.SIGQUIT)
 	go func() {
-		stackTraceBuf := make([]byte, 1 << 20)
+		stackTraceBuf := make([]byte, 1<<20)
 		for {
 			<-sigQuitChan
 			GetStackTraces(&stackTraceBuf)
@@ -74,7 +74,7 @@ func InstallSignalHandlers(cnf *conf.Config) {
 func GetStackTraces(buf *[]byte) {
 	*buf = (*buf)[0:cap(*buf)]
 	neededBytes := runtime.Stack(*buf, true)
-	for ;neededBytes > len(*buf); {
+	for neededBytes > len(*buf) {
 		*buf = make([]byte, neededBytes)
 		runtime.Stack(*buf, true)
 	}

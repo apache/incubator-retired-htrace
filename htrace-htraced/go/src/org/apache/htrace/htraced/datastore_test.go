@@ -334,7 +334,7 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "BenchmarkDatastoreWrites",
 		Cnf: map[string]string{
 			conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: "30000",
-			conf.HTRACE_LOG_LEVEL: "INFO",
+			conf.HTRACE_LOG_LEVEL:                     "INFO",
 		},
 		WrittenSpans: common.NewSemaphore(0),
 	}
@@ -351,7 +351,7 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	}()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	allSpans := make([]*common.Span, b.N)
-	for n := range(allSpans) {
+	for n := range allSpans {
 		allSpans[n] = test.NewRandomSpan(rnd, allSpans[0:n])
 	}
 
@@ -375,9 +375,9 @@ func TestReloadDataStore(t *testing.T) {
 		Cnf: map[string]string{
 			conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: "30000",
 		},
-		DataDirs: make([]string, 2),
+		DataDirs:            make([]string, 2),
 		KeepDataDirsOnClose: true,
-		WrittenSpans: common.NewSemaphore(0),
+		WrittenSpans:        common.NewSemaphore(0),
 	}
 	ht, err := htraceBld.Build()
 	if err != nil {

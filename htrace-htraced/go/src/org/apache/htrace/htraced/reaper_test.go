@@ -41,8 +41,8 @@ func TestReapingOldSpans(t *testing.T) {
 	}
 	htraceBld := &MiniHTracedBuilder{Name: "TestReapingOldSpans",
 		Cnf: map[string]string{
-			conf.HTRACE_SPAN_EXPIRY_MS:              fmt.Sprintf("%d", 60*60*1000),
-			conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  "1",
+			conf.HTRACE_SPAN_EXPIRY_MS:                fmt.Sprintf("%d", 60*60*1000),
+			conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS:    "1",
 			conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: "1",
 		},
 		WrittenSpans: common.NewSemaphore(0),

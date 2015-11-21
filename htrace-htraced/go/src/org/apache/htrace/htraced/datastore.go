@@ -131,7 +131,7 @@ func (shd *shard) processIncoming() {
 			}
 			totalWritten := 0
 			totalDropped := 0
-			for spanIdx := range(spans) {
+			for spanIdx := range spans {
 				err := shd.writeSpan(spans[spanIdx])
 				if err != nil {
 					lg.Errorf("Shard processor for %s got fatal error %s.\n",
@@ -675,59 +675,59 @@ const WRITESPANS_BATCH_SIZE = 128
 // encoder setup for each span, and also generates less garbage.
 type SpanIngestor struct {
 	// The logger to use.
-	lg              *common.Logger
+	lg *common.Logger
 
 	// The dataStore we are ingesting spans into.
-	store           *dataStore
+	store *dataStore
 
 	// The remote address these spans are coming from.
-	addr            string
+	addr string
 
 	// Default TracerId
-	defaultTrid     string
+	defaultTrid string
 
 	// The msgpack handle to use to serialize the spans.
-	mh              codec.MsgpackHandle
+	mh codec.MsgpackHandle
 
 	// The msgpack encoder to use to serialize the spans.
-	// Caching this avoids generating a lot of garbage and burning CPUs 
+	// Caching this avoids generating a lot of garbage and burning CPUs
 	// creating new encoder objects for each span.
-	enc             *codec.Encoder
+	enc *codec.Encoder
 
-	// The buffer which codec.Encoder is currently serializing to. 
+	// The buffer which codec.Encoder is currently serializing to.
 	// We have to create a new buffer for each span because once we hand it off to the shard, the
 	// shard manages the buffer lifecycle.
-	spanDataBytes   []byte
+	spanDataBytes []byte
 
 	// An array mapping shard index to span batch.
-	batches         []*SpanIngestorBatch
+	batches []*SpanIngestorBatch
 
-	// The total number of spans ingested.  Includes dropped spans. 
-	totalIngested	int
+	// The total number of spans ingested.  Includes dropped spans.
+	totalIngested int
 
 	// The total number of spans the ingestor dropped because of a server-side error.
-	serverDropped   int
+	serverDropped int
 }
 
 // A batch of spans destined for a particular shard.
 type SpanIngestorBatch struct {
-	incoming        []*IncomingSpan
+	incoming []*IncomingSpan
 }
 
 func (store *dataStore) NewSpanIngestor(lg *common.Logger,
-		addr string, defaultTrid string) *SpanIngestor {
-	ing := &SpanIngestor {
-		lg: lg,
-		store: store,
-		addr: addr,
-		defaultTrid: defaultTrid,
+	addr string, defaultTrid string) *SpanIngestor {
+	ing := &SpanIngestor{
+		lg:            lg,
+		store:         store,
+		addr:          addr,
+		defaultTrid:   defaultTrid,
 		spanDataBytes: make([]byte, 0, 1024),
-		batches: make([]*SpanIngestorBatch, len(store.shards)),
+		batches:       make([]*SpanIngestorBatch, len(store.shards)),
 	}
 	ing.mh.WriteExt = true
 	ing.enc = codec.NewEncoderBytes(&ing.spanDataBytes, &ing.mh)
-	for batchIdx := range(ing.batches) {
-		ing.batches[batchIdx] = &SpanIngestorBatch {
+	for batchIdx := range ing.batches {
+		ing.batches[batchIdx] = &SpanIngestorBatch{
 			incoming: make([]*IncomingSpan, 0, WRITESPANS_BATCH_SIZE),
 		}
 	}
@@ -770,41 +770,41 @@ func (ing *SpanIngestor) IngestSpan(span *common.Span) {
 	batch := ing.batches[shardIdx]
 	incomingLen := len(batch.incoming)
 	if ing.lg.TraceEnabled() {
-		ing.lg.Tracef("SpanIngestor#IngestSpan: spanId=%s, shardIdx=%d, " +
+		ing.lg.Tracef("SpanIngestor#IngestSpan: spanId=%s, shardIdx=%d, "+
 			"incomingLen=%d, cap(batch.incoming)=%d\n",
 			span.Id.String(), shardIdx, incomingLen, cap(batch.incoming))
 	}
-	if incomingLen + 1 == cap(batch.incoming) {
+	if incomingLen+1 == cap(batch.incoming) {
 		if ing.lg.TraceEnabled() {
-			ing.lg.Tracef("SpanIngestor#IngestSpan: flushing %d spans for " +
+			ing.lg.Tracef("SpanIngestor#IngestSpan: flushing %d spans for "+
 				"shard %d\n", len(batch.incoming), shardIdx)
 		}
 		ing.store.WriteSpans(shardIdx, batch.incoming)
 		batch.incoming = make([]*IncomingSpan, 1, WRITESPANS_BATCH_SIZE)
 		incomingLen = 0
 	} else {
-		batch.incoming = batch.incoming[0:incomingLen+1]
+		batch.incoming = batch.incoming[0 : incomingLen+1]
 	}
-	batch.incoming[incomingLen] = &IncomingSpan {
-		Addr: ing.addr,
-		Span: span,
+	batch.incoming[incomingLen] = &IncomingSpan{
+		Addr:          ing.addr,
+		Span:          span,
 		SpanDataBytes: spanDataBytes,
 	}
 }
 
 func (ing *SpanIngestor) Close(startTime time.Time) {
-	for shardIdx := range(ing.batches) {
+	for shardIdx := range ing.batches {
 		batch := ing.batches[shardIdx]
 		if len(batch.incoming) > 0 {
 			if ing.lg.TraceEnabled() {
-				ing.lg.Tracef("SpanIngestor#Close: flushing %d span(s) for " +
+				ing.lg.Tracef("SpanIngestor#Close: flushing %d span(s) for "+
 					"shard %d\n", len(batch.incoming), shardIdx)
 			}
 			ing.store.WriteSpans(shardIdx, batch.incoming)
 		}
 		batch.incoming = nil
 	}
-	ing.lg.Debugf("Closed span ingestor for %s.  Ingested %d span(s); dropped " +
+	ing.lg.Debugf("Closed span ingestor for %s.  Ingested %d span(s); dropped "+
 		"%d span(s).\n", ing.addr, ing.totalIngested, ing.serverDropped)
 
 	endTime := time.Now()

@@ -104,7 +104,7 @@ func parseQueryString(str string) ([]common.Predicate, error) {
 	if verbose {
 		fmt.Printf("Running query [ ")
 		prefix := ""
-		for tokenIdx := range(ps.tokens) {
+		for tokenIdx := range ps.tokens {
 			fmt.Printf("%s'%s'", prefix, ps.tokens[tokenIdx])
 			prefix = ", "
 		}

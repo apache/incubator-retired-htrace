@@ -48,7 +48,7 @@ type Fatalfer interface {
 }
 
 func assertNumWrittenEquals(t Fatalfer, msink *MetricsSink,
-		expectedNumWritten int) {
+	expectedNumWritten int) {
 	var sstats common.ServerStats
 	msink.PopulateServerStats(&sstats)
 	if sstats.WrittenSpans != uint64(expectedNumWritten) {
@@ -59,8 +59,8 @@ func assertNumWrittenEquals(t Fatalfer, msink *MetricsSink,
 		t.Fatalf("no entry for sstats.HostSpanMetrics[127.0.0.1] found.")
 	}
 	if sstats.HostSpanMetrics["127.0.0.1"].Written !=
-			uint64(expectedNumWritten) {
-		t.Fatalf("sstats.HostSpanMetrics[127.0.0.1].Written = %d, but " +
+		uint64(expectedNumWritten) {
+		t.Fatalf("sstats.HostSpanMetrics[127.0.0.1].Written = %d, but "+
 			"expected %d\n", sstats.HostSpanMetrics["127.0.0.1"].Written,
 			len(SIMPLE_TEST_SPANS))
 	}
@@ -83,7 +83,7 @@ func TestMetricsSinkPerHostEviction(t *testing.T) {
 	msink.lock.Lock()
 	defer msink.lock.Unlock()
 	if len(msink.HostSpanMetrics) != 2 {
-		for k, v := range(msink.HostSpanMetrics) {
+		for k, v := range msink.HostSpanMetrics {
 			fmt.Printf("WATERMELON: [%s] = [%s]\n", k, v)
 		}
 		t.Fatalf("Expected len(msink.HostSpanMetrics) to be 2, but got %d\n",
@@ -109,7 +109,7 @@ func testIngestedSpansMetricsImpl(t *testing.T, usePacked bool) {
 	}
 	defer ht.Close()
 	var hcl *htrace.Client
-	hcl, err = htrace.NewClient(ht.ClientConf(), &htrace.TestHooks {
+	hcl, err = htrace.NewClient(ht.ClientConf(), &htrace.TestHooks{
 		HrpcDisabled: !usePacked,
 	})
 	if err != nil {

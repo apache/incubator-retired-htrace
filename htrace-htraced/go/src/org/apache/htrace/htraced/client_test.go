@@ -24,15 +24,15 @@ import (
 	"github.com/ugorji/go/codec"
 	"math"
 	"math/rand"
+	htrace "org/apache/htrace/client"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"org/apache/htrace/test"
 	"sort"
-	"testing"
-	"time"
 	"sync"
 	"sync/atomic"
-	htrace "org/apache/htrace/client"
+	"testing"
+	"time"
 )
 
 func TestClientGetServerVersion(t *testing.T) {
@@ -94,7 +94,7 @@ func createRandomTestSpans(amount int) common.SpanSlice {
 
 func TestClientOperations(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestClientOperations",
-		DataDirs: make([]string, 2),
+		DataDirs:     make([]string, 2),
 		WrittenSpans: common.NewSemaphore(0),
 	}
 	ht, err := htraceBld.Build()
@@ -121,7 +121,7 @@ func TestClientOperations(t *testing.T) {
 		t.Fatalf("WriteSpans(0:%d) failed: %s\n", NUM_TEST_SPANS/2,
 			err.Error())
 	}
-	ht.Store.WrittenSpans.Waits(int64(NUM_TEST_SPANS/2))
+	ht.Store.WrittenSpans.Waits(int64(NUM_TEST_SPANS / 2))
 
 	// Look up the first half of the spans.  They should be found.
 	var span *common.Span
@@ -188,7 +188,7 @@ func TestClientOperations(t *testing.T) {
 
 func TestDumpAll(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestDumpAll",
-		DataDirs: make([]string, 2),
+		DataDirs:     make([]string, 2),
 		WrittenSpans: common.NewSemaphore(0),
 		Cnf: map[string]string{
 			conf.HTRACE_LOG_LEVEL: "INFO",
@@ -287,19 +287,19 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(TEST_NUM_WRITESPANS)
 	var numConcurrentHrpcCalls int32
-	testHooks := &hrpcTestHooks {
+	testHooks := &hrpcTestHooks{
 		HandleAdmission: func() {
 			defer wg.Done()
 			n := atomic.AddInt32(&numConcurrentHrpcCalls, 1)
 			if n > TEST_NUM_HRPC_HANDLERS {
-				t.Fatalf("The number of concurrent HRPC calls went above " +
+				t.Fatalf("The number of concurrent HRPC calls went above "+
 					"%d: it's at %d\n", TEST_NUM_HRPC_HANDLERS, n)
 			}
 			time.Sleep(1 * time.Millisecond)
 			n = atomic.AddInt32(&numConcurrentHrpcCalls, -1)
 			if n >= TEST_NUM_HRPC_HANDLERS {
-				t.Fatalf("The number of concurrent HRPC calls went above " +
-					"%d: it was at %d\n", TEST_NUM_HRPC_HANDLERS, n + 1)
+				t.Fatalf("The number of concurrent HRPC calls went above "+
+					"%d: it was at %d\n", TEST_NUM_HRPC_HANDLERS, n+1)
 			}
 		},
 	}
@@ -308,7 +308,7 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 		Cnf: map[string]string{
 			conf.HTRACE_NUM_HRPC_HANDLERS: fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
 		},
-		WrittenSpans: common.NewSemaphore(0),
+		WrittenSpans:  common.NewSemaphore(0),
 		HrpcTestHooks: testHooks,
 	}
 	ht, err := htraceBld.Build()
@@ -326,7 +326,7 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 	for iter := 0; iter < TEST_NUM_WRITESPANS; iter++ {
 		go func(i int) {
 			err = hcl.WriteSpans(&common.WriteSpansReq{
-				Spans: allSpans[i:i+1],
+				Spans: allSpans[i : i+1],
 			})
 			if err != nil {
 				t.Fatalf("WriteSpans failed: %s\n", err.Error())
@@ -342,7 +342,7 @@ func TestHrpcIoTimeout(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestHrpcIoTimeout",
 		DataDirs: make([]string, 2),
 		Cnf: map[string]string{
-			conf.HTRACE_NUM_HRPC_HANDLERS: fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
+			conf.HTRACE_NUM_HRPC_HANDLERS:  fmt.Sprintf("%d", TEST_NUM_HRPC_HANDLERS),
 			conf.HTRACE_HRPC_IO_TIMEOUT_MS: "1",
 		},
 	}
@@ -354,11 +354,11 @@ func TestHrpcIoTimeout(t *testing.T) {
 	var hcl *htrace.Client
 	finishClient := make(chan interface{})
 	defer func() {
-		// Close the finishClient channel, if it hasn't already been closed. 
-		defer func() {recover()}()
+		// Close the finishClient channel, if it hasn't already been closed.
+		defer func() { recover() }()
 		close(finishClient)
 	}()
-	testHooks := &htrace.TestHooks {
+	testHooks := &htrace.TestHooks{
 		HandleWriteRequestBody: func() {
 			<-finishClient
 		},
@@ -380,7 +380,7 @@ func TestHrpcIoTimeout(t *testing.T) {
 			// TEST_NUM_WRITESPANS I/O errors in the HRPC server-- after that,
 			// we let requests through so that the test can exit cleanly.
 			hcl.WriteSpans(&common.WriteSpansReq{
-				Spans: allSpans[i:i+1],
+				Spans: allSpans[i : i+1],
 			})
 		}(iter)
 	}
@@ -399,7 +399,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 		Cnf: map[string]string{
 			conf.HTRACE_LOG_LEVEL: "INFO",
 		},
-		WrittenSpans: common.NewSemaphore(int64(1-N)),
+		WrittenSpans: common.NewSemaphore(int64(1 - N)),
 	}
 	ht, err := htraceBld.Build()
 	if err != nil {
@@ -428,7 +428,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 	for n := 0; n < N; n++ {
 		span := allSpans[n]
 		if (curReqSpans >= maxSpansPerRpc) ||
-			   (curReqLen >= bodyLen) {
+			(curReqLen >= bodyLen) {
 			reqs = append(reqs, &common.WriteSpansReq{})
 			curReqLen = 0
 			curReq++
@@ -464,7 +464,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 	}
 
 	// Write many random spans.
-	for reqIdx := range(reqs) {
+	for reqIdx := range reqs {
 		go func() {
 			err = hcl.WriteSpans(reqs[reqIdx])
 			if err != nil {

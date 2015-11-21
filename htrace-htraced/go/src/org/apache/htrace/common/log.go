@@ -314,13 +314,13 @@ func (lg *Logger) Close() {
 // to log things that come out of the go HTTP server and other standard library
 // systems.
 type WrappedLogger struct {
-	lg *Logger
+	lg    *Logger
 	level Level
 }
 
 func (lg *Logger) Wrap(prefix string, level Level) *log.Logger {
-	wlg := &WrappedLogger {
-		lg: lg,
+	wlg := &WrappedLogger{
+		lg:    lg,
 		level: level,
 	}
 	return log.New(wlg, prefix, 0)

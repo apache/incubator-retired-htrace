@@ -36,8 +36,8 @@ type hClient struct {
 }
 
 type HrpcClientCodec struct {
-	rwc    io.ReadWriteCloser
-	length uint32
+	rwc       io.ReadWriteCloser
+	length    uint32
 	testHooks *TestHooks
 }
 
@@ -148,7 +148,7 @@ func newHClient(hrpcAddr string, testHooks *TestHooks) (*hClient, error) {
 			"at %s: %s", hrpcAddr, err.Error()))
 	}
 	hcr.rpcClient = rpc.NewClientWithCodec(&HrpcClientCodec{
-		rwc: conn,
+		rwc:       conn,
 		testHooks: testHooks,
 	})
 	return &hcr, nil

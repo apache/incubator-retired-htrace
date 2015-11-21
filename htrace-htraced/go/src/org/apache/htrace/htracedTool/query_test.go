@@ -40,49 +40,49 @@ func checkParseQueryString(t *testing.T, str string, epreds []common.Predicate) 
 		t.Fatalf("got unexpected parseQueryString error: %s\n", err.Error())
 	}
 	if !reflect.DeepEqual(preds, epreds) {
-		t.Fatalf("Unexpected result from parseQueryString.  " +
+		t.Fatalf("Unexpected result from parseQueryString.  "+
 			"Expected: %s, got: %s\n", predsToStr(epreds), predsToStr(preds))
 	}
 }
 
 func TestParseQueryString(t *testing.T) {
 	verbose = testing.Verbose()
-	checkParseQueryString(t, "description eq ls", []common.Predicate {
-		common.Predicate {
-			Op: common.EQUALS,
+	checkParseQueryString(t, "description eq ls", []common.Predicate{
+		common.Predicate{
+			Op:    common.EQUALS,
 			Field: common.DESCRIPTION,
-			Val: "ls",
+			Val:   "ls",
 		},
 	})
-	checkParseQueryString(t, "begin gt 123 and end le 456", []common.Predicate {
-		common.Predicate {
-			Op: common.GREATER_THAN,
+	checkParseQueryString(t, "begin gt 123 and end le 456", []common.Predicate{
+		common.Predicate{
+			Op:    common.GREATER_THAN,
 			Field: common.BEGIN_TIME,
-			Val: "123",
+			Val:   "123",
 		},
-		common.Predicate {
-			Op: common.LESS_THAN_OR_EQUALS,
+		common.Predicate{
+			Op:    common.LESS_THAN_OR_EQUALS,
 			Field: common.END_TIME,
-			Val: "456",
+			Val:   "456",
 		},
 	})
-	checkParseQueryString(t, `DESCRIPTION cn "Foo Bar" and ` +
+	checkParseQueryString(t, `DESCRIPTION cn "Foo Bar" and `+
 		`BEGIN ge "999" and SPANID eq "4565d8abc4f70ac1216a3f1834c6860b"`,
-		[]common.Predicate {
-		common.Predicate {
-			Op: common.CONTAINS,
-			Field: common.DESCRIPTION,
-			Val: "Foo Bar",
-		},
-		common.Predicate {
-			Op: common.GREATER_THAN_OR_EQUALS,
-			Field: common.BEGIN_TIME,
-			Val: "999",
-		},
-		common.Predicate {
-			Op: common.EQUALS,
-			Field: common.SPAN_ID,
-			Val: "4565d8abc4f70ac1216a3f1834c6860b",
-		},
-	})
+		[]common.Predicate{
+			common.Predicate{
+				Op:    common.CONTAINS,
+				Field: common.DESCRIPTION,
+				Val:   "Foo Bar",
+			},
+			common.Predicate{
+				Op:    common.GREATER_THAN_OR_EQUALS,
+				Field: common.BEGIN_TIME,
+				Val:   "999",
+			},
+			common.Predicate{
+				Op:    common.EQUALS,
+				Field: common.SPAN_ID,
+				Val:   "4565d8abc4f70ac1216a3f1834c6860b",
+			},
+		})
 }

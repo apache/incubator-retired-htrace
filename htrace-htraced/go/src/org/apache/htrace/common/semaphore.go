@@ -25,16 +25,16 @@ import (
 
 // A simple lock-and-condition-variable based semaphore implementation.
 type Semaphore struct {
-	lock sync.Mutex
-	cond *sync.Cond
+	lock  sync.Mutex
+	cond  *sync.Cond
 	count int64
 }
 
 func NewSemaphore(count int64) *Semaphore {
-	sem := &Semaphore {
-		count:int64(count),
+	sem := &Semaphore{
+		count: int64(count),
 	}
-	sem.cond = &sync.Cond {
+	sem.cond = &sync.Cond{
 		L: &sem.lock,
 	}
 	return sem
@@ -51,7 +51,7 @@ func (sem *Semaphore) Post() {
 
 func (sem *Semaphore) Posts(amt int64) {
 	sem.lock.Lock()
-	sem.count+=amt
+	sem.count += amt
 	if sem.count > 0 {
 		sem.cond.Broadcast()
 	}
@@ -72,7 +72,7 @@ func (sem *Semaphore) Wait() {
 
 func (sem *Semaphore) Waits(amt int64) {
 	var i int64
-	for i=0; i<amt; i++ {
+	for i = 0; i < amt; i++ {
 		sem.Wait()
 	}
 }
