@@ -20,6 +20,7 @@
 package main
 
 import (
+	"fmt"
 	htrace "org/apache/htrace/client"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
@@ -27,43 +28,6 @@ import (
 	"testing"
 	"time"
 )
-
-func TestMetricsSinkStartupShutdown(t *testing.T) {
-	cnfBld := conf.Builder{
-		Values:   conf.TEST_VALUES(),
-		Defaults: conf.DEFAULTS,
-	}
-	cnf, err := cnfBld.Build()
-	if err != nil {
-		t.Fatalf("failed to create conf: %s", err.Error())
-	}
-	msink := NewMetricsSink(cnf)
-	msink.Shutdown()
-}
-
-func TestAddSpanMetrics(t *testing.T) {
-	a := &ServerSpanMetrics{
-		Written:       100,
-		ServerDropped: 200,
-	}
-	b := &ServerSpanMetrics{
-		Written:       500,
-		ServerDropped: 100,
-	}
-	a.Add(b)
-	if a.Written != 600 {
-		t.Fatalf("SpanMetrics#Add failed to update #Written")
-	}
-	if a.ServerDropped != 300 {
-		t.Fatalf("SpanMetrics#Add failed to update #Dropped")
-	}
-	if b.Written != 500 {
-		t.Fatalf("SpanMetrics#Add updated b#Written")
-	}
-	if b.ServerDropped != 100 {
-		t.Fatalf("SpanMetrics#Add updated b#Dropped")
-	}
-}
 
 func compareTotals(a, b common.SpanMetricsMap) bool {
 	for k, v := range a {
@@ -79,112 +43,52 @@ func compareTotals(a, b common.SpanMetricsMap) bool {
 	return true
 }
 
-func waitForMetrics(msink *MetricsSink, expectedTotals common.SpanMetricsMap) {
-	for {
-		time.Sleep(1 * time.Millisecond)
-		totals := msink.AccessServerTotals()
-		if compareTotals(totals, expectedTotals) {
-			return
-		}
+type Fatalfer interface {
+	Fatalf(format string, args ...interface{})
+}
+
+func assertNumWrittenEquals(t Fatalfer, msink *MetricsSink,
+		expectedNumWritten int) {
+	var sstats common.ServerStats
+	msink.PopulateServerStats(&sstats)
+	if sstats.WrittenSpans != uint64(expectedNumWritten) {
+		t.Fatalf("sstats.WrittenSpans = %d, but expected %d\n",
+			sstats.WrittenSpans, len(SIMPLE_TEST_SPANS))
+	}
+	if sstats.HostSpanMetrics["127.0.0.1"] == nil {
+		t.Fatalf("no entry for sstats.HostSpanMetrics[127.0.0.1] found.")
+	}
+	if sstats.HostSpanMetrics["127.0.0.1"].Written !=
+			uint64(expectedNumWritten) {
+		t.Fatalf("sstats.HostSpanMetrics[127.0.0.1].Written = %d, but " +
+			"expected %d\n", sstats.HostSpanMetrics["127.0.0.1"].Written,
+			len(SIMPLE_TEST_SPANS))
 	}
 }
 
-func TestMetricsSinkMessages(t *testing.T) {
-	cnfBld := conf.Builder{
-		Values:   conf.TEST_VALUES(),
-		Defaults: conf.DEFAULTS,
-	}
-	cnf, err := cnfBld.Build()
-	if err != nil {
-		t.Fatalf("failed to create conf: %s", err.Error())
-	}
-	msink := NewMetricsSink(cnf)
-	totals := msink.AccessServerTotals()
-	if len(totals) != 0 {
-		t.Fatalf("Expected no data in the MetricsSink to start with.")
-	}
-	msink.UpdateMetrics(ServerSpanMetricsMap{
-		"192.168.0.100": &ServerSpanMetrics{
-			Written:       20,
-			ServerDropped: 10,
-		},
-	})
-	waitForMetrics(msink, common.SpanMetricsMap{
-		"192.168.0.100": &common.SpanMetrics{
-			Written:       20,
-			ServerDropped: 10,
-		},
-	})
-	msink.UpdateMetrics(ServerSpanMetricsMap{
-		"192.168.0.100": &ServerSpanMetrics{
-			Written:       200,
-			ServerDropped: 100,
-		},
-	})
-	msink.UpdateMetrics(ServerSpanMetricsMap{
-		"192.168.0.100": &ServerSpanMetrics{
-			Written:       1000,
-			ServerDropped: 1000,
-		},
-	})
-	waitForMetrics(msink, common.SpanMetricsMap{
-		"192.168.0.100": &common.SpanMetrics{
-			Written:       1220,
-			ServerDropped: 1110,
-		},
-	})
-	msink.UpdateMetrics(ServerSpanMetricsMap{
-		"192.168.0.200": &ServerSpanMetrics{
-			Written:       200,
-			ServerDropped: 100,
-		},
-	})
-	waitForMetrics(msink, common.SpanMetricsMap{
-		"192.168.0.100": &common.SpanMetrics{
-			Written:       1220,
-			ServerDropped: 1110,
-		},
-		"192.168.0.200": &common.SpanMetrics{
-			Written:       200,
-			ServerDropped: 100,
-		},
-	})
-	msink.Shutdown()
-}
-
-func TestMetricsSinkMessagesEviction(t *testing.T) {
+func TestMetricsSinkPerHostEviction(t *testing.T) {
 	cnfBld := conf.Builder{
 		Values:   conf.TEST_VALUES(),
 		Defaults: conf.DEFAULTS,
 	}
 	cnfBld.Values[conf.HTRACE_METRICS_MAX_ADDR_ENTRIES] = "2"
-	cnfBld.Values[conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS] = "1"
 	cnf, err := cnfBld.Build()
 	if err != nil {
 		t.Fatalf("failed to create conf: %s", err.Error())
 	}
 	msink := NewMetricsSink(cnf)
-	msink.UpdateMetrics(ServerSpanMetricsMap{
-		"192.168.0.100": &ServerSpanMetrics{
-			Written:       20,
-			ServerDropped: 10,
-		},
-		"192.168.0.101": &ServerSpanMetrics{
-			Written:       20,
-			ServerDropped: 10,
-		},
-		"192.168.0.102": &ServerSpanMetrics{
-			Written:       20,
-			ServerDropped: 10,
-		},
-	})
-	for {
-		totals := msink.AccessServerTotals()
-		if len(totals) == 2 {
-			break
+	msink.UpdatePersisted("192.168.0.100", 20, 10)
+	msink.UpdatePersisted("192.168.0.101", 20, 10)
+	msink.UpdatePersisted("192.168.0.102", 20, 10)
+	msink.lock.Lock()
+	defer msink.lock.Unlock()
+	if len(msink.HostSpanMetrics) != 2 {
+		for k, v := range(msink.HostSpanMetrics) {
+			fmt.Printf("WATERMELON: [%s] = [%s]\n", k, v)
 		}
+		t.Fatalf("Expected len(msink.HostSpanMetrics) to be 2, but got %d\n",
+			len(msink.HostSpanMetrics))
 	}
-	msink.Shutdown()
 }
 
 func TestIngestedSpansMetricsRest(t *testing.T) {

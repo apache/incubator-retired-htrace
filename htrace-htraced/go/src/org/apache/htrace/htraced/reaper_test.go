@@ -43,7 +43,7 @@ func TestReapingOldSpans(t *testing.T) {
 		Cnf: map[string]string{
 			conf.HTRACE_SPAN_EXPIRY_MS:              fmt.Sprintf("%d", 60*60*1000),
 			conf.HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  "1",
-			conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS: "1",
+			conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: "1",
 		},
 		WrittenSpans: common.NewSemaphore(0),
 		DataDirs:     make([]string, 2),
@@ -52,12 +52,11 @@ func TestReapingOldSpans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create mini htraced cluster: %s\n", err.Error())
 	}
-	for i := range testSpans {
-		ht.Store.WriteSpan(&IncomingSpan{
-			Addr: "127.0.0.1",
-			Span: testSpans[i],
-		})
+	ing := ht.Store.NewSpanIngestor(ht.Store.lg, "127.0.0.1", "")
+	for spanIdx := range testSpans {
+		ing.IngestSpan(testSpans[spanIdx])
 	}
+	ing.Close(0, time.Now())
 	// Wait the spans to be created
 	ht.Store.WrittenSpans.Waits(NUM_TEST_SPANS)
 	// Set a reaper date that will remove all the spans except final one.

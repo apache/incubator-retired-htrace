@@ -84,8 +84,16 @@
               <td><%= model.stats.get("IngestedSpans") %></td>
             </tr>
             <tr>
-              <td>Client Dropped Spans</td>
-              <td><%= model.stats.get("ClientDroppedSpans") %></td>
+              <td>Spans Written</td>
+              <td><%= model.stats.get("WrittenSpans") %></td>
+            </tr>
+            <tr>
+              <td>Server Dropped Spans</td>
+              <td><%= model.stats.get("ServerDroppedSpans") %></td>
+            </tr>
+            <tr>
+              <td>Estimated Client Dropped Spans</td>
+              <td><%= model.stats.get("ClientDroppedEstimate") %></td>
             </tr>
             <tr>
               <td>Maximum WriteSpans Latency (ms)</td>

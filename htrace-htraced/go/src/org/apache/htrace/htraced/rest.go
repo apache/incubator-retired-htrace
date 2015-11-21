@@ -252,27 +252,12 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	}
 	hand.lg.Debugf("writeSpansHandler: received %d span(s).  defaultTrid = %s\n",
 		len(msg.Spans), msg.DefaultTrid)
+
+	ing := hand.store.NewSpanIngestor(hand.lg, client, msg.DefaultTrid)
 	for spanIdx := range msg.Spans {
-		if hand.lg.DebugEnabled() {
-			hand.lg.Debugf("writing span %s\n", msg.Spans[spanIdx].ToJson())
-		}
-		span := msg.Spans[spanIdx]
-		if span.TracerId == "" {
-			span.TracerId = msg.DefaultTrid
-		}
-		spanIdProblem := span.Id.FindProblem()
-		if spanIdProblem != "" {
-			hand.lg.Warnf(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
-		} else {
-			hand.store.WriteSpan(&IncomingSpan{
-				Addr: client,
-				Span: span,
-			})
-		}
+		ing.IngestSpan(msg.Spans[spanIdx])
 	}
-	endTime := time.Now()
-	hand.store.msink.Update(client, msg.ClientDropped, len(msg.Spans),
-			endTime.Sub(startTime))
+	ing.Close(int(msg.ClientDropped), startTime)
 }
 
 type queryHandler struct {

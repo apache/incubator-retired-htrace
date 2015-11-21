@@ -50,7 +50,7 @@ htrace.ServerInfoView = Backbone.View.extend({
             '<th>Remote</th>' +
             '<th>Written</th>' +
             '<th>ServerDropped</th>' +
-            '<th>ClientDropped</th>' +
+            '<th>ClientDroppedEstimate</th>' +
           '</tr>' +
         '</thead>';
     var remotes = [];
@@ -69,7 +69,7 @@ htrace.ServerInfoView = Backbone.View.extend({
         "<td>" + remote + "</td>" +
         "<td>" + smtx.Written + "</td>" +
         "<td>" + smtx.ServerDropped + "</td>" +
-        "<td>" + smtx.ClientDropped + "</td>" +
+        "<td>" + smtx.ClientDroppedEstimate + "</td>" +
         "</tr>";
     }
     out = out + '</table>';

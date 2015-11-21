@@ -68,9 +68,9 @@ const HTRACE_LOG_PATH = "log.path"
 // The log level to use for the logs in htrace.
 const HTRACE_LOG_LEVEL = "log.level"
 
-// The period between metrics heartbeats.  This is the approximate interval at which we will
-// update global metrics.
-const HTRACE_METRICS_HEARTBEAT_PERIOD_MS = "metrics.heartbeat.period.ms"
+// The period between datastore heartbeats.  This is the approximate interval at which we will
+// prune expired spans.
+const HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS = "datastore.heartbeat.period.ms"
 
 // The maximum number of addresses for which we will maintain metrics.
 const HTRACE_METRICS_MAX_ADDR_ENTRIES = "metrics.max.addr.entries"
@@ -106,7 +106,7 @@ var DEFAULTS = map[string]string{
 	HTRACE_DATA_STORE_SPAN_BUFFER_SIZE: "100",
 	HTRACE_LOG_PATH:                    "",
 	HTRACE_LOG_LEVEL:                   "INFO",
-	HTRACE_METRICS_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
+	HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS: fmt.Sprintf("%d", 45*1000),
 	HTRACE_METRICS_MAX_ADDR_ENTRIES:    "100000",
 	HTRACE_SPAN_EXPIRY_MS:              "0",
 	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:  fmt.Sprintf("%d", 90*1000),

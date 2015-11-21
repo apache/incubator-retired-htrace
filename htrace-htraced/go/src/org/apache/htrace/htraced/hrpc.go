@@ -266,26 +266,11 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 		return errors.New(fmt.Sprintf("Failed to split host and port " +
 			"for %s: %s\n", req.Addr, err.Error()))
 	}
-	for i := range req.Spans {
-		span := req.Spans[i]
-		spanIdProblem := span.Id.FindProblem()
-		if spanIdProblem != "" {
-			return errors.New(fmt.Sprintf("Invalid span ID: %s", spanIdProblem))
-		}
-		if span.TracerId == "" {
-			span.TracerId = req.DefaultTrid
-		}
-		if hand.lg.TraceEnabled() {
-			hand.lg.Tracef("writing span %d: %s\n", i, span.ToJson())
-		}
-		hand.store.WriteSpan(&IncomingSpan{
-			Addr: client,
-			Span: span,
-		})
+	ing := hand.store.NewSpanIngestor(hand.lg, client, req.DefaultTrid)
+	for spanIdx := range req.Spans {
+		ing.IngestSpan(req.Spans[spanIdx])
 	}
-	endTime := time.Now()
-	hand.store.msink.Update(client, req.ClientDropped, len(req.Spans),
-			endTime.Sub(startTime))
+	ing.Close(int(req.ClientDropped), startTime)
 	return nil
 }
 

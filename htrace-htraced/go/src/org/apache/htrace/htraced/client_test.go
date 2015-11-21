@@ -21,6 +21,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/ugorji/go/codec"
+	"math"
 	"math/rand"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
@@ -390,4 +392,100 @@ func TestHrpcIoTimeout(t *testing.T) {
 	}
 	close(finishClient)
 	wg.Wait()
+}
+
+func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
+	htraceBld := &MiniHTracedBuilder{Name: "doWriteSpans",
+		Cnf: map[string]string{
+			conf.HTRACE_LOG_LEVEL: "INFO",
+		},
+		WrittenSpans: common.NewSemaphore(int64(1-N)),
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	rnd := rand.New(rand.NewSource(1))
+	allSpans := make([]*common.Span, N)
+	for n := 0; n < N; n++ {
+		allSpans[n] = test.NewRandomSpan(rnd, allSpans[0:n])
+	}
+	// Determine how many calls to WriteSpans we should make.  Each writeSpans
+	// message should be small enough so that it doesn't exceed the max RPC
+	// body length limit.  TODO: a production-quality golang client would do
+	// this internally rather than needing us to do it here in the unit test.
+	bodyLen := (4 * common.MAX_HRPC_BODY_LENGTH) / 5
+	reqs := make([]*common.WriteSpansReq, 0, 4)
+	curReq := -1
+	curReqLen := bodyLen
+	var curReqSpans uint32
+	mh := new(codec.MsgpackHandle)
+	mh.WriteExt = true
+	var mbuf [8192]byte
+	buf := mbuf[:0]
+	enc := codec.NewEncoderBytes(&buf, mh)
+	for n := 0; n < N; n++ {
+		span := allSpans[n]
+		if (curReqSpans >= maxSpansPerRpc) ||
+			   (curReqLen >= bodyLen) {
+			reqs = append(reqs, &common.WriteSpansReq{})
+			curReqLen = 0
+			curReq++
+			curReqSpans = 0
+		}
+		buf = mbuf[:0]
+		enc.ResetBytes(&buf)
+		err := enc.Encode(span)
+		if err != nil {
+			panic(fmt.Sprintf("Error encoding span %s: %s\n",
+				span.String(), err.Error()))
+		}
+		bufLen := len(buf)
+		if bufLen > (bodyLen / 5) {
+			panic(fmt.Sprintf("Span too long at %d bytes\n", bufLen))
+		}
+		curReqLen += bufLen
+		reqs[curReq].Spans = append(reqs[curReq].Spans, span)
+		curReqSpans++
+	}
+	ht.Store.lg.Infof("num spans: %d.  num WriteSpansReq calls: %d\n", N, len(reqs))
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create client: %s", err.Error()))
+	}
+	defer hcl.Close()
+
+	// Reset the timer to avoid including the time required to create new
+	// random spans in the benchmark total.
+	if b != nil {
+		b.ResetTimer()
+	}
+
+	// Write many random spans.
+	for reqIdx := range(reqs) {
+		go func() {
+			err = hcl.WriteSpans(reqs[reqIdx])
+			if err != nil {
+				panic(fmt.Sprintf("failed to send WriteSpans request %d: %s",
+					reqIdx, err.Error()))
+			}
+		}()
+	}
+	// Wait for all the spans to be written.
+	ht.Store.WrittenSpans.Wait()
+}
+
+// This is a test of how quickly we can create new spans via WriteSpans RPCs.
+// Like BenchmarkDatastoreWrites, it creates b.N spans in the datastore.
+// Unlike that benchmark, it sends the spans via RPC.
+// Suggested flags for running this:
+// -tags unsafe -cpu 16 -benchtime=1m
+func BenchmarkWriteSpans(b *testing.B) {
+	doWriteSpans("BenchmarkWriteSpans", b.N, math.MaxUint32, b)
+}
+
+func TestWriteSpansRpcs(t *testing.T) {
+	doWriteSpans("TestWriteSpansRpcs", 3000, 1000, nil)
 }

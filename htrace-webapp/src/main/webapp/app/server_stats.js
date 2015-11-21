@@ -22,8 +22,13 @@ htrace.ServerStats = Backbone.Model.extend({
   defaults: {
     "LastStartMs": "0",
     "CurMs": "0",
+    "ReapedSpans": "(unknown)",
     "IngestedSpans": "(unknown)",
-    "ReapedSpans": "(unknown)"
+    "WrittenSpans": "(unknown)",
+    "ServerDroppedSpans": "(unknown)",
+    "ClientDroppedSpans": "(unknown)",
+    "MaxWriteSpansLatencyMs": "(unknown)",
+    "AverageWriteSpansLatencyMs": "(unknown)"
   },
 
   url: function() {

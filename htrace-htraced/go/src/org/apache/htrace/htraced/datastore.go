@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmhodges/levigo"
+	"github.com/ugorji/go/codec"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
@@ -66,7 +67,7 @@ import (
 //
 
 const UNKNOWN_LAYOUT_VERSION = 0
-const CURRENT_LAYOUT_VERSION = 2
+const CURRENT_LAYOUT_VERSION = 3
 
 var EMPTY_BYTE_BUF []byte = []byte{}
 
@@ -89,6 +90,9 @@ type IncomingSpan struct {
 
 	// The span.
 	*common.Span
+
+	// Serialized span data
+	SpanDataBytes []byte
 }
 
 // A single directory containing a levelDB instance.
@@ -103,19 +107,13 @@ type shard struct {
 	path string
 
 	// Incoming requests to write Spans.
-	incoming chan *IncomingSpan
+	incoming chan []*IncomingSpan
 
 	// A channel for incoming heartbeats
 	heartbeats chan interface{}
 
 	// Tracks whether the shard goroutine has exited.
 	exited sync.WaitGroup
-
-	// Per-address metrics
-	mtxMap ServerSpanMetricsMap
-
-	// The maximum number of metrics to allow in our map
-	maxMtx int
 }
 
 // Process incoming spans for a shard.
@@ -127,24 +125,33 @@ func (shd *shard) processIncoming() {
 	}()
 	for {
 		select {
-		case span := <-shd.incoming:
-			if span == nil {
+		case spans := <-shd.incoming:
+			if spans == nil {
 				return
 			}
-			err := shd.writeSpan(span)
-			if err != nil {
-				lg.Errorf("Shard processor for %s got fatal error %s.\n", shd.path, err.Error())
-			} else if lg.TraceEnabled() {
-				lg.Tracef("Shard processor for %s wrote span %s.\n", shd.path, span.ToJson())
+			totalWritten := 0
+			totalDropped := 0
+			for spanIdx := range(spans) {
+				err := shd.writeSpan(spans[spanIdx])
+				if err != nil {
+					lg.Errorf("Shard processor for %s got fatal error %s.\n",
+						shd.path, err.Error())
+					totalDropped++
+				} else {
+					if lg.TraceEnabled() {
+						lg.Tracef("Shard processor for %s wrote span %s.\n",
+							shd.path, spans[spanIdx].ToJson())
+					}
+					totalWritten++
+				}
+			}
+			shd.store.msink.UpdatePersisted(spans[0].Addr, totalWritten, totalDropped)
+			if shd.store.WrittenSpans != nil {
+				lg.Debugf("Shard %s incrementing WrittenSpans by %d\n", shd.path, len(spans))
+				shd.store.WrittenSpans.Posts(int64(len(spans)))
 			}
 		case <-shd.heartbeats:
 			lg.Tracef("Shard processor for %s handling heartbeat.\n", shd.path)
-			mtxMap := make(ServerSpanMetricsMap)
-			for addr, mtx := range shd.mtxMap {
-				mtxMap[addr] = mtx.Clone()
-				mtx.Clear()
-			}
-			shd.store.msink.UpdateMetrics(mtxMap)
 			shd.pruneExpired()
 		}
 	}
@@ -246,21 +253,10 @@ func u64toSlice(val uint64) []byte {
 func (shd *shard) writeSpan(ispan *IncomingSpan) error {
 	batch := levigo.NewWriteBatch()
 	defer batch.Close()
-
-	// Add SpanData to batch.
-	spanDataBuf := new(bytes.Buffer)
-	spanDataEnc := gob.NewEncoder(spanDataBuf)
 	span := ispan.Span
-	err := spanDataEnc.Encode(span.SpanData)
-	if err != nil {
-		shd.store.lg.Errorf("Error encoding span %s: %s\n",
-			span.String(), err.Error())
-		shd.mtxMap.IncrementDropped(ispan.Addr, shd.maxMtx, shd.store.lg)
-		return err
-	}
 	primaryKey :=
 		append([]byte{SPAN_ID_INDEX_PREFIX}, span.Id.Val()...)
-	batch.Put(primaryKey, spanDataBuf.Bytes())
+	batch.Put(primaryKey, ispan.SpanDataBytes)
 
 	// Add this to the parent index.
 	for parentIdx := range span.Parents {
@@ -280,16 +276,11 @@ func (shd *shard) writeSpan(ispan *IncomingSpan) error {
 		u64toSlice(s2u64(span.Duration()))...), span.Id.Val()...)
 	batch.Put(durationKey, EMPTY_BYTE_BUF)
 
-	err = shd.ldb.Write(shd.store.writeOpts, batch)
+	err := shd.ldb.Write(shd.store.writeOpts, batch)
 	if err != nil {
 		shd.store.lg.Errorf("Error writing span %s to leveldb at %s: %s\n",
 			span.String(), shd.path, err.Error())
-		shd.mtxMap.IncrementDropped(ispan.Addr, shd.maxMtx, shd.store.lg)
 		return err
-	}
-	shd.mtxMap.IncrementWritten(ispan.Addr, shd.maxMtx, shd.store.lg)
-	if shd.store.WrittenSpans != nil {
-		shd.store.WrittenSpans.Post()
 	}
 	return nil
 }
@@ -510,13 +501,11 @@ func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataSto
 	for idx := range store.shards {
 		shd := store.shards[idx]
 		shd.heartbeats = make(chan interface{}, 1)
-		shd.mtxMap = make(ServerSpanMetricsMap)
-		shd.maxMtx = store.msink.maxMtx
 		shd.exited.Add(1)
 		go shd.processIncoming()
 	}
 	store.hb = NewHeartbeater("DatastoreHeartbeater",
-		cnf.GetInt64(conf.HTRACE_METRICS_HEARTBEAT_PERIOD_MS), lg)
+		cnf.GetInt64(conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS), lg)
 	for shdIdx := range store.shards {
 		shd := store.shards[shdIdx]
 		store.hb.AddHeartbeatTarget(&HeartbeatTarget{
@@ -606,7 +595,7 @@ func CreateShard(store *dataStore, cnf *conf.Config, path string,
 	}
 	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
 	shd = &shard{store: store, ldb: ldb, path: path,
-		incoming: make(chan *IncomingSpan, spanBufferSize)}
+		incoming: make(chan []*IncomingSpan, spanBufferSize)}
 	return shd, nil
 }
 
@@ -654,10 +643,6 @@ func (store *dataStore) Close() {
 		store.rpr.Shutdown()
 		store.rpr = nil
 	}
-	if store.msink != nil {
-		store.msink.Shutdown()
-		store.msink = nil
-	}
 	if store.readOpts != nil {
 		store.readOpts.Close()
 		store.readOpts = nil
@@ -677,8 +662,158 @@ func (store *dataStore) getShardIndex(sid common.SpanId) int {
 	return int(sid.Hash32() % uint32(len(store.shards)))
 }
 
-func (store *dataStore) WriteSpan(span *IncomingSpan) {
-	store.shards[store.getShardIndex(span.Id)].incoming <- span
+const WRITESPANS_BATCH_SIZE = 128
+
+// SpanIngestor is a class used internally to ingest spans from an RPC
+// endpoint.  It groups spans destined for a particular shard into small
+// batches, so that we can reduce the number of objects that need to be sent
+// over the shard's "incoming" channel.  Since sending objects over a channel
+// requires goroutine synchronization, this improves performance.
+//
+// SpanIngestor also allows us to reuse the same encoder object for many spans,
+// rather than creating a new encoder per span.  This avoids re-doing the
+// encoder setup for each span, and also generates less garbage.
+type SpanIngestor struct {
+	// The logger to use.
+	lg              *common.Logger
+
+	// The dataStore we are ingesting spans into.
+	store           *dataStore
+
+	// The remote address these spans are coming from.
+	addr            string
+
+	// Default TracerId
+	defaultTrid     string
+
+	// The msgpack handle to use to serialize the spans.
+	mh              codec.MsgpackHandle
+
+	// The msgpack encoder to use to serialize the spans.
+	// Caching this avoids generating a lot of garbage and burning CPUs 
+	// creating new encoder objects for each span.
+	enc             *codec.Encoder
+
+	// The buffer which codec.Encoder is currently serializing to. 
+	// We have to create a new buffer for each span because once we hand it off to the shard, the
+	// shard manages the buffer lifecycle.
+	spanDataBytes   []byte
+
+	// An array mapping shard index to span batch.
+	batches         []*SpanIngestorBatch
+
+	// The total number of spans ingested.  Includes dropped spans. 
+	totalIngested	int
+
+	// The total number of spans the ingestor dropped because of a server-side error.
+	serverDropped   int
+}
+
+// A batch of spans destined for a particular shard.
+type SpanIngestorBatch struct {
+	incoming        []*IncomingSpan
+}
+
+func (store *dataStore) NewSpanIngestor(lg *common.Logger,
+		addr string, defaultTrid string) *SpanIngestor {
+	ing := &SpanIngestor {
+		lg: lg,
+		store: store,
+		addr: addr,
+		defaultTrid: defaultTrid,
+		spanDataBytes: make([]byte, 0, 1024),
+		batches: make([]*SpanIngestorBatch, len(store.shards)),
+	}
+	ing.mh.WriteExt = true
+	ing.enc = codec.NewEncoderBytes(&ing.spanDataBytes, &ing.mh)
+	for batchIdx := range(ing.batches) {
+		ing.batches[batchIdx] = &SpanIngestorBatch {
+			incoming: make([]*IncomingSpan, 0, WRITESPANS_BATCH_SIZE),
+		}
+	}
+	return ing
+}
+
+func (ing *SpanIngestor) IngestSpan(span *common.Span) {
+	ing.totalIngested++
+	// Make sure the span ID is valid.
+	spanIdProblem := span.Id.FindProblem()
+	if spanIdProblem != "" {
+		// Can't print the invalid span ID because String() might fail.
+		ing.lg.Warnf("Invalid span ID: %s\n", spanIdProblem)
+		ing.serverDropped++
+		return
+	}
+
+	// Set the default tracer id, if needed.
+	if span.TracerId == "" {
+		span.TracerId = ing.defaultTrid
+	}
+
+	// Encode the span data.  Doing the encoding here is better than doing it
+	// in the shard goroutine, because we can achieve more parallelism.
+	// There is one shard goroutine per shard, but potentially many more
+	// ingestors per shard.
+	err := ing.enc.Encode(span.SpanData)
+	if err != nil {
+		ing.lg.Warnf("Failed to encode span ID %s: %s\n",
+			span.Id.String(), err.Error())
+		ing.serverDropped++
+		return
+	}
+	spanDataBytes := ing.spanDataBytes
+	ing.spanDataBytes = make([]byte, 0, 1024)
+	ing.enc.ResetBytes(&ing.spanDataBytes)
+
+	// Determine which shard this span should go to.
+	shardIdx := ing.store.getShardIndex(span.Id)
+	batch := ing.batches[shardIdx]
+	incomingLen := len(batch.incoming)
+	if ing.lg.TraceEnabled() {
+		ing.lg.Tracef("SpanIngestor#IngestSpan: spanId=%s, shardIdx=%d, " +
+			"incomingLen=%d, cap(batch.incoming)=%d\n",
+			span.Id.String(), shardIdx, incomingLen, cap(batch.incoming))
+	}
+	if incomingLen + 1 == cap(batch.incoming) {
+		if ing.lg.TraceEnabled() {
+			ing.lg.Tracef("SpanIngestor#IngestSpan: flushing %d spans for " +
+				"shard %d\n", len(batch.incoming), shardIdx)
+		}
+		ing.store.WriteSpans(shardIdx, batch.incoming)
+		batch.incoming = make([]*IncomingSpan, 1, WRITESPANS_BATCH_SIZE)
+		incomingLen = 0
+	} else {
+		batch.incoming = batch.incoming[0:incomingLen+1]
+	}
+	batch.incoming[incomingLen] = &IncomingSpan {
+		Addr: ing.addr,
+		Span: span,
+		SpanDataBytes: spanDataBytes,
+	}
+}
+
+func (ing *SpanIngestor) Close(clientDropped int, startTime time.Time) {
+	for shardIdx := range(ing.batches) {
+		batch := ing.batches[shardIdx]
+		if len(batch.incoming) > 0 {
+			if ing.lg.TraceEnabled() {
+				ing.lg.Tracef("SpanIngestor#Close: flushing %d span(s) for " +
+					"shard %d\n", len(batch.incoming), shardIdx)
+			}
+			ing.store.WriteSpans(shardIdx, batch.incoming)
+		}
+		batch.incoming = nil
+	}
+	ing.lg.Debugf("Closed span ingestor for %s.  Ingested %d span(s); dropped " +
+		"%d span(s).\n", ing.addr, ing.totalIngested, ing.serverDropped)
+
+	endTime := time.Now()
+	ing.store.msink.UpdateIngested(ing.addr, ing.totalIngested,
+		ing.serverDropped, clientDropped, endTime.Sub(startTime))
+}
+
+func (store *dataStore) WriteSpans(shardIdx int, ispans []*IncomingSpan) {
+	store.shards[shardIdx].incoming <- ispans
 }
 
 func (store *dataStore) FindSpan(sid common.SpanId) *common.Span {
@@ -709,14 +844,14 @@ func (shd *shard) FindSpan(sid common.SpanId) *common.Span {
 
 func (shd *shard) decodeSpan(sid common.SpanId, buf []byte) (*common.Span, error) {
 	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
+	mh := new(codec.MsgpackHandle)
+	mh.WriteExt = true
+	decoder := codec.NewDecoder(r, mh)
 	data := common.SpanData{}
 	err := decoder.Decode(&data)
 	if err != nil {
 		return nil, err
 	}
-	// Gob encoding translates empty slices to nil.  Reverse this so that we're always dealing with
-	// non-nil slices.
 	if data.Parents == nil {
 		data.Parents = []common.SpanId{}
 	}
@@ -1259,19 +1394,6 @@ func (store *dataStore) ServerStats() *common.ServerStats {
 	serverStats.LastStartMs = store.startMs
 	serverStats.CurMs = common.TimeToUnixMs(time.Now().UTC())
 	serverStats.ReapedSpans = atomic.LoadUint64(&store.rpr.ReapedSpans)
-	wsData := store.msink.wsm.GetData()
-	serverStats.HostSpanMetrics = store.msink.AccessServerTotals()
-	for k, v := range wsData.clientDroppedMap {
-		smtx := serverStats.HostSpanMetrics[k]
-		if smtx == nil {
-			smtx = &common.SpanMetrics {}
-			serverStats.HostSpanMetrics[k] = smtx
-		}
-		smtx.ClientDropped = v
-	}
-	serverStats.IngestedSpans = wsData.ingestedSpans
-	serverStats.ClientDroppedSpans = wsData.clientDroppedSpans
-	serverStats.MaxWriteSpansLatencyMs = wsData.latencyMax
-	serverStats.AverageWriteSpansLatencyMs = wsData.latencyAverage
+	store.msink.PopulateServerStats(&serverStats)
 	return &serverStats
 }

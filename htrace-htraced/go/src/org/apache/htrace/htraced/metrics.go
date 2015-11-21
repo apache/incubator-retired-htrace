@@ -20,7 +20,6 @@
 package main
 
 import (
-	"encoding/json"
 	"math"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
@@ -40,252 +39,114 @@ import (
 
 const LATENCY_CIRC_BUF_SIZE = 4096
 
-type ServerSpanMetrics struct {
-	// The total number of spans written to HTraced.
-	Written uint64
+type MetricsSink struct {
+	// The metrics sink logger.
+	lg *common.Logger
+
+	// The maximum number of entries we shuld allow in the HostSpanMetrics map.
+	maxMtx int
+
+	// The total number of spans ingested by the server (counting dropped spans)
+	IngestedSpans uint64
+
+	// The total number of spans written to leveldb since the server started.
+	WrittenSpans uint64
 
 	// The total number of spans dropped by the server.
 	ServerDropped uint64
-}
 
-func (spm *ServerSpanMetrics) Clone() *ServerSpanMetrics {
-	return &ServerSpanMetrics{
-		Written:       spm.Written,
-		ServerDropped: spm.ServerDropped,
-	}
-}
+	// The total number of spans dropped by the client (self-reported).
+	ClientDroppedEstimate uint64
 
-func (spm *ServerSpanMetrics) String() string {
-	jbytes, err := json.Marshal(*spm)
-	if err != nil {
-		panic(err)
-	}
-	return string(jbytes)
-}
+	// Per-host Span Metrics
+	HostSpanMetrics common.SpanMetricsMap
 
-func (spm *ServerSpanMetrics) Add(ospm *ServerSpanMetrics) {
-	spm.Written += ospm.Written
-	spm.ServerDropped += ospm.ServerDropped
-}
+	// The last few writeSpan latencies
+	wsLatencyCircBuf *CircBufU32
 
-func (spm *ServerSpanMetrics) Clear() {
-	spm.Written = 0
-	spm.ServerDropped = 0
-}
-
-// A map from network address strings to ServerSpanMetrics structures.
-type ServerSpanMetricsMap map[string]*ServerSpanMetrics
-
-func (smtxMap ServerSpanMetricsMap) IncrementDropped(addr string, maxMtx int,
-	lg *common.Logger) {
-	mtx := smtxMap[addr]
-	if mtx == nil {
-		mtx = &ServerSpanMetrics{}
-		smtxMap[addr] = mtx
-	}
-	mtx.ServerDropped++
-	smtxMap.Prune(maxMtx, lg)
-}
-
-func (smtxMap ServerSpanMetricsMap) IncrementWritten(addr string, maxMtx int,
-	lg *common.Logger) {
-	mtx := smtxMap[addr]
-	if mtx == nil {
-		mtx = &ServerSpanMetrics{}
-		smtxMap[addr] = mtx
-	}
-	mtx.Written++
-	smtxMap.Prune(maxMtx, lg)
-}
-
-func (smtxMap ServerSpanMetricsMap) Prune(maxMtx int, lg *common.Logger) {
-	if len(smtxMap) >= maxMtx {
-		// Delete a random entry
-		for k := range smtxMap {
-			lg.Warnf("Evicting metrics entry for addr %s "+
-				"because there are more than %d addrs.\n", k, maxMtx)
-			delete(smtxMap, k)
-			return
-		}
-	}
-}
-
-type AccessReq struct {
-	mtxMap common.SpanMetricsMap
-	done   chan interface{}
-}
-
-type MetricsSink struct {
-	// The total span metrics.
-	smtxMap ServerSpanMetricsMap
-
-	// A channel of incoming shard metrics.
-	// When this is shut down, the MetricsSink will exit.
-	updateReqs chan ServerSpanMetricsMap
-
-	// A channel of incoming requests for shard metrics.
-	accessReqs chan *AccessReq
-
-	// This will be closed when the MetricsSink has exited.
-	exited chan interface{}
-
-	// The logger used by this MetricsSink.
-	lg *common.Logger
-
-	// The maximum number of metrics totals we will maintain.
-	maxMtx int
-
-	// Metrics about WriteSpans requests
-	wsm WriteSpanMetrics
+	// Lock protecting all metrics
+	lock sync.Mutex
 }
 
 func NewMetricsSink(cnf *conf.Config) *MetricsSink {
-	mcl := MetricsSink{
-		smtxMap:          make(ServerSpanMetricsMap),
-		updateReqs:       make(chan ServerSpanMetricsMap, 128),
-		accessReqs:       make(chan *AccessReq),
-		exited:           make(chan interface{}),
+	return &MetricsSink {
 		lg:               common.NewLogger("metrics", cnf),
 		maxMtx:           cnf.GetInt(conf.HTRACE_METRICS_MAX_ADDR_ENTRIES),
-		wsm: WriteSpanMetrics {
-			clientDroppedMap: make(map[string]uint64),
-			latencyCircBuf: NewCircBufU32(LATENCY_CIRC_BUF_SIZE),
-		},
-	}
-	go mcl.run()
-	return &mcl
-}
-
-func (msink *MetricsSink) run() {
-	lg := msink.lg
-	defer func() {
-		lg.Info("MetricsSink: stopping service goroutine.\n")
-		close(msink.exited)
-	}()
-	lg.Tracef("MetricsSink: starting.\n")
-	for {
-		select {
-		case updateReq, open := <-msink.updateReqs:
-			if !open {
-				lg.Trace("MetricsSink: shutting down cleanly.\n")
-				return
-			}
-			for addr, umtx := range updateReq {
-				smtx := msink.smtxMap[addr]
-				if smtx == nil {
-					smtx = &ServerSpanMetrics{}
-					msink.smtxMap[addr] = smtx
-				}
-				smtx.Add(umtx)
-				if lg.TraceEnabled() {
-					lg.Tracef("MetricsSink: updated %s to %s\n", addr, smtx.String())
-				}
-			}
-			msink.smtxMap.Prune(msink.maxMtx, lg)
-		case accessReq := <-msink.accessReqs:
-			msink.handleAccessReq(accessReq)
-		}
+		HostSpanMetrics: make(common.SpanMetricsMap),
+		wsLatencyCircBuf: NewCircBufU32(LATENCY_CIRC_BUF_SIZE),
 	}
 }
 
-func (msink *MetricsSink) handleAccessReq(accessReq *AccessReq) {
-	msink.lg.Debug("MetricsSink: accessing global metrics.\n")
-	defer close(accessReq.done)
-	for addr, smtx := range msink.smtxMap {
-		accessReq.mtxMap[addr] = &common.SpanMetrics{
-			Written:       smtx.Written,
-			ServerDropped: smtx.ServerDropped,
-		}
-	}
-}
-
-func (msink *MetricsSink) AccessServerTotals() common.SpanMetricsMap {
-	accessReq := &AccessReq{
-		mtxMap: make(common.SpanMetricsMap),
-		done:   make(chan interface{}),
-	}
-	msink.accessReqs <- accessReq
-	<-accessReq.done
-	return accessReq.mtxMap
-}
-
-func (msink *MetricsSink) UpdateMetrics(mtxMap ServerSpanMetricsMap) {
-	msink.updateReqs <- mtxMap
-}
-
-func (msink *MetricsSink) Shutdown() {
-	close(msink.updateReqs)
-	<-msink.exited
-}
-
-type WriteSpanMetrics struct {
-	// Lock protecting WriteSpanMetrics
-	lock sync.Mutex
-
-	// The number of spans which each client has self-reported that it has
-	// dropped.
-	clientDroppedMap map[string]uint64
-
-	// The total number of new span writes we've gotten since startup.
-	ingestedSpans uint64
-
-	// The total number of spans all clients have dropped since startup.
-	clientDroppedSpans uint64
-
-	// The last few writeSpan latencies
-	latencyCircBuf *CircBufU32
-}
-
-type WriteSpanMetricsData struct {
-	clientDroppedMap map[string]uint64
-	ingestedSpans uint64
-	clientDroppedSpans uint64
-	latencyMax uint32
-	latencyAverage uint32
-}
-
-func (msink *MetricsSink) Update(client string, clientDropped uint64, clientWritten int,
-		wsLatency time.Duration) {
-	wsLatencyNs := wsLatency.Nanoseconds() / 1000000
+// Update the total number of spans which were ingested, as well as other
+// metrics that get updated during span ingest. 
+func (msink *MetricsSink) UpdateIngested(addr string, totalIngested int,
+		serverDropped int, clientDroppedEstimate int, wsLatency time.Duration) {
+	msink.lock.Lock()
+	defer msink.lock.Unlock()
+	msink.IngestedSpans += uint64(totalIngested)
+	msink.ServerDropped += uint64(serverDropped)
+	msink.ClientDroppedEstimate += uint64(clientDroppedEstimate)
+	msink.updateSpanMetrics(addr, 0, serverDropped, clientDroppedEstimate)
+	wsLatencyMs := wsLatency.Nanoseconds() / 1000000
 	var wsLatency32 uint32
-	if wsLatencyNs > math.MaxUint32 {
+	if wsLatencyMs > math.MaxUint32 {
 		wsLatency32 = math.MaxUint32
 	} else {
-		wsLatency32 = uint32(wsLatencyNs)
+		wsLatency32 = uint32(wsLatencyMs)
 	}
-	msink.wsm.update(msink.maxMtx, client, clientDropped, clientWritten, wsLatency32)
+	msink.wsLatencyCircBuf.Append(wsLatency32)
 }
 
-func (wsm *WriteSpanMetrics) update(maxMtx int, client string, clientDropped uint64,
-		clientWritten int, wsLatency uint32) {
-	wsm.lock.Lock()
-	defer wsm.lock.Unlock()
-	wsm.clientDroppedMap[client] = clientDropped
-	if len(wsm.clientDroppedMap) >= maxMtx {
-		// Delete a random entry
-		for k := range wsm.clientDroppedMap {
-			delete(wsm.clientDroppedMap, k)
-			return
+// Update the per-host span metrics.  Must be called with the lock held.
+func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
+		serverDropped int, clientDroppedEstimate int) {
+	mtx, found := msink.HostSpanMetrics[addr]
+	if !found {
+		// Ensure that the per-host span metrics map doesn't grow too large.
+		if len(msink.HostSpanMetrics) >= msink.maxMtx {
+			// Delete a random entry
+			for k := range msink.HostSpanMetrics {
+				msink.lg.Warnf("Evicting metrics entry for addr %s "+
+					"because there are more than %d addrs.\n", k, msink.maxMtx)
+				delete(msink.HostSpanMetrics, k)
+				break
+			}
 		}
+		mtx = &common.SpanMetrics { }
+		msink.HostSpanMetrics[addr] = mtx
 	}
-	wsm.ingestedSpans += uint64(clientWritten)
-	wsm.clientDroppedSpans += uint64(clientDropped)
-	wsm.latencyCircBuf.Append(wsLatency)
+	mtx.Written += uint64(numWritten)
+	mtx.ServerDropped += uint64(serverDropped)
+	mtx.ClientDroppedEstimate += uint64(clientDroppedEstimate)
 }
 
-func (wsm *WriteSpanMetrics) GetData() *WriteSpanMetricsData {
-	wsm.lock.Lock()
-	defer wsm.lock.Unlock()
-	clientDroppedMap := make(map[string]uint64)
-	for k, v := range wsm.clientDroppedMap {
-		clientDroppedMap[k] = v
-	}
-	return &WriteSpanMetricsData {
-		clientDroppedMap: clientDroppedMap,
-		ingestedSpans: wsm.ingestedSpans,
-		clientDroppedSpans: wsm.clientDroppedSpans,
-		latencyMax: wsm.latencyCircBuf.Max(),
-		latencyAverage: wsm.latencyCircBuf.Average(),
+// Update the total number of spans which were persisted to disk.
+func (msink *MetricsSink) UpdatePersisted(addr string, totalWritten int,
+		serverDropped int) {
+	msink.lock.Lock()
+	defer msink.lock.Unlock()
+	msink.WrittenSpans += uint64(totalWritten)
+	msink.ServerDropped += uint64(serverDropped)
+	msink.updateSpanMetrics(addr, totalWritten, serverDropped, 0)
+}
+
+// Read the server stats.
+func (msink *MetricsSink) PopulateServerStats(stats *common.ServerStats) {
+	msink.lock.Lock()
+	defer msink.lock.Unlock()
+	stats.IngestedSpans = msink.IngestedSpans
+	stats.WrittenSpans = msink.WrittenSpans
+	stats.ServerDroppedSpans = msink.ServerDropped
+	stats.ClientDroppedEstimate = msink.ClientDroppedEstimate
+	stats.MaxWriteSpansLatencyMs = msink.wsLatencyCircBuf.Max()
+	stats.AverageWriteSpansLatencyMs = msink.wsLatencyCircBuf.Average()
+	stats.HostSpanMetrics = make(common.SpanMetricsMap)
+	for k, v := range(msink.HostSpanMetrics) {
+		stats.HostSpanMetrics[k] = &common.SpanMetrics {
+			Written: v.Written,
+			ServerDropped: v.ServerDropped,
+			ClientDroppedEstimate: v.ClientDroppedEstimate,
+		}
 	}
 }
 
