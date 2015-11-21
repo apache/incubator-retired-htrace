@@ -792,7 +792,7 @@ func (ing *SpanIngestor) IngestSpan(span *common.Span) {
 	}
 }
 
-func (ing *SpanIngestor) Close(clientDropped int, startTime time.Time) {
+func (ing *SpanIngestor) Close(startTime time.Time) {
 	for shardIdx := range(ing.batches) {
 		batch := ing.batches[shardIdx]
 		if len(batch.incoming) > 0 {
@@ -809,7 +809,7 @@ func (ing *SpanIngestor) Close(clientDropped int, startTime time.Time) {
 
 	endTime := time.Now()
 	ing.store.msink.UpdateIngested(ing.addr, ing.totalIngested,
-		ing.serverDropped, clientDropped, endTime.Sub(startTime))
+		ing.serverDropped, endTime.Sub(startTime))
 }
 
 func (store *dataStore) WriteSpans(shardIdx int, ispans []*IncomingSpan) {

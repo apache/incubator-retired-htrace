@@ -55,9 +55,6 @@ type MetricsSink struct {
 	// The total number of spans dropped by the server.
 	ServerDropped uint64
 
-	// The total number of spans dropped by the client (self-reported).
-	ClientDroppedEstimate uint64
-
 	// Per-host Span Metrics
 	HostSpanMetrics common.SpanMetricsMap
 
@@ -80,13 +77,12 @@ func NewMetricsSink(cnf *conf.Config) *MetricsSink {
 // Update the total number of spans which were ingested, as well as other
 // metrics that get updated during span ingest. 
 func (msink *MetricsSink) UpdateIngested(addr string, totalIngested int,
-		serverDropped int, clientDroppedEstimate int, wsLatency time.Duration) {
+		serverDropped int, wsLatency time.Duration) {
 	msink.lock.Lock()
 	defer msink.lock.Unlock()
 	msink.IngestedSpans += uint64(totalIngested)
 	msink.ServerDropped += uint64(serverDropped)
-	msink.ClientDroppedEstimate += uint64(clientDroppedEstimate)
-	msink.updateSpanMetrics(addr, 0, serverDropped, clientDroppedEstimate)
+	msink.updateSpanMetrics(addr, 0, serverDropped)
 	wsLatencyMs := wsLatency.Nanoseconds() / 1000000
 	var wsLatency32 uint32
 	if wsLatencyMs > math.MaxUint32 {
@@ -99,7 +95,7 @@ func (msink *MetricsSink) UpdateIngested(addr string, totalIngested int,
 
 // Update the per-host span metrics.  Must be called with the lock held.
 func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
-		serverDropped int, clientDroppedEstimate int) {
+		serverDropped int) {
 	mtx, found := msink.HostSpanMetrics[addr]
 	if !found {
 		// Ensure that the per-host span metrics map doesn't grow too large.
@@ -117,7 +113,6 @@ func (msink *MetricsSink) updateSpanMetrics(addr string, numWritten int,
 	}
 	mtx.Written += uint64(numWritten)
 	mtx.ServerDropped += uint64(serverDropped)
-	mtx.ClientDroppedEstimate += uint64(clientDroppedEstimate)
 }
 
 // Update the total number of spans which were persisted to disk.
@@ -127,7 +122,7 @@ func (msink *MetricsSink) UpdatePersisted(addr string, totalWritten int,
 	defer msink.lock.Unlock()
 	msink.WrittenSpans += uint64(totalWritten)
 	msink.ServerDropped += uint64(serverDropped)
-	msink.updateSpanMetrics(addr, totalWritten, serverDropped, 0)
+	msink.updateSpanMetrics(addr, totalWritten, serverDropped)
 }
 
 // Read the server stats.
@@ -137,7 +132,6 @@ func (msink *MetricsSink) PopulateServerStats(stats *common.ServerStats) {
 	stats.IngestedSpans = msink.IngestedSpans
 	stats.WrittenSpans = msink.WrittenSpans
 	stats.ServerDroppedSpans = msink.ServerDropped
-	stats.ClientDroppedEstimate = msink.ClientDroppedEstimate
 	stats.MaxWriteSpansLatencyMs = msink.wsLatencyCircBuf.Max()
 	stats.AverageWriteSpansLatencyMs = msink.wsLatencyCircBuf.Average()
 	stats.HostSpanMetrics = make(common.SpanMetricsMap)
@@ -145,7 +139,6 @@ func (msink *MetricsSink) PopulateServerStats(stats *common.ServerStats) {
 		stats.HostSpanMetrics[k] = &common.SpanMetrics {
 			Written: v.Written,
 			ServerDropped: v.ServerDropped,
-			ClientDroppedEstimate: v.ClientDroppedEstimate,
 		}
 	}
 }

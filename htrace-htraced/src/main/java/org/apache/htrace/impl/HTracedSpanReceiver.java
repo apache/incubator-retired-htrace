@@ -17,7 +17,20 @@
  */
 package org.apache.htrace.impl;
 
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.WRITE;
+
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+//import java.nio.file.attribute.FileAttribute;
+//import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,6 +87,8 @@ public class HTracedSpanReceiver extends SpanReceiver {
   private int flushingBuf = -1;
 
   private long lastBufferClearedTimeMs = 0;
+
+  private long unbufferableSpans = 0;
 
   static class FaultInjector {
     static FaultInjector NO_OP = new FaultInjector();
@@ -140,10 +155,12 @@ public class HTracedSpanReceiver extends SpanReceiver {
         }
         long deltaMs = TimeUtil.deltaMs(startTimeMs, TimeUtil.nowMs());
         if (deltaMs > conf.spanDropTimeoutMs) {
+          StringBuilder bld = new StringBuilder();
           spanDropLog.error("Dropping a span after unsuccessfully " +
               "attempting to add it for " + deltaMs + " ms.  There is not " +
               "enough buffer space. Please increase " + Conf.BUFFER_SIZE_KEY +
               " or decrease the rate of spans being generated.");
+          unbufferableSpans++;
           return;
         } else if (LOG.isDebugEnabled()) {
           LOG.debug("Unable to write span to buffer #" + activeBuf +
@@ -296,6 +313,16 @@ public class HTracedSpanReceiver extends SpanReceiver {
         return;
       }
       int flushTries = 0;
+      if (unbufferableSpans > 0) {
+        try {
+          appendToDroppedSpansLog("Dropped " + unbufferableSpans +
+              " spans because of lack of local buffer space.\n");
+        } catch (IOException e) {
+          // Ignore.  We already logged a message about the dropped spans
+          // earlier.
+        }
+        unbufferableSpans = 0;
+      }
       while (true) {
         Throwable exc;
         try {
@@ -311,22 +338,66 @@ public class HTracedSpanReceiver extends SpanReceiver {
           return;
         }
         int numSpans = flushBufManager.getNumberOfSpans();
-        String excMessage = "Failed to flush " + numSpans  + " htrace " +
-            "spans to " + conf.endpointStr + " on try " + (flushTries + 1);
+        flushErrorLog.error("Failed to flush " + numSpans  + " htrace " +
+            "spans to " + conf.endpointStr + " on try " + (flushTries + 1),
+            exc);
         if (flushTries >= conf.flushRetryDelays.length) {
-          excMessage += ".  Discarding all spans.";
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.error(excMessage, exc);
-        } else {
-          flushErrorLog.error(excMessage, exc);
-        }
-        if (flushTries >= conf.flushRetryDelays.length) {
+          StringBuilder bld = new StringBuilder();
+          bld.append("Failed to flush ").append(numSpans).
+            append(" spans to htraced at").append(conf.endpointStr).
+            append(" after ").append(flushTries).append(" tries: ").
+            append(exc.getMessage());
+          try {
+            appendToDroppedSpansLog(bld.toString());
+          } catch (IOException e) {
+            bld.append(".  Failed to write to dropped spans log: ").
+              append(e.getMessage());
+          }
+          spanDropLog.error(bld.toString());
           return;
         }
         int delayMs = conf.flushRetryDelays[flushTries];
         Thread.sleep(delayMs);
         flushTries++;
+      }
+    }
+  }
+
+  void appendToDroppedSpansLog(String text) throws IOException {
+    // Is the dropped spans log is disabled?
+    if (conf.droppedSpansLogPath.isEmpty() ||
+        (conf.droppedSpansLogMaxSize == 0)) {
+      return;
+    }
+    FileLock lock = null;
+    ByteBuffer bb = ByteBuffer.wrap(
+        text.getBytes(StandardCharsets.UTF_8));
+    // FileChannel locking corresponds to advisory locking on UNIX.  It will
+    // protect multiple processes from attempting to write to the same dropped
+    // spans log at once.  However, within a single process, we need this
+    // synchronized block to ensure that multiple HTracedSpanReceiver objects
+    // don't try to write to the same log at once.  (It is unusal to configure
+    // multiple HTracedSpanReceiver objects, but possible.)
+    synchronized(HTracedSpanReceiver.class) {
+      FileChannel channel = FileChannel.open(
+          Paths.get(conf.droppedSpansLogPath), APPEND, CREATE, WRITE);
+      try {
+        lock = channel.lock();
+        long size = channel.size();
+        if (size > conf.droppedSpansLogMaxSize) {
+          throw new IOException("Dropped spans log " +
+              conf.droppedSpansLogPath + " is already " + size +
+              " bytes; will not add to it.");
+        }
+        channel.write(bb);
+      } finally {
+        try {
+          if (lock != null) {
+            lock.release();
+          }
+        } finally {
+          channel.close();
+        }
       }
     }
   }

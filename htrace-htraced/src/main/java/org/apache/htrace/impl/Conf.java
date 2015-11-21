@@ -18,6 +18,7 @@
 package org.apache.htrace.impl;
 
 import java.io.IOException;
+import java.io.File;
 import java.net.InetSocketAddress;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -144,6 +145,18 @@ class Conf {
       "htraced.error.log.period.ms";
   final static long ERROR_LOG_PERIOD_MS_DEFAULT = 30000L;
 
+  final static String DROPPED_SPANS_LOG_PATH_KEY =
+      "htraced.dropped.spans.log.path";
+
+  final static String DROPPED_SPANS_LOG_PATH_DEFAULT =
+      new File(System.getProperty("java.io.tmpdir", "/tmp"), "htraceDropped").
+        getAbsolutePath();
+
+  final static String DROPPED_SPANS_LOG_MAX_SIZE_KEY =
+      "htraced.dropped.spans.log.max.size";
+
+  final static long DROPPED_SPANS_LOG_MAX_SIZE_DEFAULT = 1024L * 1024L;
+
   @JsonProperty("ioTimeoutMs")
   final int ioTimeoutMs;
 
@@ -179,6 +192,12 @@ class Conf {
 
   @JsonProperty("endpoint")
   final InetSocketAddress endpoint;
+
+  @JsonProperty("droppedSpansLogPath")
+  final String droppedSpansLogPath;
+
+  @JsonProperty("droppedSpansLogMaxSize")
+  final long droppedSpansLogMaxSize;
 
   private static int getBoundedInt(final HTraceConfiguration conf,
         String key, int defaultValue, int minValue, int maxValue) {
@@ -341,6 +360,11 @@ class Conf {
       throw new IOException("Error reading " + ADDRESS_KEY + ": " +
           e.getMessage());
     }
+    this.droppedSpansLogPath = conf.get(
+        DROPPED_SPANS_LOG_PATH_KEY, DROPPED_SPANS_LOG_PATH_DEFAULT);
+    this.droppedSpansLogMaxSize = getBoundedLong(conf,
+        DROPPED_SPANS_LOG_MAX_SIZE_KEY, DROPPED_SPANS_LOG_MAX_SIZE_DEFAULT,
+        0, Long.MAX_VALUE);
   }
 
   @Override

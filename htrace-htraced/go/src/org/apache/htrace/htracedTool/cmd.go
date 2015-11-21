@@ -218,8 +218,6 @@ func printServerStats(hcl *htrace.Client) int {
 	fmt.Fprintf(w, "Spans ingested\t%d\n", stats.IngestedSpans)
 	fmt.Fprintf(w, "Spans written\t%d\n", stats.WrittenSpans)
 	fmt.Fprintf(w, "Spans dropped by server\t%d\n", stats.ServerDroppedSpans)
-	fmt.Fprintf(w, "Estimated spans dropped by clients\t%d\n",
-		stats.ClientDroppedEstimate)
 	dur := time.Millisecond * time.Duration(stats.AverageWriteSpansLatencyMs)
 	fmt.Fprintf(w, "Average WriteSpan Latency\t%s\n", dur.String())
 	dur = time.Millisecond * time.Duration(stats.MaxWriteSpansLatencyMs)
@@ -247,8 +245,8 @@ func printServerStats(hcl *htrace.Client) int {
 	sort.Sort(keys)
 	for k := range keys {
 		mtx := mtxMap[keys[k]]
-		fmt.Fprintf(w, "%s\twritten: %d\tserver dropped: %d\tclient dropped estimate: %d\n",
-			keys[k], mtx.Written, mtx.ServerDropped, mtx.ClientDroppedEstimate)
+		fmt.Fprintf(w, "%s\twritten: %d\tserver dropped: %d\n",
+			keys[k], mtx.Written, mtx.ServerDropped)
 	}
 	w.Flush()
 	return EXIT_SUCCESS

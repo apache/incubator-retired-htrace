@@ -41,7 +41,6 @@ type WriteSpansReq struct {
 	Addr          string `json:",omitempty"` // This gets filled in by the RPC layer.
 	DefaultTrid   string `json:",omitempty"`
 	Spans         []*Span
-	ClientDropped uint64 `json:",omitempty"`
 }
 
 // Info returned by /server/version
@@ -97,20 +96,6 @@ type SpanMetrics struct {
 
 	// The total number of spans dropped by the server.
 	ServerDropped uint64
-
-	// The total number of spans dropped by the client.
-	//
-	// This number is just an estimate and may be incorrect for many reasons.
-	// If the client can't contact the server at all, then obviously the server
-	// will never increment ClientDropped... even though spans are being
-	// dropped.  The client may also tell the server about some new spans it
-	// has dropped, but then for some reason fail to get the acknowledgement
-	// from the server.  In that case, the client would re-send its client
-	// dropped estimate and it would be double-counted by the server
-	//
-	// The intention here is to provide a rough estimate of how overloaded
-	// htraced clients are, not to provide strongly consistent numbers.
-	ClientDroppedEstimate uint64
 }
 
 // A map from network address strings to SpanMetrics structures.
@@ -144,10 +129,6 @@ type ServerStats struct {
 
 	// The total number of spans dropped by the server since the server started.
 	ServerDroppedSpans uint64
-
-	// An estimate of the total number of spans dropped by the server since the server started.
-	// See SpanMetrics#ClientDroppedEstimate
-	ClientDroppedEstimate uint64
 
 	// The maximum latency of a writeSpans request, in milliseconds.
 	MaxWriteSpansLatencyMs uint32

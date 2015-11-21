@@ -257,7 +257,7 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	for spanIdx := range msg.Spans {
 		ing.IngestSpan(msg.Spans[spanIdx])
 	}
-	ing.Close(int(msg.ClientDropped), startTime)
+	ing.Close(startTime)
 }
 
 type queryHandler struct {

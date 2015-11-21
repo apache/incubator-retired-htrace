@@ -77,7 +77,7 @@ func createSpans(spans []common.Span, store *dataStore) {
 	for idx := range spans {
 		ing.IngestSpan(&spans[idx])
 	}
-	ing.Close(0, time.Now())
+	ing.Close(time.Now())
 	store.WrittenSpans.Waits(int64(len(spans)))
 }
 
@@ -364,7 +364,7 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		ing.IngestSpan(allSpans[n])
 	}
-	ing.Close(0, time.Now())
+	ing.Close(time.Now())
 	// Wait for all the spans to be written.
 	ht.Store.WrittenSpans.Waits(int64(b.N))
 	assertNumWrittenEquals(b, ht.Store.msink, b.N)

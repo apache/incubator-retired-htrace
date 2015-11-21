@@ -26,7 +26,6 @@ htrace.ServerStats = Backbone.Model.extend({
     "IngestedSpans": "(unknown)",
     "WrittenSpans": "(unknown)",
     "ServerDroppedSpans": "(unknown)",
-    "ClientDroppedSpans": "(unknown)",
     "MaxWriteSpansLatencyMs": "(unknown)",
     "AverageWriteSpansLatencyMs": "(unknown)"
   },

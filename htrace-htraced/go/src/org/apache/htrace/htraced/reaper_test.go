@@ -56,7 +56,7 @@ func TestReapingOldSpans(t *testing.T) {
 	for spanIdx := range testSpans {
 		ing.IngestSpan(testSpans[spanIdx])
 	}
-	ing.Close(0, time.Now())
+	ing.Close(time.Now())
 	// Wait the spans to be created
 	ht.Store.WrittenSpans.Waits(NUM_TEST_SPANS)
 	// Set a reaper date that will remove all the spans except final one.

@@ -270,7 +270,7 @@ func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
 	for spanIdx := range req.Spans {
 		ing.IngestSpan(req.Spans[spanIdx])
 	}
-	ing.Close(int(req.ClientDropped), startTime)
+	ing.Close(startTime)
 	return nil
 }
 
