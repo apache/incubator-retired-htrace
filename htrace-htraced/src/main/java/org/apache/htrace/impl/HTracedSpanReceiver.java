@@ -29,8 +29,6 @@ import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-//import java.nio.file.attribute.FileAttribute;
-//import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -346,7 +344,7 @@ public class HTracedSpanReceiver extends SpanReceiver {
           bld.append("Failed to flush ").append(numSpans).
             append(" spans to htraced at").append(conf.endpointStr).
             append(" after ").append(flushTries).append(" tries: ").
-            append(exc.getMessage());
+            append(exc.getMessage()).append("\n");
           try {
             appendToDroppedSpansLog(bld.toString());
           } catch (IOException e) {
