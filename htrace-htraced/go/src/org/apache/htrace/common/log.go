@@ -258,7 +258,7 @@ func (lg *Logger) Errorf(format string, v ...interface{}) error {
 
 func (lg *Logger) Write(level Level, str string) {
 	if level >= lg.Level {
-		lg.sink.write(time.Now().Format(time.RFC3339) + " " +
+		lg.sink.write(time.Now().UTC().Format(time.RFC3339) + " " +
 			level.LogString() + ": " + str)
 	}
 }
