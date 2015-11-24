@@ -330,6 +330,68 @@ func TestQueries4(t *testing.T) {
 	}, []common.Span{SIMPLE_TEST_SPANS[2]})
 }
 
+var TEST_QUERIES5_SPANS []common.Span = []common.Span{
+	common.Span{Id: common.TestId("10000000000000000000000000000001"),
+		SpanData: common.SpanData{
+			Begin:       123,
+			End:         456,
+			Description: "span1",
+			Parents:     []common.SpanId{},
+			TracerId:    "myTracer",
+		}},
+	common.Span{Id: common.TestId("10000000000000000000000000000002"),
+		SpanData: common.SpanData{
+			Begin:       123,
+			End:         200,
+			Description: "span2",
+			Parents:     []common.SpanId{common.TestId("10000000000000000000000000000001")},
+			TracerId:    "myTracer",
+		}},
+	common.Span{Id: common.TestId("10000000000000000000000000000003"),
+		SpanData: common.SpanData{
+			Begin:       124,
+			End:         457,
+			Description: "span3",
+			Parents:     []common.SpanId{common.TestId("10000000000000000000000000000001")},
+			TracerId:    "myTracer",
+		}},
+}
+
+func TestQueries5(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueries5",
+		WrittenSpans: common.NewSemaphore(0),
+		DataDirs: make([]string, 1),
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(TEST_QUERIES5_SPANS, ht.Store)
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.BEGIN_TIME,
+				Val:   "123",
+			},
+		},
+		Lim: 5,
+	}, []common.Span{TEST_QUERIES5_SPANS[2]})
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.GREATER_THAN,
+				Field: common.END_TIME,
+				Val:   "200",
+			},
+		},
+		Lim: 500,
+	}, []common.Span{TEST_QUERIES5_SPANS[0], TEST_QUERIES5_SPANS[2]})
+}
+
 func BenchmarkDatastoreWrites(b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "BenchmarkDatastoreWrites",
 		Cnf: map[string]string{

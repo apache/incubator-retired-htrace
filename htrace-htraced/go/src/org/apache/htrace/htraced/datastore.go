@@ -1013,20 +1013,51 @@ func (pred *predicateData) spanPtrIsBefore(a *common.Span, b *common.Span) bool 
 	}
 }
 
-// Returns true if the predicate is satisfied by the given span.
-func (pred *predicateData) satisfiedBy(span *common.Span) bool {
+type satisfiedByReturn int
+
+const (
+	NOT_SATISFIED satisfiedByReturn = iota
+	NOT_YET_SATISFIED = iota
+	SATISFIED = iota
+)
+
+// Determine whether the predicate is satisfied by the given span.
+func (pred *predicateData) satisfiedBy(span *common.Span) satisfiedByReturn {
 	val := pred.extractRelevantSpanData(span)
 	switch pred.Op {
 	case common.CONTAINS:
-		return bytes.Contains(val, pred.key)
+		if bytes.Contains(val, pred.key) {
+			return SATISFIED
+		} else {
+			return NOT_SATISFIED
+		}
 	case common.EQUALS:
-		return bytes.Equal(val, pred.key)
+		if bytes.Equal(val, pred.key) {
+			return SATISFIED
+		} else {
+			return NOT_SATISFIED
+		}
 	case common.LESS_THAN_OR_EQUALS:
-		return bytes.Compare(val, pred.key) <= 0
+		if bytes.Compare(val, pred.key) <= 0 {
+			return SATISFIED
+		} else {
+			return NOT_SATISFIED
+		}
 	case common.GREATER_THAN_OR_EQUALS:
-		return bytes.Compare(val, pred.key) >= 0
+		if bytes.Compare(val, pred.key) >= 0 {
+			return SATISFIED
+		} else {
+			return NOT_SATISFIED
+		}
 	case common.GREATER_THAN:
-		return bytes.Compare(val, pred.key) > 0
+		cmp := bytes.Compare(val, pred.key)
+		if cmp < 0 {
+			return NOT_SATISFIED
+		} else if cmp == 0 {
+			return NOT_YET_SATISFIED
+		} else {
+			return SATISFIED
+		}
 	default:
 		panic(fmt.Sprintf("unknown Op type %s should have been caught "+
 			"during normalization", pred.Op))
@@ -1176,25 +1207,6 @@ func CreateReaperSource(shd *shard) (*source, error) {
 	return src, nil
 }
 
-// Return true if this operation may require skipping the first result we get back from leveldb.
-func mayRequireOneSkip(op common.Op) bool {
-	switch op {
-	// When dealing with descending predicates, the first span we read might not satisfy
-	// the predicate, even though subsequent ones will.  This is because the iter.Seek()
-	// function "moves the iterator the position of the key given or, if the key doesn't
-	// exist, the next key that does exist in the database."  So if we're on that "next
-	// key" it will not satisfy the predicate, but the keys previous to it might.
-	case common.LESS_THAN_OR_EQUALS:
-		return true
-	// iter.Seek basically takes us to the key which is "greater than or equal to" some
-	// value.  Since we want greater than (not greater than or equal to) we may have to
-	// skip the first key.
-	case common.GREATER_THAN:
-		return true
-	}
-	return false
-}
-
 // Fill in the entry in the 'next' array for a specific shard.
 func (src *source) populateNextFromShard(shardIdx int) {
 	lg := src.store.lg
@@ -1253,20 +1265,18 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		} else {
 			iter.Next()
 		}
-		if src.pred.satisfiedBy(span) {
-			lg.Debugf("Populated valid span %v from shard %s.\n", sid, shdPath)
+		ret := src.pred.satisfiedBy(span)
+		switch ret {
+		case NOT_SATISFIED:
+			break // This and subsequent entries don't satisfy predicate
+		case SATISFIED:
+			if lg.DebugEnabled() {
+				lg.Debugf("Populated valid span %v from shard %s.\n", sid, shdPath)
+			}
 			src.nexts[shardIdx] = span // Found valid entry
 			return
-		} else {
-			if lg.DebugEnabled() {
-				lg.Debugf("Span %s from shard %s does not satisfy the predicate.\n",
-					sid.String(), shdPath)
-			}
-			if src.numRead[shardIdx] <= 1 && mayRequireOneSkip(src.pred.Op) {
-				continue
-			}
-			// This and subsequent entries don't satisfy predicate
-			break
+		case NOT_YET_SATISFIED:
+			continue // try again
 		}
 	}
 	lg.Debugf("Closing iterator for shard %s.\n", shdPath)
@@ -1361,7 +1371,7 @@ func (store *dataStore) HandleQuery(query *common.Query) ([]*common.Span, error)
 		}
 		satisfied := true
 		for predIdx := range preds {
-			if !preds[predIdx].satisfiedBy(span) {
+			if preds[predIdx].satisfiedBy(span) != SATISFIED {
 				satisfied = false
 				break
 			}
