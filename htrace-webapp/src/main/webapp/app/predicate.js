@@ -91,20 +91,20 @@ htrace.PType = Backbone.Model.extend({
 
 htrace.parsePType = function(name) {
   switch (name) {
-    case "Began after":
-      return new htrace.PType({name: name, field:"begin", op:"gt"});
+    case "Began at or after":
+      return new htrace.PType({name: name, field:"begin", op:"ge"});
     case "Began at or before":
       return new htrace.PType({name: name, field:"begin", op:"le"});
-    case "Ended after":
-      return new htrace.PType({name: name, field:"end", op:"gt"});
+    case "Ended at or after":
+      return new htrace.PType({name: name, field:"end", op:"ge"});
     case "Ended at or before":
       return new htrace.PType({name: name, field:"end", op:"le"});
     case "Description contains":
       return new htrace.PType({name: name, field:"description", op:"cn"});
     case "Description is exactly":
       return new htrace.PType({name: name, field:"description", op:"eq"});
-    case "Duration is longer than":
-      return new htrace.PType({name: name, field:"duration", op:"gt"});
+    case "Duration is at least":
+      return new htrace.PType({name: name, field:"duration", op:"ge"});
     case "Duration is at most":
       return new htrace.PType({name: name, field:"duration", op:"le"});
     case "Span ID is":
