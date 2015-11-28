@@ -225,14 +225,14 @@ func (hcl *Client) makeRestRequest(reqType string, reqName string,
 			err.Error()))
 	}
 	defer resp.Body.Close()
+	body, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		return nil, -1, errors.New(fmt.Sprintf("Error: error reading response body: %s\n", err2.Error()))
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, resp.StatusCode,
-			errors.New(fmt.Sprintf("Error: got bad response status from %s: %s\n", url, resp.Status))
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, -1, errors.New(fmt.Sprintf("Error: error reading response body: %s\n", err.Error()))
+			errors.New(fmt.Sprintf("Error: got bad response status from " +
+				"%s: %s\n%s\n", url, resp.Status, body))
 	}
 	return body, 0, nil
 }
