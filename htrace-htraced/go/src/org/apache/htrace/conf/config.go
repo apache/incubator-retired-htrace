@@ -217,8 +217,8 @@ func (cnf *Config) Contains(key string) bool {
 
 // Get a string configuration key.
 func (cnf *Config) Get(key string) string {
-	ret := cnf.settings[key]
-	if ret != "" {
+	ret, hadKey := cnf.settings[key]
+	if hadKey {
 		return ret
 	}
 	return cnf.defaults[key]

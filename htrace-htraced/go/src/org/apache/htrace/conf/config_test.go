@@ -30,7 +30,10 @@ import (
 func TestParseArgV(t *testing.T) {
 	t.Parallel()
 	argv := []string{"-Dfoo=bar", "-Dbaz=123", "-DsillyMode", "-Dlog.path="}
-	bld := &Builder{Argv: argv}
+	bld := &Builder{Argv: argv,
+		Defaults:map[string]string {
+			"log.path": "/log/path/default",
+		}}
 	cnf, err := bld.Build()
 	if err != nil {
 		t.Fatal()
