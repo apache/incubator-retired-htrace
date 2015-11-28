@@ -96,6 +96,10 @@ const HTRACE_NUM_HRPC_HANDLERS = "num.hrpc.handlers"
 // this to read or write a message, we will abort the connection.
 const HTRACE_HRPC_IO_TIMEOUT_MS = "hrpc.io.timeout.ms"
 
+// The leveldb write buffer size, or 0 to use the library default, which is 4
+// MB in leveldb 1.16.  See leveldb's options.h for more details.
+const HTRACE_LEVELDB_WRITE_BUFFER_SIZE = "leveldb.write.buffer.size"
+
 // Default values for HTrace configuration keys.
 var DEFAULTS = map[string]string{
 	HTRACE_WEB_ADDRESS:  fmt.Sprintf("0.0.0.0:%d", HTRACE_WEB_ADDRESS_DEFAULT_PORT),
@@ -112,6 +116,7 @@ var DEFAULTS = map[string]string{
 	HTRACE_REAPER_HEARTBEAT_PERIOD_MS:    fmt.Sprintf("%d", 90*1000),
 	HTRACE_NUM_HRPC_HANDLERS:             "20",
 	HTRACE_HRPC_IO_TIMEOUT_MS:            "60000",
+	HTRACE_LEVELDB_WRITE_BUFFER_SIZE:     "0",
 }
 
 // Values to be used when creating test configurations

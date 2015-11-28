@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"github.com/jmhodges/levigo"
 	"github.com/ugorji/go/codec"
+	"math"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
@@ -34,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -460,6 +462,9 @@ type dataStore struct {
 
 	// When this datastore was started (in UTC milliseconds since the epoch)
 	startMs int64
+
+	// The maximum number of open files to allow per shard.
+	maxFdPerShard int
 }
 
 func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataStore, error) {
@@ -482,6 +487,7 @@ func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataSto
 
 	store.readOpts = levigo.NewReadOptions()
 	store.readOpts.SetFillCache(true)
+	store.readOpts.SetVerifyChecksums(false)
 	store.writeOpts = levigo.NewWriteOptions()
 	store.writeOpts.SetSync(false)
 
@@ -514,7 +520,47 @@ func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataSto
 		})
 	}
 	store.startMs = common.TimeToUnixMs(time.Now().UTC())
+	err = store.calculateMaxOpenFilesPerShard()
+	if err != nil {
+		lg.Warnf("Unable to calculate maximum open files per shard: %s\n",
+			err.Error())
+	}
 	return store, nil
+}
+
+// The maximum number of file descriptors we'll use on non-datastore things.
+const NON_DATASTORE_FD_MAX = 300
+
+// The minimum number of file descriptors per shard we will set.  Setting fewer
+// than this number could trigger a bug in some early versions of leveldb.
+const MIN_FDS_PER_SHARD = 80
+
+func (store *dataStore) calculateMaxOpenFilesPerShard() error {
+	var rlim syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim)
+	if err != nil {
+		return err
+	}
+	// I think RLIMIT_NOFILE fits in 32 bits on all known operating systems,
+	// but there's no harm in being careful.  'int' in golang always holds at
+	// least 32 bits.
+	var maxFd int
+	if rlim.Cur > uint64(math.MaxInt32) {
+		maxFd = math.MaxInt32
+	} else {
+		maxFd = int(rlim.Cur)
+	}
+	fdsPerShard := (maxFd - NON_DATASTORE_FD_MAX) / len(store.shards)
+	if fdsPerShard < MIN_FDS_PER_SHARD {
+		return errors.New(fmt.Sprintf("Expected to be able to use at least %d " +
+			"fds per shard, but we have %d shards and %d total fds to allocate, " +
+			"giving us only %d FDs per shard.", MIN_FDS_PER_SHARD,
+			len(store.shards), maxFd - NON_DATASTORE_FD_MAX, fdsPerShard))
+	}
+	store.lg.Infof("maxFd = %d.  Setting maxFdPerShard = %d\n",
+		maxFd, fdsPerShard)
+	store.maxFdPerShard = fdsPerShard
+	return nil
 }
 
 func CreateShard(store *dataStore, cnf *conf.Config, path string,
@@ -543,6 +589,14 @@ func CreateShard(store *dataStore, cnf *conf.Config, path string,
 	}
 	var shd *shard
 	openOpts := levigo.NewOptions()
+	openOpts.SetParanoidChecks(false)
+	writeBufferSize := cnf.GetInt(conf.HTRACE_LEVELDB_WRITE_BUFFER_SIZE)
+	if writeBufferSize > 0 {
+		openOpts.SetWriteBufferSize(writeBufferSize)
+	}
+	if store.maxFdPerShard > 0 {
+		openOpts.SetMaxOpenFiles(store.maxFdPerShard)
+	}
 	defer openOpts.Close()
 	newlyCreated := false
 	ldb, err := levigo.Open(path, openOpts)
@@ -636,8 +690,10 @@ func (store *dataStore) Close() {
 		store.hb = nil
 	}
 	for idx := range store.shards {
-		store.shards[idx].Close()
-		store.shards[idx] = nil
+		if store.shards[idx] != nil {
+			store.shards[idx].Close()
+			store.shards[idx] = nil
+		}
 	}
 	if store.rpr != nil {
 		store.rpr.Shutdown()
