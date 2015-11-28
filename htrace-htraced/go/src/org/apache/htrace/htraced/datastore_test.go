@@ -390,6 +390,20 @@ func TestQueries5(t *testing.T) {
 		},
 		Lim: 500,
 	}, []common.Span{TEST_QUERIES5_SPANS[0], TEST_QUERIES5_SPANS[2]})
+
+	testQuery(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.LESS_THAN_OR_EQUALS,
+				Field: common.END_TIME,
+				Val:   "999",
+			},
+		},
+		Lim: 500,
+	}, []common.Span{TEST_QUERIES5_SPANS[2],
+		TEST_QUERIES5_SPANS[0],
+		TEST_QUERIES5_SPANS[1],
+	})
 }
 
 func BenchmarkDatastoreWrites(b *testing.B) {

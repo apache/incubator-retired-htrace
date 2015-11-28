@@ -1228,12 +1228,20 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		}
 		src.numRead[shardIdx]++
 		key := iter.Key()
-		if !bytes.HasPrefix(key, []byte{src.keyPrefix}) {
-			if lg.DebugEnabled() {
-				lg.Debugf("Can't populate: Iterator for shard %s does not have prefix %s\n",
-					shdPath, string(src.keyPrefix))
-			}
+		if len(key) < 1 {
+			lg.Warnf("Encountered invalid zero-byte key in shard %s.\n", shdPath)
+			break
+		}
+		ret := src.checkKeyPrefix(key[0], iter)
+		if ret == NOT_SATISFIED {
 			break // Can't read past end of indexed section
+		} else if ret == NOT_YET_SATISFIED {
+			if src.pred.Op.IsDescending() {
+				iter.Prev()
+			} else {
+				iter.Next()
+			}
+			continue // Try again because we are not yet at the indexed section.
 		}
 		var span *common.Span
 		var sid common.SpanId
@@ -1265,7 +1273,7 @@ func (src *source) populateNextFromShard(shardIdx int) {
 		} else {
 			iter.Next()
 		}
-		ret := src.pred.satisfiedBy(span)
+		ret = src.pred.satisfiedBy(span)
 		switch ret {
 		case NOT_SATISFIED:
 			break // This and subsequent entries don't satisfy predicate
@@ -1283,6 +1291,26 @@ func (src *source) populateNextFromShard(shardIdx int) {
 	iter.Close()
 	src.iters[shardIdx] = nil
 }
+
+// Check the key prefix against the key prefix of the query.
+func (src *source) checkKeyPrefix(kp byte, iter *levigo.Iterator) satisfiedByReturn {
+	if kp == src.keyPrefix {
+		return SATISFIED
+	} else if kp < src.keyPrefix {
+		if src.pred.Op.IsDescending() {
+			return NOT_SATISFIED
+		} else {
+			return NOT_YET_SATISFIED
+		}
+	} else {
+		if src.pred.Op.IsDescending() {
+			return NOT_YET_SATISFIED
+		} else {
+			return NOT_SATISFIED
+		}
+	}
+}
+
 
 func (src *source) next() *common.Span {
 	for shardIdx := range src.shards {
