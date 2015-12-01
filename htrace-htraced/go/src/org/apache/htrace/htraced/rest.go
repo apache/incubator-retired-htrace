@@ -24,8 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"org/apache/htrace/common"
@@ -230,34 +228,32 @@ func (hand *writeSpansHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 				req.RemoteAddr, serr.Error()))
 		return
 	}
-	var dec *json.Decoder
-	if hand.lg.TraceEnabled() {
-		b, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			writeError(hand.lg, w, http.StatusBadRequest,
-				fmt.Sprintf("Error reading span data: %s", err.Error()))
-			return
-		}
-		hand.lg.Tracef("writeSpansHandler: read %s\n", string(b))
-		dec = json.NewDecoder(bytes.NewBuffer(b))
-	} else {
-		dec = json.NewDecoder(req.Body)
-	}
+	dec := json.NewDecoder(req.Body)
 	var msg common.WriteSpansReq
 	err := dec.Decode(&msg)
-	if (err != nil) && (err != io.EOF) {
+	if (err != nil) {
 		writeError(hand.lg, w, http.StatusBadRequest,
 			fmt.Sprintf("Error parsing WriteSpansReq: %s", err.Error()))
 		return
 	}
-	hand.lg.Debugf("writeSpansHandler: received %d span(s).  defaultTrid = %s\n",
-		len(msg.Spans), msg.DefaultTrid)
-
+	if hand.lg.TraceEnabled() {
+		hand.lg.Tracef("%s: read WriteSpans REST message: %s\n",
+			req.RemoteAddr, asJson(&msg))
+	}
 	ing := hand.store.NewSpanIngestor(hand.lg, client, msg.DefaultTrid)
-	for spanIdx := range msg.Spans {
-		ing.IngestSpan(msg.Spans[spanIdx])
+	for spanIdx := 0; spanIdx < msg.NumSpans; spanIdx++ {
+		var span *common.Span
+		err := dec.Decode(&span)
+		if err != nil {
+			writeError(hand.lg, w, http.StatusBadRequest,
+				fmt.Sprintf("Failed to decode span %d out of %d: ",
+					spanIdx, msg.NumSpans, err.Error()))
+			return
+		}
+		ing.IngestSpan(span)
 	}
 	ing.Close(startTime)
+	return
 }
 
 type queryHandler struct {

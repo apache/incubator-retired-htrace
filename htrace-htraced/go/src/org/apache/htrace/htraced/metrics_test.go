@@ -118,9 +118,7 @@ func testIngestedSpansMetricsImpl(t *testing.T, usePacked bool) {
 
 	NUM_TEST_SPANS := 12
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
-	err = hcl.WriteSpans(&common.WriteSpansReq{
-		Spans: allSpans,
-	})
+	err = hcl.WriteSpans(allSpans)
 	if err != nil {
 		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}

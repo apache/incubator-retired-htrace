@@ -362,9 +362,7 @@ func doLoadSpans(hcl *htrace.Client, reader io.Reader) int {
 		}
 		fmt.Printf("\n")
 	}
-	err = hcl.WriteSpans(&common.WriteSpansReq{
-		Spans: spans,
-	})
+	err = hcl.WriteSpans(spans)
 	if err != nil {
 		fmt.Println(err.Error())
 		return EXIT_FAILURE

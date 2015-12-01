@@ -42,15 +42,12 @@ import org.eclipse.jetty.http.HttpStatus;
 class RestBufferManager implements BufferManager {
   private static final Log LOG = LogFactory.getLog(RestBufferManager.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
-  private static final byte COMMA_BYTE = (byte)0x2c;
   private static final int MAX_PREQUEL_LENGTH = 512;
-  private static final int MAX_EPILOGUE_LENGTH = 32;
   private final Conf conf;
   private final HttpClient httpClient;
   private final String urlString;
   private final ByteBuffer prequel;
   private final ByteBuffer spans;
-  private final ByteBuffer epilogue;
   private int numSpans;
 
   private static class RestBufferManagerContentProvider
@@ -122,7 +119,6 @@ class RestBufferManager implements BufferManager {
         conf.endpoint.getPort(), "/writeSpans").toString();
     this.prequel = ByteBuffer.allocate(MAX_PREQUEL_LENGTH);
     this.spans = ByteBuffer.allocate(conf.bufferSize);
-    this.epilogue = ByteBuffer.allocate(MAX_EPILOGUE_LENGTH);
     clear();
     this.httpClient.start();
   }
@@ -130,11 +126,10 @@ class RestBufferManager implements BufferManager {
   @Override
   public void writeSpan(Span span) throws IOException {
     byte[] spanJsonBytes = span.toString().getBytes(UTF8);
-    if ((spans.capacity() - spans.position()) < (spanJsonBytes.length + 1)) {
-      // Make sure we have enough space for the span JSON and a comma.
+    if ((spans.capacity() - spans.position()) < spanJsonBytes.length) {
+      // Make sure we have enough space for the span JSON.
       throw new IOException("Not enough space remaining in span buffer.");
     }
-    spans.put(COMMA_BYTE);
     spans.put(spanJsonBytes);
     numSpans++;
   }
@@ -151,15 +146,13 @@ class RestBufferManager implements BufferManager {
 
   @Override
   public void prepare() throws IOException {
-    String prequelString = "{\"Spans\":[";
+    StringBuilder bld = new StringBuilder();
+    bld.append("{\"NumSpans\":").append(numSpans).append("}");
+    String prequelString = bld.toString();
     prequel.put(prequelString.getBytes(UTF8));
     prequel.flip();
 
     spans.flip();
-
-    String epilogueString = "]}";
-    epilogue.put(epilogueString.toString().getBytes(UTF8));
-    epilogue.flip();
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Preparing to send " + contentLength() + " bytes of span " +
@@ -172,12 +165,11 @@ class RestBufferManager implements BufferManager {
   public void flush() throws IOException {
     // Position the buffers at the beginning.
     prequel.position(0);
-    spans.position(spans.limit() == 0 ? 0 : 1); // Skip the first comma
-    epilogue.position(0);
+    spans.position(0);
 
     RestBufferManagerContentProvider contentProvider =
         new RestBufferManagerContentProvider(
-            new ByteBuffer[] { prequel, spans, epilogue });
+            new ByteBuffer[] { prequel, spans });
     long rpcLength = contentProvider.getLength();
     try {
       Request request = httpClient.
@@ -206,7 +198,6 @@ class RestBufferManager implements BufferManager {
   public void clear() {
     prequel.clear();
     spans.clear();
-    epilogue.clear();
     numSpans = 0;
   }
 

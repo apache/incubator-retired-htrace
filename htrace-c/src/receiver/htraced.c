@@ -71,7 +71,7 @@
  * The maximum length of the message we will send to the server.
  * This must be the same or shorter than MAX_HRPC_BODY_LENGTH in rpc.go.
  */
-#define MAX_HRPC_LEN (64ULL * 1024ULL * 1024ULL)
+#define MAX_HRPC_LEN (32ULL * 1024ULL * 1024ULL)
 
 /**
  * The maximum length of the prequel in a WriteSpans message.
@@ -490,8 +490,8 @@ static int should_xmit(struct htraced_rcv *rcv, uint64_t now)
 
 #define DEFAULT_TRID_STR        "DefaultTrid"
 #define DEFAULT_TRID_STR_LEN    (sizeof(DEFAULT_TRID_STR) - 1)
-#define SPANS_STR               "Spans"
-#define SPANS_STR_LEN           (sizeof(SPANS_STR) - 1)
+#define NUM_SPANS_STR               "NumSpans"
+#define NUM_SPANS_STR_LEN           (sizeof(NUM_SPANS_STR) - 1)
 
 /**
  * Write the prequel to the WriteSpans message.
@@ -511,10 +511,10 @@ static int add_writespans_prequel(struct htraced_rcv *rcv,
     if (!cmp_write_str(ctx, rcv->tracer->trid, strlen(rcv->tracer->trid))) {
         return -1;
     }
-    if (!cmp_write_fixstr(ctx, SPANS_STR, SPANS_STR_LEN)) {
+    if (!cmp_write_fixstr(ctx, NUM_SPANS_STR, NUM_SPANS_STR_LEN)) {
         return -1;
     }
-    if (!cmp_write_array(ctx, sbuf->num_spans)) {
+    if (!cmp_write_uint(ctx, sbuf->num_spans)) {
         return -1;
     }
     return bctx.off;

@@ -34,13 +34,13 @@ const METHOD_NAME_WRITE_SPANS = "HrpcHandler.WriteSpans"
 const MAX_HRPC_ERROR_LENGTH = 4 * 1024 * 1024
 
 // Maximum length of HRPC message body
-const MAX_HRPC_BODY_LENGTH = 64 * 1024 * 1024
+const MAX_HRPC_BODY_LENGTH = 32 * 1024 * 1024
 
 // A request to write spans to htraced.
+// This request is followed by a sequence of spans.
 type WriteSpansReq struct {
-	Addr        string `json:",omitempty"` // This gets filled in by the RPC layer.
 	DefaultTrid string `json:",omitempty"`
-	Spans       []*Span
+	NumSpans    int
 }
 
 // Info returned by /server/version

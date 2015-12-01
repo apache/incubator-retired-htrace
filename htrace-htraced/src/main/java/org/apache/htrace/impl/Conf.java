@@ -113,11 +113,11 @@ class Conf {
    */
   final static String BUFFER_SIZE_KEY =
       "htraced.receiver.buffer.size";
-  final static int BUFFER_SIZE_DEFAULT = 48 * 1024 * 1024;
+  final static int BUFFER_SIZE_DEFAULT = 16 * 1024 * 1024;
   static int BUFFER_SIZE_MIN = 4 * 1024 * 1024;
   // The maximum buffer size should not be longer than
   // PackedBuffer.MAX_HRPC_BODY_LENGTH.
-  final static int BUFFER_SIZE_MAX = 63 * 1024 * 1024;
+  final static int BUFFER_SIZE_MAX = 32 * 1024 * 1024;
 
   /**
    * Set the fraction of the span buffer which needs to fill up before we

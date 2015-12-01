@@ -142,25 +142,35 @@ func (hcl *Client) FindSpan(sid common.SpanId) (*common.Span, error) {
 	return &span, nil
 }
 
-func (hcl *Client) WriteSpans(req *common.WriteSpansReq) error {
+func (hcl *Client) WriteSpans(spans []*common.Span) error {
 	if hcl.hrpcAddr == "" {
-		return hcl.writeSpansHttp(req)
+		return hcl.writeSpansHttp(spans)
 	}
 	hcr, err := newHClient(hcl.hrpcAddr, hcl.testHooks)
 	if err != nil {
 		return err
 	}
 	defer hcr.Close()
-	return hcr.writeSpans(req)
+	return hcr.writeSpans(spans)
 }
 
-func (hcl *Client) writeSpansHttp(req *common.WriteSpansReq) error {
+func (hcl *Client) writeSpansHttp(spans []*common.Span) error {
+	req := common.WriteSpansReq {
+		NumSpans: len(spans),
+	}
 	var w bytes.Buffer
 	enc := json.NewEncoder(&w)
 	err := enc.Encode(req)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error serializing span: %s",
+		return errors.New(fmt.Sprintf("Error serializing WriteSpansReq: %s",
 			err.Error()))
+	}
+	for spanIdx := range(spans) {
+		err := enc.Encode(spans[spanIdx])
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error serializing span %d out " +
+				"of %d: %s", spanIdx, len(spans), err.Error()))
+		}
 	}
 	_, _, err = hcl.makeRestRequest("POST", "writeSpans", &w)
 	if err != nil {

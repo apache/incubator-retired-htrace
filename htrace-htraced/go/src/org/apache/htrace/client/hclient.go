@@ -41,20 +41,41 @@ type HrpcClientCodec struct {
 	testHooks *TestHooks
 }
 
-func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) error {
-	methodId := common.HrpcMethodNameToId(req.ServiceMethod)
+func (cdc *HrpcClientCodec) WriteRequest(rr *rpc.Request, msg interface{}) error {
+	methodId := common.HrpcMethodNameToId(rr.ServiceMethod)
 	if methodId == common.METHOD_ID_NONE {
 		return errors.New(fmt.Sprintf("HrpcClientCodec: Unknown method name %s",
-			req.ServiceMethod))
+			rr.ServiceMethod))
 	}
 	mh := new(codec.MsgpackHandle)
 	mh.WriteExt = true
 	w := bytes.NewBuffer(make([]byte, 0, 2048))
+
+	var err error
 	enc := codec.NewEncoder(w, mh)
-	err := enc.Encode(msg)
-	if err != nil {
-		return errors.New(fmt.Sprintf("HrpcClientCodec: Unable to marshal "+
-			"message as msgpack: %s", err.Error()))
+	if methodId == common.METHOD_ID_WRITE_SPANS {
+		spans := msg.([]*common.Span)
+		req := &common.WriteSpansReq {
+			NumSpans: len(spans),
+		}
+		err = enc.Encode(req)
+		if err != nil {
+			return errors.New(fmt.Sprintf("HrpcClientCodec: Unable to marshal "+
+				"message as msgpack: %s", err.Error()))
+		}
+		for spanIdx := range(spans) {
+			err = enc.Encode(spans[spanIdx])
+			if err != nil {
+				return errors.New(fmt.Sprintf("HrpcClientCodec: Unable to marshal "+
+					"span %d out of %d as msgpack: %s", spanIdx, len(spans), err.Error()))
+			}
+		}
+	} else {
+		err = enc.Encode(msg)
+		if err != nil {
+			return errors.New(fmt.Sprintf("HrpcClientCodec: Unable to marshal "+
+				"message as msgpack: %s", err.Error()))
+		}
 	}
 	buf := w.Bytes()
 	if len(buf) > common.MAX_HRPC_BODY_LENGTH {
@@ -65,7 +86,7 @@ func (cdc *HrpcClientCodec) WriteRequest(req *rpc.Request, msg interface{}) erro
 	hdr := common.HrpcRequestHeader{
 		Magic:    common.HRPC_MAGIC,
 		MethodId: methodId,
-		Seq:      req.Seq,
+		Seq:      rr.Seq,
 		Length:   uint32(len(buf)),
 	}
 	err = binary.Write(cdc.rwc, binary.LittleEndian, &hdr)
@@ -154,9 +175,9 @@ func newHClient(hrpcAddr string, testHooks *TestHooks) (*hClient, error) {
 	return &hcr, nil
 }
 
-func (hcr *hClient) writeSpans(req *common.WriteSpansReq) error {
+func (hcr *hClient) writeSpans(spans []*common.Span) error {
 	resp := common.WriteSpansResp{}
-	return hcr.rpcClient.Call(common.METHOD_NAME_WRITE_SPANS, req, &resp)
+	return hcr.rpcClient.Call(common.METHOD_NAME_WRITE_SPANS, spans, &resp)
 }
 
 func (hcr *hClient) Close() {

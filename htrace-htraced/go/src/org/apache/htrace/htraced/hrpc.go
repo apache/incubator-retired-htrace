@@ -32,7 +32,6 @@ import (
 	"net/rpc"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
-	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -101,6 +100,13 @@ type HrpcServerCodec struct {
 
 	// The number of messages this connection has handled.
 	numHandled int
+
+	// The buffer for reading requests.  These buffers are reused for multiple
+	// requests to avoid allocating memory.
+	buf []byte
+
+	// Configuration for msgpack decoding
+	msgpackHandle codec.MsgpackHandle
 }
 
 func asJson(val interface{}) string {
@@ -164,29 +170,55 @@ func (cdc *HrpcServerCodec) ReadRequestHeader(req *rpc.Request) error {
 }
 
 func (cdc *HrpcServerCodec) ReadRequestBody(body interface{}) error {
+	remoteAddr := cdc.conn.RemoteAddr().String()
 	if cdc.lg.TraceEnabled() {
 		cdc.lg.Tracef("%s: Reading HRPC %d-byte request body.\n",
-			cdc.conn.RemoteAddr(), cdc.length)
+			remoteAddr, cdc.length)
 	}
-	mh := new(codec.MsgpackHandle)
-	mh.WriteExt = true
-	dec := codec.NewDecoder(io.LimitReader(cdc.conn, int64(cdc.length)), mh)
-	err := dec.Decode(body)
+	if cap(cdc.buf) < int(cdc.length) {
+		var pow uint
+		for pow=0;(1<<pow) < int(cdc.length);pow++ {
+		}
+		cdc.buf = make([]byte, 0, 1<<pow)
+	}
+	_, err := io.ReadFull(cdc.conn, cdc.buf[:cdc.length])
 	if err != nil {
 		return newIoErrorWarn(cdc, fmt.Sprintf("Failed to read %d-byte "+
 			"request body: %s", cdc.length, err.Error()))
 	}
-	if cdc.lg.TraceEnabled() {
-		cdc.lg.Tracef("%s: read %d-byte request body %s\n",
-			cdc.conn.RemoteAddr(), cdc.length, asJson(&body))
-	}
-	val := reflect.ValueOf(body)
-	addr := val.Elem().FieldByName("Addr")
-	if addr.IsValid() {
-		addr.SetString(cdc.conn.RemoteAddr().String())
-	}
 	var zeroTime time.Time
 	cdc.conn.SetDeadline(zeroTime)
+
+	dec := codec.NewDecoderBytes(cdc.buf[:cdc.length], &cdc.msgpackHandle)
+	err = dec.Decode(body)
+	if cdc.lg.TraceEnabled() {
+		cdc.lg.Tracef("%s: read HRPC message: %s\n",
+			remoteAddr, asJson(&body))
+	}
+	req := body.(*common.WriteSpansReq)
+	if req == nil {
+		return nil
+	}
+	// We decode WriteSpans requests in a streaming fashion, to avoid overloading the garbage
+	// collector with a ton of trace spans all at once.
+	startTime := time.Now()
+	client, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return newIoErrorWarn(cdc, fmt.Sprintf("Failed to split host and port "+
+			"for %s: %s\n", remoteAddr, err.Error()))
+	}
+	hand := cdc.hsv.hand
+	ing := hand.store.NewSpanIngestor(hand.lg, client, req.DefaultTrid)
+	for spanIdx := 0; spanIdx < req.NumSpans; spanIdx++ {
+		var span *common.Span
+		err := dec.Decode(&span)
+		if err != nil {
+			return newIoErrorWarn(cdc, fmt.Sprintf("Failed to decode span %d " +
+				"out of %d: %s\n", spanIdx, req.NumSpans, err.Error()))
+		}
+		ing.IngestSpan(span)
+	}
+	ing.Close(startTime)
 	return nil
 }
 
@@ -197,10 +229,8 @@ func (cdc *HrpcServerCodec) WriteResponse(resp *rpc.Response, msg interface{}) e
 	var err error
 	buf := EMPTY
 	if msg != nil {
-		mh := new(codec.MsgpackHandle)
-		mh.WriteExt = true
 		w := bytes.NewBuffer(make([]byte, 0, 128))
-		enc := codec.NewEncoder(w, mh)
+		enc := codec.NewEncoder(w, &cdc.msgpackHandle)
 		err := enc.Encode(msg)
 		if err != nil {
 			return newIoErrorWarn(cdc, fmt.Sprintf("Failed to marshal "+
@@ -257,20 +287,8 @@ func (cdc *HrpcServerCodec) Close() error {
 }
 
 func (hand *HrpcHandler) WriteSpans(req *common.WriteSpansReq,
-	resp *common.WriteSpansResp) (err error) {
-	startTime := time.Now()
-	hand.lg.Debugf("hrpc writeSpansHandler: received %d span(s).  "+
-		"defaultTrid = %s\n", len(req.Spans), req.DefaultTrid)
-	client, _, err := net.SplitHostPort(req.Addr)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to split host and port "+
-			"for %s: %s\n", req.Addr, err.Error()))
-	}
-	ing := hand.store.NewSpanIngestor(hand.lg, client, req.DefaultTrid)
-	for spanIdx := range req.Spans {
-		ing.IngestSpan(req.Spans[spanIdx])
-	}
-	ing.Close(startTime)
+		resp *common.WriteSpansResp) (err error) {
+	// Nothing to do here; WriteSpans is handled in ReadRequestBody.
 	return nil
 }
 
@@ -303,6 +321,9 @@ func CreateHrpcServer(cnf *conf.Config, store *dataStore,
 		hsv.cdcs <- &HrpcServerCodec{
 			lg:  lg,
 			hsv: hsv,
+			msgpackHandle: codec.MsgpackHandle {
+				WriteExt: true,
+			},
 		}
 	}
 	var err error

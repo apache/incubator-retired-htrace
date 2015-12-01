@@ -114,9 +114,7 @@ func TestClientOperations(t *testing.T) {
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
 
 	// Write half of the spans to htraced via the client.
-	err = hcl.WriteSpans(&common.WriteSpansReq{
-		Spans: allSpans[0 : NUM_TEST_SPANS/2],
-	})
+	err = hcl.WriteSpans(allSpans[0 : NUM_TEST_SPANS/2])
 	if err != nil {
 		t.Fatalf("WriteSpans(0:%d) failed: %s\n", NUM_TEST_SPANS/2,
 			err.Error())
@@ -209,9 +207,7 @@ func TestDumpAll(t *testing.T) {
 	NUM_TEST_SPANS := 100
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
 	sort.Sort(allSpans)
-	err = hcl.WriteSpans(&common.WriteSpansReq{
-		Spans: allSpans,
-	})
+	err = hcl.WriteSpans(allSpans)
 	if err != nil {
 		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}
@@ -325,9 +321,7 @@ func TestHrpcAdmissionsControl(t *testing.T) {
 	allSpans := createRandomTestSpans(TEST_NUM_WRITESPANS)
 	for iter := 0; iter < TEST_NUM_WRITESPANS; iter++ {
 		go func(i int) {
-			err = hcl.WriteSpans(&common.WriteSpansReq{
-				Spans: allSpans[i : i+1],
-			})
+			err = hcl.WriteSpans(allSpans[i : i+1])
 			if err != nil {
 				t.Fatalf("WriteSpans failed: %s\n", err.Error())
 			}
@@ -379,9 +373,7 @@ func TestHrpcIoTimeout(t *testing.T) {
 			// Keep in mind that we only block until we have seen
 			// TEST_NUM_WRITESPANS I/O errors in the HRPC server-- after that,
 			// we let requests through so that the test can exit cleanly.
-			hcl.WriteSpans(&common.WriteSpansReq{
-				Spans: allSpans[i : i+1],
-			})
+			hcl.WriteSpans(allSpans[i : i+1])
 		}(iter)
 	}
 	for {
@@ -398,6 +390,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 	htraceBld := &MiniHTracedBuilder{Name: "doWriteSpans",
 		Cnf: map[string]string{
 			conf.HTRACE_LOG_LEVEL: "INFO",
+			conf.HTRACE_NUM_HRPC_HANDLERS: "20",
 		},
 		WrittenSpans: common.NewSemaphore(int64(1 - N)),
 	}
@@ -416,7 +409,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 	// body length limit.  TODO: a production-quality golang client would do
 	// this internally rather than needing us to do it here in the unit test.
 	bodyLen := (4 * common.MAX_HRPC_BODY_LENGTH) / 5
-	reqs := make([]*common.WriteSpansReq, 0, 4)
+	reqs := make([][]*common.Span, 0, 4)
 	curReq := -1
 	curReqLen := bodyLen
 	var curReqSpans uint32
@@ -429,7 +422,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 		span := allSpans[n]
 		if (curReqSpans >= maxSpansPerRpc) ||
 			(curReqLen >= bodyLen) {
-			reqs = append(reqs, &common.WriteSpansReq{})
+			reqs = append(reqs, make([]*common.Span, 0, 16))
 			curReqLen = 0
 			curReq++
 			curReqSpans = 0
@@ -446,7 +439,7 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 			panic(fmt.Sprintf("Span too long at %d bytes\n", bufLen))
 		}
 		curReqLen += bufLen
-		reqs[curReq].Spans = append(reqs[curReq].Spans, span)
+		reqs[curReq] = append(reqs[curReq], span)
 		curReqSpans++
 	}
 	ht.Store.lg.Infof("num spans: %d.  num WriteSpansReq calls: %d\n", N, len(reqs))
@@ -465,13 +458,13 @@ func doWriteSpans(name string, N int, maxSpansPerRpc uint32, b *testing.B) {
 
 	// Write many random spans.
 	for reqIdx := range reqs {
-		go func() {
-			err = hcl.WriteSpans(reqs[reqIdx])
+		go func(i int) {
+			err = hcl.WriteSpans(reqs[i])
 			if err != nil {
 				panic(fmt.Sprintf("failed to send WriteSpans request %d: %s",
-					reqIdx, err.Error()))
+					i, err.Error()))
 			}
-		}()
+		}(reqIdx)
 	}
 	// Wait for all the spans to be written.
 	ht.Store.WrittenSpans.Wait()

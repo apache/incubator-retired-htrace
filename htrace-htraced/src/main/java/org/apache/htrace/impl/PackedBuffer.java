@@ -78,7 +78,7 @@ class PackedBuffer {
 
   private static final Log LOG = LogFactory.getLog(PackedBuffer.class);
   private static final Charset UTF8 = StandardCharsets.UTF_8;
-  private static final byte SPANS[] = "Spans".getBytes(UTF8);
+  private static final byte NUM_SPANS[] = "NumSpans".getBytes(UTF8);
   private static final byte DEFAULT_PID[] = "DefaultPid".getBytes(UTF8);
   private static final byte A[] = "a".getBytes(UTF8);
   private static final byte B[] = "b".getBytes(UTF8);
@@ -401,9 +401,9 @@ class PackedBuffer {
         packer.writePayload(DEFAULT_PID);
         packer.packString(defaultPid);
       }
-      packer.packRawStringHeader(SPANS.length);
-      packer.writePayload(SPANS);
-      packer.packArrayHeader(numSpans);
+      packer.packRawStringHeader(NUM_SPANS.length);
+      packer.writePayload(NUM_SPANS);
+      packer.packInt(numSpans);
       packer.flush();
       success = true;
     } finally {

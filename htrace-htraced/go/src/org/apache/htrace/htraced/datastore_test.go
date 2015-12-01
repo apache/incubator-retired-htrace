@@ -478,9 +478,7 @@ func TestReloadDataStore(t *testing.T) {
 	// Create some random trace spans.
 	NUM_TEST_SPANS := 5
 	allSpans := createRandomTestSpans(NUM_TEST_SPANS)
-	err = hcl.WriteSpans(&common.WriteSpansReq{
-		Spans: allSpans,
-	})
+	err = hcl.WriteSpans(allSpans)
 	if err != nil {
 		t.Fatalf("WriteSpans failed: %s\n", err.Error())
 	}
