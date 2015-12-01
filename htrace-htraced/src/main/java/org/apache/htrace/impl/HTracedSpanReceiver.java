@@ -27,8 +27,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.Files;
+import java.nio.file.FileSystems;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -87,6 +95,26 @@ public class HTracedSpanReceiver extends SpanReceiver {
   private long lastBufferClearedTimeMs = 0;
 
   private long unbufferableSpans = 0;
+
+  private static final SimpleDateFormat ISO_DATE_FORMAT;
+
+  private static final Set<PosixFilePermission> DROPPED_SPANS_FILE_PERMS;
+
+  static {
+    ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+    ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+    if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+      DROPPED_SPANS_FILE_PERMS = new HashSet<PosixFilePermission>();
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.OWNER_READ);
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.OWNER_WRITE);
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.GROUP_READ);
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.GROUP_WRITE);
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.OTHERS_READ);
+      DROPPED_SPANS_FILE_PERMS.add(PosixFilePermission.OTHERS_WRITE);
+    } else {
+      DROPPED_SPANS_FILE_PERMS = null;
+    }
+  }
 
   static class FaultInjector {
     static FaultInjector NO_OP = new FaultInjector();
@@ -368,8 +396,9 @@ public class HTracedSpanReceiver extends SpanReceiver {
       return;
     }
     FileLock lock = null;
+    String msg = ISO_DATE_FORMAT.format(new Date()) + ": " + text;
     ByteBuffer bb = ByteBuffer.wrap(
-        text.getBytes(StandardCharsets.UTF_8));
+        msg.getBytes(StandardCharsets.UTF_8));
     // FileChannel locking corresponds to advisory locking on UNIX.  It will
     // protect multiple processes from attempting to write to the same dropped
     // spans log at once.  However, within a single process, we need this
@@ -386,6 +415,11 @@ public class HTracedSpanReceiver extends SpanReceiver {
           throw new IOException("Dropped spans log " +
               conf.droppedSpansLogPath + " is already " + size +
               " bytes; will not add to it.");
+        } else if ((size == 0) && (DROPPED_SPANS_FILE_PERMS != null)) {
+          // Set the permissions of the dropped spans file so that other
+          // processes can write to it.
+          Files.setPosixFilePermissions(Paths.get(conf.droppedSpansLogPath),
+              DROPPED_SPANS_FILE_PERMS);
         }
         channel.write(bb);
       } finally {

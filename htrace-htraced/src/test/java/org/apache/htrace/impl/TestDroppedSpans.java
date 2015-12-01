@@ -105,7 +105,7 @@ public class TestDroppedSpans {
           put(Conf.ADDRESS_KEY, "127.0.0.1:8080");
           put(TracerId.TRACER_ID_KEY, "testWriteToDroppedSpansLog");
           put(Conf.DROPPED_SPANS_LOG_PATH_KEY, logPath);
-          put(Conf.DROPPED_SPANS_LOG_MAX_SIZE_KEY, "78");
+          put(Conf.DROPPED_SPANS_LOG_MAX_SIZE_KEY, "128");
         }});
     HTracedSpanReceiver rcvr = new HTracedSpanReceiver(conf);
     try {
@@ -123,8 +123,8 @@ public class TestDroppedSpans {
       List<String> lines =
           Files.readAllLines(Paths.get(logPath), StandardCharsets.UTF_8);
       Assert.assertEquals(2, lines.size());
-      Assert.assertEquals(LINE1, lines.get(0));
-      Assert.assertEquals(LINE2, lines.get(1));
+      Assert.assertEquals(LINE1, lines.get(0).substring(25));
+      Assert.assertEquals(LINE2, lines.get(1).substring(25));
     } finally {
       rcvr.close();
     }
