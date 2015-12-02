@@ -115,8 +115,10 @@ func (bld *MiniHTracedBuilder) Build() (*MiniHTraced, error) {
 				store.Close()
 			}
 			for idx := range bld.DataDirs {
-				if bld.DataDirs[idx] != "" {
-					os.RemoveAll(bld.DataDirs[idx])
+				if !bld.KeepDataDirsOnClose {
+					if bld.DataDirs[idx] != "" {
+						os.RemoveAll(bld.DataDirs[idx])
+					}
 				}
 			}
 			if rsv != nil {

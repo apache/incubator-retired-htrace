@@ -29,7 +29,6 @@ import (
 	"org/apache/htrace/test"
 	"os"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 )
@@ -446,6 +445,55 @@ func BenchmarkDatastoreWrites(b *testing.B) {
 	assertNumWrittenEquals(b, ht.Store.msink, b.N)
 }
 
+func verifySuccessfulLoad(t *testing.T, allSpans common.SpanSlice,
+		dataDirs []string) {
+	htraceBld := &MiniHTracedBuilder{
+		Name: "TestReloadDataStore#verifySuccessfulLoad",
+		DataDirs: dataDirs,
+		KeepDataDirsOnClose: true,
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		t.Fatalf("failed to create datastore: %s", err.Error())
+	}
+	defer ht.Close()
+	var hcl *htrace.Client
+	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err.Error())
+	}
+	defer hcl.Close()
+	for i := 0; i < len(allSpans); i++ {
+		span, err := hcl.FindSpan(allSpans[i].Id)
+		if err != nil {
+			t.Fatalf("FindSpan(%d) failed: %s\n", i, err.Error())
+		}
+		common.ExpectSpansEqual(t, allSpans[i], span)
+	}
+	// Look up the spans we wrote.
+	var span *common.Span
+	for i := 0; i < len(allSpans); i++ {
+		span, err = hcl.FindSpan(allSpans[i].Id)
+		if err != nil {
+			t.Fatalf("FindSpan(%d) failed: %s\n", i, err.Error())
+		}
+		common.ExpectSpansEqual(t, allSpans[i], span)
+	}
+}
+
+func verifyFailedLoad(t *testing.T, dataDirs []string, expectedErr string) {
+	htraceBld := &MiniHTracedBuilder{
+		Name: "TestReloadDataStore#verifyFailedLoad",
+		DataDirs: dataDirs,
+		KeepDataDirsOnClose: true,
+	}
+	_, err := htraceBld.Build()
+	if err == nil {
+		t.Fatalf("expected failure to load, but the load succeeded.")
+	}
+	common.AssertErrContains(t, err, expectedErr)
+}
+
 func TestReloadDataStore(t *testing.T) {
 	htraceBld := &MiniHTracedBuilder{Name: "TestReloadDataStore",
 		Cnf: map[string]string{
@@ -474,6 +522,7 @@ func TestReloadDataStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %s", err.Error())
 	}
+	hcnf := ht.Cnf.Clone()
 
 	// Create some random trace spans.
 	NUM_TEST_SPANS := 5
@@ -493,57 +542,112 @@ func TestReloadDataStore(t *testing.T) {
 		}
 		common.ExpectSpansEqual(t, allSpans[i], span)
 	}
-
+	hcl.Close()
 	ht.Close()
 	ht = nil
 
-	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore2",
-		DataDirs: dataDirs, KeepDataDirsOnClose: true}
-	ht, err = htraceBld.Build()
-	if err != nil {
-		t.Fatalf("failed to re-create datastore: %s", err.Error())
-	}
-	hcl, err = htrace.NewClient(ht.ClientConf(), nil)
-	if err != nil {
-		t.Fatalf("failed to re-create client: %s", err.Error())
-	}
+	// Verify that we can reload the datastore, even if we configure the data
+	// directories in a different order.
+	verifySuccessfulLoad(t, allSpans, []string{dataDirs[1], dataDirs[0]})
 
-	// Look up the spans we wrote earlier.
-	for i := 0; i < NUM_TEST_SPANS; i++ {
-		span, err = hcl.FindSpan(allSpans[i].Id)
-		if err != nil {
-			t.Fatalf("FindSpan(%d) failed: %s\n", i, err.Error())
+	// If we try to reload the datastore with only one directory, it won't work
+	// (we need both).
+	verifyFailedLoad(t, []string{dataDirs[1]},
+		"The TotalShards field of all shards is 2, but we have 1 shards.")
+
+	// Test that we give an intelligent error message when 0 directories are
+	// configured.
+	verifyFailedLoad(t, []string{}, "No shard directories found.")
+
+	// Can't specify the same directory more than once... will get "lock
+	// already held by process"
+	verifyFailedLoad(t, []string{dataDirs[0], dataDirs[1], dataDirs[1]},
+		" already held by process.")
+
+	// Open the datastore and modify it to have the wrong DaemonId
+	dld := NewDataStoreLoader(hcnf)
+	defer func() {
+		if dld != nil {
+			dld.Close()
+			dld = nil
 		}
-		common.ExpectSpansEqual(t, allSpans[i], span)
+	}()
+	dld.LoadShards()
+	sinfo, err := dld.shards[0].readShardInfo()
+	if err != nil {
+		t.Fatalf("error reading shard info for shard %s: %s\n",
+			dld.shards[0].path, err.Error())
 	}
+	newDaemonId := sinfo.DaemonId + 1
+	dld.lg.Infof("Read %s from shard %s.  Changing daemonId to 0x%016x\n.",
+		asJson(sinfo), dld.shards[0].path, newDaemonId)
+	sinfo.DaemonId = newDaemonId
+	err = dld.shards[0].writeShardInfo(sinfo)
+	if err != nil {
+		t.Fatalf("error writing shard info for shard %s: %s\n",
+			dld.shards[0].path, err.Error())
+	}
+	dld.Close()
+	dld = nil
+	verifyFailedLoad(t, dataDirs, "DaemonId mismatch.")
 
-	// Set an old datastore version number.
-	for i := range ht.Store.shards {
-		shard := ht.Store.shards[i]
-		writeDataStoreVersion(ht.Store, shard.ldb, CURRENT_LAYOUT_VERSION-1)
+	// Open the datastore and modify it to have the wrong TotalShards
+	dld = NewDataStoreLoader(hcnf)
+	dld.LoadShards()
+	sinfo, err = dld.shards[0].readShardInfo()
+	if err != nil {
+		t.Fatalf("error reading shard info for shard %s: %s\n",
+			dld.shards[0].path, err.Error())
 	}
-	ht.Close()
-	ht = nil
+	newDaemonId = sinfo.DaemonId - 1
+	dld.lg.Infof("Read %s from shard %s.  Changing daemonId to 0x%016x, " +
+		"TotalShards to 3\n.",
+		asJson(sinfo), dld.shards[0].path, newDaemonId)
+	sinfo.DaemonId = newDaemonId
+	sinfo.TotalShards = 3
+	err = dld.shards[0].writeShardInfo(sinfo)
+	if err != nil {
+		t.Fatalf("error writing shard info for shard %s: %s\n",
+			dld.shards[0].path, err.Error())
+	}
+	dld.Close()
+	dld = nil
+	verifyFailedLoad(t, dataDirs, "TotalShards mismatch.")
 
-	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore3",
-		DataDirs: dataDirs, KeepDataDirsOnClose: true}
-	ht, err = htraceBld.Build()
-	if err == nil {
-		t.Fatalf("expected the datastore to fail to load after setting an " +
-			"incorrect version.\n")
+	// Open the datastore and modify it to have the wrong LayoutVersion
+	dld = NewDataStoreLoader(hcnf)
+	dld.LoadShards()
+	for shardIdx := range(dld.shards) {
+		sinfo, err = dld.shards[shardIdx].readShardInfo()
+		if err != nil {
+			t.Fatalf("error reading shard info for shard %s: %s\n",
+				dld.shards[shardIdx].path, err.Error())
+		}
+		dld.lg.Infof("Read %s from shard %s.  Changing TotalShards to 2, " +
+			"LayoutVersion to 2\n", asJson(sinfo), dld.shards[shardIdx].path)
+		sinfo.TotalShards = 2
+		sinfo.LayoutVersion = 2
+		err = dld.shards[shardIdx].writeShardInfo(sinfo)
+		if err != nil {
+			t.Fatalf("error writing shard info for shard %s: %s\n",
+				dld.shards[0].path, err.Error())
+		}
 	}
-	if !strings.Contains(err.Error(), "Invalid layout version") {
-		t.Fatal(`expected the loading error to contain "invalid layout version"` + "\n")
-	}
+	dld.Close()
+	dld = nil
+	verifyFailedLoad(t, dataDirs, "The layout version of all shards is 2, " +
+		"but we only support")
 
 	// It should work with data.store.clear set.
-	htraceBld = &MiniHTracedBuilder{Name: "TestReloadDataStore4",
-		DataDirs: dataDirs, KeepDataDirsOnClose: true,
-		Cnf: map[string]string{conf.HTRACE_DATA_STORE_CLEAR: "true"}}
+	htraceBld = &MiniHTracedBuilder{
+		Name: "TestReloadDataStore#clear",
+		DataDirs: dataDirs,
+		KeepDataDirsOnClose: true,
+		Cnf: map[string]string{conf.HTRACE_DATA_STORE_CLEAR: "true"},
+	}
 	ht, err = htraceBld.Build()
 	if err != nil {
-		t.Fatalf("expected the datastore loading to succeed after setting an "+
-			"incorrect version.  But it failed with error %s\n", err.Error())
+		t.Fatalf("failed to create datastore: %s", err.Error())
 	}
 }
 

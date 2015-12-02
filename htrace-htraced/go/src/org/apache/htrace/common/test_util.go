@@ -22,6 +22,7 @@ package common
 import (
 	"fmt"
 	"testing"
+	"strings"
 	"time"
 )
 
@@ -80,4 +81,11 @@ func TestId(str string) SpanId {
 		panic(err.Error())
 	}
 	return spanId
+}
+
+func AssertErrContains(t *testing.T, err error, str string) {
+	if !strings.Contains(err.Error(), str) {
+		t.Fatalf("expected the error to contain %s, but it was %s\n",
+			str, err.Error())
+	}
 }

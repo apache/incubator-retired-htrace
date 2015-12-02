@@ -21,21 +21,17 @@ package main
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/jmhodges/levigo"
 	"github.com/ugorji/go/codec"
-	"math"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -68,12 +64,7 @@ import (
 // the signed fields.
 //
 
-const UNKNOWN_LAYOUT_VERSION = 0
-const CURRENT_LAYOUT_VERSION = 3
-
 var EMPTY_BYTE_BUF []byte = []byte{}
-
-const VERSION_KEY = 'v'
 
 const SPAN_ID_INDEX_PREFIX = 's'
 const BEGIN_TIME_INDEX_PREFIX = 'b'
@@ -462,225 +453,47 @@ type dataStore struct {
 
 	// When this datastore was started (in UTC milliseconds since the epoch)
 	startMs int64
-
-	// The maximum number of open files to allow per shard.
-	maxFdPerShard int
 }
 
 func CreateDataStore(cnf *conf.Config, writtenSpans *common.Semaphore) (*dataStore, error) {
-	// Get the configuration.
-	clearStored := cnf.GetBool(conf.HTRACE_DATA_STORE_CLEAR)
-	dirsStr := cnf.Get(conf.HTRACE_DATA_STORE_DIRECTORIES)
-	dirs := strings.Split(dirsStr, conf.PATH_LIST_SEP)
-
-	var err error
-	lg := common.NewLogger("datastore", cnf)
-	store := &dataStore{lg: lg, shards: []*shard{}, WrittenSpans: writtenSpans}
-
-	// If we return an error, close the store.
-	defer func() {
-		if err != nil {
-			store.Close()
-			store = nil
-		}
-	}()
-
-	store.readOpts = levigo.NewReadOptions()
-	store.readOpts.SetFillCache(true)
-	store.readOpts.SetVerifyChecksums(false)
-	store.writeOpts = levigo.NewWriteOptions()
-	store.writeOpts.SetSync(false)
-
-	// Open all shards
-	for idx := range dirs {
-		path := dirs[idx] + conf.PATH_SEP + "db"
-		var shd *shard
-		shd, err = CreateShard(store, cnf, path, clearStored)
-		if err != nil {
-			lg.Errorf("Error creating shard %s: %s\n", path, err.Error())
-			return nil, err
-		}
-		store.shards = append(store.shards, shd)
+	dld := NewDataStoreLoader(cnf)
+	defer dld.Close()
+	err := dld.Load()
+	if err != nil {
+		dld.lg.Errorf("Error loading datastore: %s\n", err.Error())
+		return nil, err
 	}
-	store.msink = NewMetricsSink(cnf)
-	store.rpr = NewReaper(cnf)
-	for idx := range store.shards {
-		shd := store.shards[idx]
-		shd.heartbeats = make(chan interface{}, 1)
+	store := &dataStore {
+		lg: dld.lg,
+		shards: make([]*shard, len(dld.shards)),
+		readOpts: dld.readOpts,
+		writeOpts: dld.writeOpts,
+		WrittenSpans: writtenSpans,
+		msink: NewMetricsSink(cnf),
+		hb: NewHeartbeater("DatastoreHeartbeater",
+			cnf.GetInt64(conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS), dld.lg),
+		rpr: NewReaper(cnf),
+		startMs: common.TimeToUnixMs(time.Now().UTC()),
+	}
+	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
+	for shdIdx := range store.shards {
+		shd := &shard {
+			store: store,
+			ldb: dld.shards[shdIdx].ldb,
+			path: dld.shards[shdIdx].path,
+			incoming: make(chan []*IncomingSpan, spanBufferSize),
+			heartbeats: make(chan interface{}, 1),
+		}
 		shd.exited.Add(1)
 		go shd.processIncoming()
-	}
-	store.hb = NewHeartbeater("DatastoreHeartbeater",
-		cnf.GetInt64(conf.HTRACE_DATASTORE_HEARTBEAT_PERIOD_MS), lg)
-	for shdIdx := range store.shards {
-		shd := store.shards[shdIdx]
+		store.shards[shdIdx] = shd
 		store.hb.AddHeartbeatTarget(&HeartbeatTarget{
 			name:       fmt.Sprintf("shard(%s)", shd.path),
 			targetChan: shd.heartbeats,
 		})
 	}
-	store.startMs = common.TimeToUnixMs(time.Now().UTC())
-	err = store.calculateMaxOpenFilesPerShard()
-	if err != nil {
-		lg.Warnf("Unable to calculate maximum open files per shard: %s\n",
-			err.Error())
-	}
+	dld.DisownResources()
 	return store, nil
-}
-
-// The maximum number of file descriptors we'll use on non-datastore things.
-const NON_DATASTORE_FD_MAX = 300
-
-// The minimum number of file descriptors per shard we will set.  Setting fewer
-// than this number could trigger a bug in some early versions of leveldb.
-const MIN_FDS_PER_SHARD = 80
-
-func (store *dataStore) calculateMaxOpenFilesPerShard() error {
-	var rlim syscall.Rlimit
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim)
-	if err != nil {
-		return err
-	}
-	// I think RLIMIT_NOFILE fits in 32 bits on all known operating systems,
-	// but there's no harm in being careful.  'int' in golang always holds at
-	// least 32 bits.
-	var maxFd int
-	if rlim.Cur > uint64(math.MaxInt32) {
-		maxFd = math.MaxInt32
-	} else {
-		maxFd = int(rlim.Cur)
-	}
-	fdsPerShard := (maxFd - NON_DATASTORE_FD_MAX) / len(store.shards)
-	if fdsPerShard < MIN_FDS_PER_SHARD {
-		return errors.New(fmt.Sprintf("Expected to be able to use at least %d " +
-			"fds per shard, but we have %d shards and %d total fds to allocate, " +
-			"giving us only %d FDs per shard.", MIN_FDS_PER_SHARD,
-			len(store.shards), maxFd - NON_DATASTORE_FD_MAX, fdsPerShard))
-	}
-	store.lg.Infof("maxFd = %d.  Setting maxFdPerShard = %d\n",
-		maxFd, fdsPerShard)
-	store.maxFdPerShard = fdsPerShard
-	return nil
-}
-
-func CreateShard(store *dataStore, cnf *conf.Config, path string,
-	clearStored bool) (*shard, error) {
-	lg := store.lg
-	if clearStored {
-		fi, err := os.Stat(path)
-		if err != nil && !os.IsNotExist(err) {
-			lg.Errorf("Failed to stat %s: %s\n", path, err.Error())
-			return nil, err
-		}
-		if fi != nil {
-			err = os.RemoveAll(path)
-			if err != nil {
-				lg.Errorf("Failed to clear existing datastore directory %s: %s\n",
-					path, err.Error())
-				return nil, err
-			}
-			lg.Infof("Cleared existing datastore directory %s\n", path)
-		}
-	}
-	err := os.MkdirAll(path, 0777)
-	if err != nil {
-		lg.Errorf("Failed to MkdirAll(%s): %s\n", path, err.Error())
-		return nil, err
-	}
-	var shd *shard
-	openOpts := levigo.NewOptions()
-	openOpts.SetParanoidChecks(false)
-	writeBufferSize := cnf.GetInt(conf.HTRACE_LEVELDB_WRITE_BUFFER_SIZE)
-	if writeBufferSize > 0 {
-		openOpts.SetWriteBufferSize(writeBufferSize)
-	}
-	if store.maxFdPerShard > 0 {
-		openOpts.SetMaxOpenFiles(store.maxFdPerShard)
-	}
-	defer openOpts.Close()
-	newlyCreated := false
-	ldb, err := levigo.Open(path, openOpts)
-	if err == nil {
-		store.lg.Infof("LevelDB opened %s\n", path)
-	} else {
-		store.lg.Debugf("LevelDB failed to open %s: %s\n", path, err.Error())
-		openOpts.SetCreateIfMissing(true)
-		ldb, err = levigo.Open(path, openOpts)
-		if err != nil {
-			store.lg.Errorf("LevelDB failed to create %s: %s\n", path, err.Error())
-			return nil, err
-		}
-		store.lg.Infof("Created new LevelDB instance in %s\n", path)
-		newlyCreated = true
-	}
-	defer func() {
-		if shd == nil {
-			ldb.Close()
-		}
-	}()
-	lv, err := readLayoutVersion(store, ldb)
-	if err != nil {
-		store.lg.Errorf("Got error while reading datastore version for %s: %s\n",
-			path, err.Error())
-		return nil, err
-	}
-	if newlyCreated && (lv == UNKNOWN_LAYOUT_VERSION) {
-		err = writeDataStoreVersion(store, ldb, CURRENT_LAYOUT_VERSION)
-		if err != nil {
-			store.lg.Errorf("Got error while writing datastore version for %s: %s\n",
-				path, err.Error())
-			return nil, err
-		}
-		store.lg.Tracef("Wrote layout version %d to shard at %s.\n",
-			CURRENT_LAYOUT_VERSION, path)
-	} else if lv != CURRENT_LAYOUT_VERSION {
-		versionName := "unknown"
-		if lv != UNKNOWN_LAYOUT_VERSION {
-			versionName = fmt.Sprintf("%d", lv)
-		}
-		store.lg.Errorf("Can't read old datastore.  Its layout version is %s, but this "+
-			"software is at layout version %d.  Please set %s to clear the datastore "+
-			"on startup, or clear it manually.\n", versionName,
-			CURRENT_LAYOUT_VERSION, conf.HTRACE_DATA_STORE_CLEAR)
-		return nil, errors.New(fmt.Sprintf("Invalid layout version: got %s, expected %d.",
-			versionName, CURRENT_LAYOUT_VERSION))
-	} else {
-		store.lg.Tracef("Found layout version %d in %s.\n", lv, path)
-	}
-	spanBufferSize := cnf.GetInt(conf.HTRACE_DATA_STORE_SPAN_BUFFER_SIZE)
-	shd = &shard{store: store, ldb: ldb, path: path,
-		incoming: make(chan []*IncomingSpan, spanBufferSize)}
-	return shd, nil
-}
-
-// Read the datastore version of a leveldb instance.
-func readLayoutVersion(store *dataStore, ldb *levigo.DB) (uint32, error) {
-	buf, err := ldb.Get(store.readOpts, []byte{VERSION_KEY})
-	if err != nil {
-		return 0, err
-	}
-	if len(buf) == 0 {
-		return 0, nil
-	}
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	var v uint32
-	err = decoder.Decode(&v)
-	if err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-// Write the datastore version to a shard.
-func writeDataStoreVersion(store *dataStore, ldb *levigo.DB, v uint32) error {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(&v)
-	if err != nil {
-		return err
-	}
-	return ldb.Put(store.writeOpts, []byte{VERSION_KEY}, w.Bytes())
 }
 
 // Close the DataStore.
