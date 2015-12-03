@@ -92,7 +92,13 @@ func main() {
 		lg.Infof(scanner.Text() + "\n")
 	}
 	common.InstallSignalHandlers(cnf)
-	lg.Infof("GOMAXPROCS=%d\n", runtime.GOMAXPROCS(0))
+	if runtime.GOMAXPROCS(0) == 1 {
+		ncpu := runtime.NumCPU()
+		runtime.GOMAXPROCS(ncpu)
+		lg.Infof("setting GOMAXPROCS=%d\n", ncpu)
+	} else {
+		lg.Infof("GOMAXPROCS=%d\n", runtime.GOMAXPROCS(0))
+	}
 	lg.Infof("leveldb version=%d.%d\n",
 		levigo.GetLevelDBMajorVersion(), levigo.GetLevelDBMinorVersion())
 
