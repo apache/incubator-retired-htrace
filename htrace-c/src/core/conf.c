@@ -33,7 +33,7 @@
      ";" HTRACED_WRITE_TIMEO_MS_KEY "=60000"\
      ";" HTRACED_READ_TIMEO_MS_KEY "=60000"\
      ";" HTRACE_TRACER_ID "=%{tname}/%{ip}"\
-     ";" HTRACED_ADDRESS_KEY "=localhost:9095"\
+     ";" HTRACED_ADDRESS_KEY "=localhost:9096"\
      ";" HTRACED_BUFFER_SEND_TRIGGER_FRACTION "=0.50"\
     )
 

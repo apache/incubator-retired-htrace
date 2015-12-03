@@ -45,7 +45,7 @@ const HTRACED_CONF_DIR = "HTRACED_CONF_DIR"
 const HTRACE_WEB_ADDRESS = "web.address"
 
 // The default port for the Htrace web address.
-const HTRACE_WEB_ADDRESS_DEFAULT_PORT = 9095
+const HTRACE_WEB_ADDRESS_DEFAULT_PORT = 9096
 
 // The web address to start the REST server on.
 const HTRACE_HRPC_ADDRESS = "hrpc.address"

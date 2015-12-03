@@ -46,9 +46,9 @@ public class TestHTracedReceiverConf {
 
     addr = new Conf(
         HTraceConfiguration.fromKeyValuePairs(
-          Conf.ADDRESS_KEY, "[ff02:0:0:0:0:0:0:12]:9095")).endpoint;
+          Conf.ADDRESS_KEY, "[ff02:0:0:0:0:0:0:12]:9096")).endpoint;
     Assert.assertEquals("ff02:0:0:0:0:0:0:12", addr.getHostName());
-    Assert.assertEquals(9095, addr.getPort());
+    Assert.assertEquals(9096, addr.getPort());
   }
 
   private static void verifyFail(String hostPort) {
@@ -67,7 +67,7 @@ public class TestHTracedReceiverConf {
     verifyFail("localhost"); // no port
     verifyFail("127.0.0.1"); // no port
     verifyFail(":8080"); // no hostname
-    verifyFail("bob[ff02:0:0:0:0:0:0:12]:9095"); // bracket at incorrect place
+    verifyFail("bob[ff02:0:0:0:0:0:0:12]:9096"); // bracket at incorrect place
   }
 
   @Test(timeout = 60000)

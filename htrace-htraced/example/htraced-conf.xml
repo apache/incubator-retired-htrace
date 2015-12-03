@@ -27,7 +27,7 @@
   </property>
   <property>
     <name>web.address</name>
-    <value>localhost:9095</value>
+    <value>localhost:9096</value>
   </property>
   <property>
     <name>data.store.directories</name>
