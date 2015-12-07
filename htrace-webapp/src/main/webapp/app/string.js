@@ -50,9 +50,9 @@ htrace.dateToString = function(val) {
 // Normalize a span ID into the format the server expects to see--
 // i.e. something like 00000000000000000000000000000000.
 htrace.normalizeSpanId = function(str) {
-  if (str.length != 36) {
+  if (str.length != 32) {
     throw "The length of '" + str + "' was " + str.length +
-      ", but span IDs must be 36 characters long.";
+      ", but span IDs must be 32 characters long.";
   }
   if (str.search(/[^0-9a-fA-F]/) != -1) {
     throw "Span IDs must contain only hexadecimal digits, but '" + str +
