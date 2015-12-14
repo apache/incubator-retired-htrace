@@ -100,6 +100,9 @@ const HTRACE_HRPC_IO_TIMEOUT_MS = "hrpc.io.timeout.ms"
 // MB in leveldb 1.16.  See leveldb's options.h for more details.
 const HTRACE_LEVELDB_WRITE_BUFFER_SIZE = "leveldb.write.buffer.size"
 
+// The LRU cache size for leveldb, in bytes.
+const HTRACE_LEVELDB_CACHE_SIZE = "leveldb.cache.size"
+
 // Default values for HTrace configuration keys.
 var DEFAULTS = map[string]string{
 	HTRACE_WEB_ADDRESS:  fmt.Sprintf("0.0.0.0:%d", HTRACE_WEB_ADDRESS_DEFAULT_PORT),
@@ -117,6 +120,7 @@ var DEFAULTS = map[string]string{
 	HTRACE_NUM_HRPC_HANDLERS:             "20",
 	HTRACE_HRPC_IO_TIMEOUT_MS:            "60000",
 	HTRACE_LEVELDB_WRITE_BUFFER_SIZE:     "0",
+	HTRACE_LEVELDB_CACHE_SIZE:            fmt.Sprintf("%d", 100 * 1024 * 1024),
 }
 
 // Values to be used when creating test configurations

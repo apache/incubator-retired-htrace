@@ -115,6 +115,8 @@ func NewDataStoreLoader(cnf *conf.Config) *DataStoreLoader {
 		}
 	}
 	dld.openOpts = levigo.NewOptions()
+	cacheSize := cnf.GetInt(conf.HTRACE_LEVELDB_CACHE_SIZE)
+	dld.openOpts.SetCache(levigo.NewLRUCache(cacheSize))
 	dld.openOpts.SetParanoidChecks(false)
 	writeBufferSize := cnf.GetInt(conf.HTRACE_LEVELDB_WRITE_BUFFER_SIZE)
 	if writeBufferSize > 0 {
