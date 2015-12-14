@@ -23,13 +23,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/alecthomas/kingpin"
 	"github.com/jmhodges/levigo"
 	"net"
 	"org/apache/htrace/common"
 	"org/apache/htrace/conf"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -48,7 +48,7 @@ Usage:
 
 -Dk=v: set configuration key 'k' to value 'v'
 For example -Dweb.address=127.0.0.1:8080 sets the web address to localhost,
-port 8080.
+port 8080.  -Dlog.level=DEBUG will set the default log level to DEBUG.
 
 -Dk: set configuration key 'k' to 'true'
 
@@ -59,16 +59,21 @@ of setting configuration when launching the daemon.
 `
 
 func main() {
-	for idx := range os.Args {
-		arg := os.Args[idx]
-		if strings.HasPrefix(arg, "--h") || strings.HasPrefix(arg, "-h") {
-			fmt.Fprintf(os.Stderr, USAGE)
-			os.Exit(0)
-		}
-	}
-
 	// Load the htraced configuration.
+	// This also parses the -Dfoo=bar command line arguments and removes them
+	// from os.Argv.
 	cnf, cnfLog := conf.LoadApplicationConfig("htraced.")
+
+	// Parse the remaining command-line arguments.
+	app := kingpin.New(os.Args[0], USAGE)
+	version := app.Command("version", "Print server version and exit.")
+	cmd := kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	// Handle the "version" command-line argument.
+	if cmd == version.FullCommand() {
+		fmt.Printf("Running htraced %s [%s].\n", RELEASE_VERSION, GIT_VERSION)
+		os.Exit(0)
+	}
 
 	// Open the HTTP port.
 	// We want to do this first, before initializing the datastore or setting up
