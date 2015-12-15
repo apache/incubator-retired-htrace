@@ -90,12 +90,14 @@ htrace.SearchView = Backbone.View.extend({
       queryJson.prev =
           this.searchResults.at(this.searchResults.size() - 1).unparse();
     }
+    $("body").css("cursor", "progress");
     var searchView = this;
     var queryResults = new htrace.QueryResults({queryJson: queryJson});
     console.log("Starting span query " + queryResults.url());
     this.searchInProgress = true;
     queryResults.fetch({
       success: function(model, response, options){
+        $("body").css("cursor", "default");
         var firstResults = (searchView.searchResults.size() === 0);
         console.log("Success on span query " + queryResults.url() + ": got " +
             queryResults.size() + " result(s).  firstResults=" + firstResults);
@@ -125,6 +127,7 @@ htrace.SearchView = Backbone.View.extend({
         searchView.resultsView.render();
       },
       error: function(model, response, options){
+        $("body").css("cursor", "default");
         searchView.searchResults.reset();
         var err = "Error " + JSON.stringify(response, null, 2) +
           " on span query " + queryResults.url();
