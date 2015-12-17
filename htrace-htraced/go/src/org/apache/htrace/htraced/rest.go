@@ -278,7 +278,7 @@ func (hand *queryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	var results []*common.Span
-	results, err = hand.store.HandleQuery(&query)
+	results, err, _ = hand.store.HandleQuery(&query)
 	if err != nil {
 		writeError(hand.lg, w, http.StatusInternalServerError,
 			fmt.Sprintf("Internal error processing query %s: %s",

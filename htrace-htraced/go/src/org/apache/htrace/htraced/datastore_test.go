@@ -28,6 +28,7 @@ import (
 	"org/apache/htrace/conf"
 	"org/apache/htrace/test"
 	"os"
+	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -122,10 +123,15 @@ func TestDatastoreWriteAndRead(t *testing.T) {
 }
 
 func testQuery(t *testing.T, ht *MiniHTraced, query *common.Query,
-	expectedSpans []common.Span) {
-	spans, err := ht.Store.HandleQuery(query)
+		expectedSpans []common.Span) {
+	testQueryExt(t, ht, query, expectedSpans, nil)
+}
+
+func testQueryExt(t *testing.T, ht *MiniHTraced, query *common.Query,
+	expectedSpans []common.Span, expectedNumScanned []int) {
+	spans, err, numScanned := ht.Store.HandleQuery(query)
 	if err != nil {
-		t.Fatalf("First query failed: %s\n", err.Error())
+		t.Fatalf("Query %s failed: %s\n", query.String(), err.Error())
 	}
 	expectedBuf := new(bytes.Buffer)
 	dec := json.NewEncoder(expectedBuf)
@@ -142,6 +148,12 @@ func testQuery(t *testing.T, ht *MiniHTraced, query *common.Query,
 	t.Logf("len(spans) = %d, len(expectedSpans) = %d\n", len(spans),
 		len(expectedSpans))
 	common.ExpectStrEqual(t, string(expectedBuf.Bytes()), string(spansBuf.Bytes()))
+	if expectedNumScanned != nil {
+		if !reflect.DeepEqual(expectedNumScanned, numScanned) {
+			t.Fatalf("Invalid values for numScanned: got %v, expected %v\n",
+					expectedNumScanned, numScanned)
+		}
+	}
 }
 
 // Test queries on the datastore.
@@ -720,4 +732,30 @@ func TestQueriesWithContinuationTokens1(t *testing.T) {
 		Lim:  100,
 		Prev: &SIMPLE_TEST_SPANS[1],
 	}, []common.Span{SIMPLE_TEST_SPANS[2], SIMPLE_TEST_SPANS[0]})
+}
+
+func TestQueryRowsScanned(t *testing.T) {
+	t.Parallel()
+	htraceBld := &MiniHTracedBuilder{Name: "TestQueryRowsScanned",
+		WrittenSpans: common.NewSemaphore(0),
+	}
+	ht, err := htraceBld.Build()
+	if err != nil {
+		panic(err)
+	}
+	defer ht.Close()
+	createSpans(SIMPLE_TEST_SPANS, ht.Store)
+	assertNumWrittenEquals(t, ht.Store.msink, len(SIMPLE_TEST_SPANS))
+	testQueryExt(t, ht, &common.Query{
+		Predicates: []common.Predicate{
+			common.Predicate{
+				Op:    common.EQUALS,
+				Field: common.SPAN_ID,
+				Val:   common.TestId("00000000000000000000000000000001").String(),
+			},
+		},
+		Lim:  100,
+		Prev: nil,
+	}, []common.Span{SIMPLE_TEST_SPANS[0]},
+	[]int{2, 1})
 }
