@@ -126,7 +126,7 @@ htrace.SpanWidget = function(params) {
   this.drawTracerId = function() {
     this.ctx.save();
     this.ctx.fillStyle="#000000";
-    this.ctx.font = (this.ySize - 2) + "px sans-serif";
+    this.ctx.font = "14px sans-serif";
     this.ctx.beginPath();
     this.ctx.rect(this.x0, this.y0, this.xB - this.x0, this.ySize);
     this.ctx.clip();
@@ -158,7 +158,7 @@ htrace.SpanWidget = function(params) {
       endX = this.xF;
     }
 
-    var gapY = 2;
+    var gapY = 1;
     var epsilon = Math.max(2, Math.floor(this.xSize / 1000));
     if (endX - beginX < epsilon) {
       // The time interval is too narrow to see.  Draw a diamond on the point instead.
@@ -192,7 +192,7 @@ htrace.SpanWidget = function(params) {
 
     // Draw description text
     this.ctx.fillStyle="#000000";
-    this.ctx.font = (this.ySize - gapY) + "px sans-serif";
+    this.ctx.font = "14px sans-serif";
     this.ctx.fillText(this.span.get('description'),
         this.xD + this.xT,
         this.yF - gapY - 2);

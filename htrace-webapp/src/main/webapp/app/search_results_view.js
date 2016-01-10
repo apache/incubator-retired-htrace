@@ -174,7 +174,7 @@ htrace.SearchResultsView = Backbone.View.extend({
     var partitionWidgetWidth = Math.max(5, Math.floor(this.viewX / 300));
 
     // Create a SpanWidget for each span we know about
-    var spanWidgetHeight = Math.min(25, Math.floor(this.viewY / 32));
+    var spanWidgetHeight = 16;
     var numResults = this.searchResults.size();
     var groupY = 0;
     for (var i = 0; i < numResults; i++) {
