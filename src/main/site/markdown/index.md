@@ -54,7 +54,7 @@ To instrument your system you must:
 ### Create a Tracer object
 You can create a Tracer object via the `Tracer#Builder`.
 
-    Tracer tracer = new Tracer#Builder(conf).setName("MyApp").build();
+    Tracer tracer = new Tracer.Builder("MyApp").conf(conf).build();
 
 The `Tracer#Builder` will take care of creating the appropriate Sampler and
 SpanReceiver objects, as well as the Tracer itself.   If a SpanReceiver was
@@ -79,15 +79,17 @@ like this:
 
 Just change it to look this:
 
-    Thread t1 = new Thread(Trace.wrap(new MyRunnable()));
+    Thread t1 = new Thread(tracer.wrap(new MyRunnable(), "MyRunnable"));
 
-That's it! `Trace.wrap()` takes a single argument (a runnable or a
-callable) and if the current thread is a part of a trace, returns a
-wrapped version of the argument.  The wrapped version of a callable
-and runnable just knows about the span that created it and will start
-a new span in the new thread that is the child of the span that
+That's it! `Tracer.wrap()` takes two arguments
+(a runnable or a callable and span description)
+and if the current thread is a part of a trace,
+returns a wrapped version of the runnable/callable.
+The wrapped version of a runnable/callable
+just knows about the span that created it and will start a new span
+with given description in the new thread that is the child of the span that
 created the runnable/callable.  There may be situations in which a
-simple `Trace.wrap()` does not suffice.  In these cases all you need
+simple `Tracer.wrap()` does not suffice.  In these cases all you need
 to do is keep a reference to the "parent span" (the span before the
 thread change) and once you're in the new thread start a new span that
 is the "child" of the parent span you stored.
@@ -106,29 +108,23 @@ the child of the span stored in the Put.
 Once you've augmented your RPC's and wrapped the necessary thread
 changes, you can add more spans and annotations wherever you want.
 For example, you might do some expensive computation that you want to
-see on your traces.  In this case, you could start a new span before
-the computation that you then stop after the computation has
+see on your traces.  In this case,
+you could create a new trace scope which starts a new span internally
+before the computation that you then close after the computation has
 finished. It might look like this:
 
-    Span computationSpan = tracer.newScope("Expensive computation.");
+    TraceScope computationScope = tracer.newScope("Expensive computation.");
     try {
         //expensive computation here
     } finally {
-        computationSpan.stop();
+        computationScope.close();
     }
 
 HTrace also supports key-value annotations on a per-trace basis.
 
 Example:
 
-    scope.addAnnotation("faultyRecordCounter".getBytes(), "1".getBytes());
-
-### Generating test spans
-The test that creates a sample trace (TestHTrace) takes a command line
-argument telling it where to write span information. Run
-`mvn test -DargLine="-DspanFile=FILE\_PATH"` to write span
-information to FILE_PATH. If no file is specified, span information
-will be written to standard out.
+    scope.addKVAnnotation("faultyRecordCounter", Integer.toString(1));
 
 ## htrace-zipkin
 htrace-zipkin provides the `SpanReceiver` implementation
