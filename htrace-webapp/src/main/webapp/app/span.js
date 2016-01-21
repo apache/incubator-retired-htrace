@@ -219,18 +219,19 @@ htrace.Span = Backbone.Model.extend({
     return rootDeferred.promise();
   },
 
-  reifyChildrenRecursive: function(depth) {
+  reifyChildrenRecursive: function(depth, lim) {
     var rootDeferred = jQuery.Deferred();
     var span = this;
-    span.reifyChildren().done(function(err) {
-      if ((err != "") || (depth <= 0)) {
+    span.reifyChildren(lim).done(function(err) {
+      var reifiedChildren = span.get("reifiedChildren");
+      lim = lim - reifiedChildren.length;
+      if ((err != "") || (depth <= 0) || (lim <= 0)) {
         rootDeferred.resolve(err);
         return;
       }
       var recursivePromises = [];
-      var reifiedChildren = span.get("reifiedChildren");
       for (var j = 0; j < reifiedChildren.length; j++) {
-        recursivePromises.push(reifiedChildren[j].reifyChildrenRecursive(depth - 1));
+        recursivePromises.push(reifiedChildren[j].reifyChildrenRecursive(depth - 1, lim));
       }
       $.when.apply($, recursivePromises).then(function() {
         for (var i = 0; i < arguments.length; i++) {
@@ -253,11 +254,11 @@ htrace.Span = Backbone.Model.extend({
   // this span and stores them into reifiedChildren.  The promise returns the
   // empty string on success, or an error string on failure.
   //
-  reifyChildren: function() {
+  reifyChildren: function(lim) {
     var rootDeferred = jQuery.Deferred();
     var span = this;
     $.ajax({
-        url: "span/" + span.get("spanId") + "/children?lim=50",
+        url: "span/" + span.get("spanId") + "/children?lim=" + lim.toString(),
         data: {},
         contentType: "application/json; charset=utf-8",
         dataType: "json"
@@ -288,8 +289,8 @@ htrace.Span = Backbone.Model.extend({
           for (var j = 0; j < reifiedChildren.length; j++) {
             reifiedChildren[j].set("reifiedParents", [span]);
           }
-          console.log("Setting reified children for " + span.get("spanId") +
-              " to " + htrace.spanModelsToString (reifiedChildren));
+          //console.log("Setting reified children for " + span.get("spanId") +
+          //    " to " + htrace.spanModelsToString (reifiedChildren));
           span.set("reifiedChildren", reifiedChildren);
           rootDeferred.resolve("");
         });

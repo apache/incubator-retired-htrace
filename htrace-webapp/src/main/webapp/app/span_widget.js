@@ -246,7 +246,9 @@ htrace.SpanWidget = function(params) {
       case "dblclick":
         if (htrace.inBoundingBox(e.x, e.y,
             this.x0, this.xF, this.y0, this.yF)) {
+          $("body").css("cursor", "progress");
           htrace.showSpanDetails(this.span);
+          $("body").css("cursor", "default");
         }
         return true;
     }
@@ -271,10 +273,12 @@ htrace.SpanWidget = function(params) {
       y0: this.y0 + 2,
       yF: this.yF - 2,
       callback: function(e) {
+        $("body").css("cursor", "progress");
         var depth = (e.raw.ctrlKey) ? 100 : 0;
         $.when(widget.span.reifyParentsRecursive(depth)).done(function(result) {
           console.log("reifyParentsRecursive(" + depth + "): result was '" +
               result + "'");
+          $("body").css("cursor", "default");
           if (result != "") {
             alert(result);
           } else {
@@ -294,10 +298,14 @@ htrace.SpanWidget = function(params) {
       y0: this.y0 + 2,
       yF: this.yF - 2,
       callback: function(e) {
+        $("body").css("cursor", "progress");
+        var lim = Math.min(parseInt($("#children-lim").val()) || 50, 500);
+        $("#children-lim").val(lim.toString());
         var depth = (e.raw.ctrlKey) ? 100 : 0;
-        $.when(widget.span.reifyChildrenRecursive(depth)).done(function (result) {
+        $.when(widget.span.reifyChildrenRecursive(depth, lim)).done(function (result) {
           console.log("reifyChildrenRecursive(" + depth + "): result was '" +
               result + "'");
+          $("body").css("cursor", "default");
           if (result != "") {
             alert(result);
           } else {

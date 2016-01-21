@@ -80,9 +80,11 @@ htrace.SearchView = Backbone.View.extend({
         return false;
       }
     }
+    var lim = Math.min(parseInt($("#search-lim").val()) || 20, 200);
+    $("#search-lim").val(lim.toString());
     var queryJson = {
       pred: predicates,
-      lim: 20
+      lim: lim
     };
     // If there are existing search results, we want results which "come after"
     // those.  So pass the last span we saw as a continuation token.
