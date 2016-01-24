@@ -32,8 +32,8 @@ Tutorial
 2) Edit hdfs-site.xml to include the following:
 
 	<property>
-		<name>hadoop.trace.spanreceiver.classes</name>
-		<value>org.htrace.impl.FlumeSpanReceiver</value>
+		<name>hadoop.htrace.span.receiver.classes</name>
+		<value>org.apache.htrace.impl.FlumeSpanReceiver</value>
 	</property>
 	<property>
 		<name>hadoop.htrace.flume.hostname</name>
