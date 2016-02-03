@@ -18,7 +18,7 @@ language governing permissions and limitations under the License. -->
   <parent>
     <artifactId>htrace</artifactId>
     <groupId>org.apache.htrace</groupId>
-    <version>4.1.0-incubating-SNAPSHOT</version>
+    <version>4.1.0-incubating</version>
     <relativePath>..</relativePath>
   </parent>
 
