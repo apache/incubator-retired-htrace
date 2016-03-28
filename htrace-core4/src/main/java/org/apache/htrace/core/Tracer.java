@@ -96,7 +96,7 @@ public class Tracer implements Closeable {
           bld.append(prefix).append(className);
           prefix = ", ";
         } catch (Throwable e) {
-          LOG.error("Failed to create SpanReceiver of type " + className, e);
+          LOG.error("Failed to create Sampler of type " + className, e);
         }
       }
       String resultString = bld.toString();
