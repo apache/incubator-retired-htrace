@@ -34,20 +34,14 @@ public class TraceCreator {
   }
 
   public void createSampleRpcTrace() {
-    TraceScope s = tracer.newScope(RPC_TRACE_ROOT);
-    try {
+    try (TraceScope s = tracer.newScope(RPC_TRACE_ROOT)) {
       pretendRpcSend();
-    } finally {
-      s.close();
     }
   }
 
   public void createSimpleTrace() {
-    TraceScope s = tracer.newScope(SIMPLE_TRACE_ROOT);
-    try {
+    try (TraceScope s = tracer.newScope(SIMPLE_TRACE_ROOT)) {
       importantWork1();
-    } finally {
-      s.close();
     }
   }
 
@@ -55,8 +49,7 @@ public class TraceCreator {
    * Creates the demo trace (will create different traces from call to call).
    */
   public void createThreadedTrace() {
-    TraceScope s = tracer.newScope(THREADED_TRACE_ROOT);
-    try {
+    try (TraceScope s = tracer.newScope(THREADED_TRACE_ROOT)) {
       Random r = ThreadLocalRandom.current();
       int numThreads = r.nextInt(4) + 1;
       Thread[] threads = new Thread[numThreads];
@@ -74,31 +67,23 @@ public class TraceCreator {
         }
       }
       importantWork1();
-    } finally {
-      s.close();
     }
   }
 
   private void importantWork1() {
-    TraceScope cur = tracer.newScope("important work 1");
-    try {
+    try (TraceScope cur = tracer.newScope("important work 1")) {
       Thread.sleep((long) (2000 * Math.random()));
       importantWork2();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    } finally {
-      cur.close();
     }
   }
 
   private void importantWork2() {
-    TraceScope cur = tracer.newScope("important work 2");
-    try {
+    try (TraceScope cur = tracer.newScope("important work 2")) {
       Thread.sleep((long) (2000 * Math.random()));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    } finally {
-      cur.close();
     }
   }
 
@@ -113,13 +98,10 @@ public class TraceCreator {
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       } catch (ArithmeticException ae) {
-        TraceScope c = tracer.newScope("dealing with arithmetic exception.");
-        try {
+        try (TraceScope c = tracer.newScope("dealing with arithmetic exception.")) {
           Thread.sleep((long) (3000 * Math.random()));
         } catch (InterruptedException ie1) {
           Thread.currentThread().interrupt();
-        } finally {
-          c.close();
         }
       }
     }
@@ -131,11 +113,8 @@ public class TraceCreator {
   }
 
   public void pretendRpcReceiveWithTraceInfo(SpanId parentId) {
-    TraceScope s = tracer.newScope("received RPC", parentId);
-    try {
+    try (TraceScope s = tracer.newScope("received RPC", parentId)) {
       importantWork1();
-    } finally {
-      s.close();
     }
   }
 }

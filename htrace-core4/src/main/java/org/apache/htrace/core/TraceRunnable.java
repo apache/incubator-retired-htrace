@@ -39,12 +39,8 @@ public class TraceRunnable implements Runnable {
 
   @Override
   public void run() {
-    TraceScope chunk = tracer.newScope(description,
-        parent.getSpan().getSpanId());
-    try {
+    try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
       runnable.run();
-    } finally {
-      chunk.close();
     }
   }
 

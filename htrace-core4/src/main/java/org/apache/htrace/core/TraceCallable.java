@@ -41,12 +41,8 @@ public class TraceCallable<V> implements Callable<V> {
 
   @Override
   public V call() throws Exception {
-    TraceScope chunk = tracer.newScope(description,
-        parent.getSpan().getSpanId());
-    try {
+    try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
       return impl.call();
-    } finally {
-      chunk.close();
     }
   }
 

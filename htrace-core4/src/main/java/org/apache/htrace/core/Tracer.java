@@ -464,19 +464,15 @@ public class Tracer implements Closeable {
    */
   @SuppressWarnings("unchecked")
   <T, V> T createProxy(final T instance) {
-    final Tracer tracer = this;
     InvocationHandler handler = new InvocationHandler() {
       @Override
       public Object invoke(Object obj, Method method, Object[] args)
           throws Throwable {
-        TraceScope scope = tracer.newScope(method.getName());
-        try {
+        try (TraceScope scope = Tracer.this.newScope(method.getName());) {
           return method.invoke(instance, args);
         } catch (Throwable ex) {
           ex.printStackTrace();
           throw ex;
-        } finally {
-          scope.close();
         }
       }
     };
