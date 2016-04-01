@@ -59,4 +59,22 @@ public class TestHTraceConfiguration {
     assertEquals(5, configuration.getInt("d", -999));
     assertEquals(-999, configuration.getInt("absent", -999));
   }
+
+  @Test
+  public void testPropertyConfiguration() throws Exception {
+    System.setProperty("supercalifragilistic.property", "1");
+    System.setProperty("htrace.supercalifragilistic.property", "2");
+    System.setProperty("foo.htrace.supercalifragilistic.property", "3");
+    JavaPropertyConfiguration conf =
+      new JavaPropertyConfiguration.Builder().
+        addPrefix("foo.htrace.").
+        build();
+    assertEquals("3", conf.get("supercalifragilistic.property"));
+    JavaPropertyConfiguration conf2 =
+      new JavaPropertyConfiguration.Builder().
+        build();
+    assertEquals("2", conf2.get("supercalifragilistic.property"));
+    assertTrue(null == conf.get("superfly"));
+    assertTrue(null == conf2.get("superfly"));
+  }
 }
