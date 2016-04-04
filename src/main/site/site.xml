@@ -37,7 +37,7 @@
       <item name="License" href="license.html" />
       <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/incubator/htrace/" />
       <item name="Distribution" href="dependency-management.html" />
-      <item name="Dependency" href="dependency-info.html" />
+      <item name="Dependency" href="htrace-core4/dependency-info.html" />
       <item name="Issue Tracking" href="issue-tracking.html" />
       <item name="CI" href="integration.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
