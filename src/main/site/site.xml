@@ -33,7 +33,7 @@
   </bannerRight>
   <body>
     <menu name="Apache HTrace Project">
-      <item name="Overview" href="index.html"/>
+      <item name="Developer Guide" href="developer_guide.html"/>
       <item name="License" href="license.html" />
       <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/incubator/htrace/" />
       <item name="Distribution" href="dependency-management.html" />

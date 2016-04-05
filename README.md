@@ -17,8 +17,13 @@
 
 HTrace
 ======
-HTrace is a tracing framework for use with distributed systems.  See the
-documentation at [src/main/site/markdown/index.md] or at
-http://htrace.incubator.apache.org for more details.
+[HTrace](http://htrace.incubator.apache.org) is a tracing framework for use
+with distributed systems.
 
-For help on building the software, see [BUILDING.txt].
+For help on building the software, see [BUILDING.txt](./BUILDING.txt).
+
+For details about integrating HTrace into an application, see the [developer
+guide](./src/main/site/markdown/developer_guide.md)
+
+See the [release guide](./src/main/site/markdown/building.md) for
+information about making an HTrace release.
