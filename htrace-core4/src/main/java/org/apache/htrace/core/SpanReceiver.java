@@ -24,9 +24,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * The collector within a process that is the destination of Spans when a trace is running.
- * {@code SpanReceiver} implementations are expected to provide a constructor with the signature
- * <p>
+ * The collector within a process that is the destination of Spans when a
+ * trace is running. {@code SpanReceiver} implementations are expected to
+ * provide a constructor with the signature
+ *
  * <pre>
  * <code>public SpanReceiverImpl(HTraceConfiguration)</code>
  * </pre>
@@ -68,6 +69,8 @@ public abstract class SpanReceiver implements Closeable {
 
     /**
      * Configure whether we should log errors during build().
+     *
+     * @param logErrors Whether we should log errors during build().
      * @return This instance
      */
     public Builder logErrors(boolean logErrors) {
@@ -147,7 +150,9 @@ public abstract class SpanReceiver implements Closeable {
   private static final AtomicLong HIGHEST_SPAN_RECEIVER_ID = new AtomicLong(0);
 
   /**
-   * Get an ID uniquely identifying this SpanReceiver.
+   * Get the ID for this SpanReceiver.
+   *
+   * @return The unique ID identifying this SpanReceiver.
    */
   public final long getId() {
     return id;
@@ -159,6 +164,8 @@ public abstract class SpanReceiver implements Closeable {
 
   /**
    * Called when a Span is stopped and can now be stored.
+   *
+   * @param span    The span to store with this SpanReceiver.
    */
   public abstract void receiveSpan(Span span);
 }

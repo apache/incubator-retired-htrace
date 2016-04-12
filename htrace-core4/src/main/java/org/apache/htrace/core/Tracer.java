@@ -33,8 +33,6 @@ import org.apache.commons.logging.LogFactory;
  * Use a Tracer instance inside a 'process' to collect and distribute its trace Spans.
  * Example processes are an HDFS DataNode or an HBase RegionServer. A Tracer instance is your
  * one-stop shop for all things tracing.
- * 
- * <p>
  */
 public class Tracer implements Closeable {
   private static final Log LOG = LogFactory.getLog(Tracer.class);
@@ -61,8 +59,8 @@ public class Tracer implements Closeable {
     }
 
     /**
-     * @param name
-     * @return This
+     * @param name The name of the Tracer to create.
+     * @return this
      * @deprecated Since 4.0.0. Use Constructor that takes a <code>name</code> argument instead.
      */
     @Deprecated
@@ -71,11 +69,19 @@ public class Tracer implements Closeable {
       return this;
     }
 
+    /**
+     * @param conf The configuration to set.
+     * @return this
+     */
     public Builder conf(HTraceConfiguration conf) {
       this.conf = conf;
       return this;
     }
 
+    /**
+     * @param tracerPool The pool to set.
+     * @return this
+     */
     public Builder tracerPool(TracerPool tracerPool) {
       this.tracerPool = tracerPool;
       return this;
@@ -150,6 +156,9 @@ public class Tracer implements Closeable {
       return cleanedClassNames;
     }
 
+    /**
+     * @return The new Tracer object.
+     */
     public Tracer build() {
       if (name == null) {
         throw new RuntimeException("You must specify a name for this Tracer.");
@@ -414,6 +423,8 @@ public class Tracer implements Closeable {
 
   /**
    * Return a null trace scope.
+   *
+   * @return The null trace scope.
    */
   public TraceScope newNullScope() {
     ThreadContext context = threadContext.get();
@@ -424,6 +435,10 @@ public class Tracer implements Closeable {
   /**
    * Wrap the callable in a TraceCallable, if tracing.
    *
+   * @param <V>          The subclass of callable.
+   * @param callable     The callable to wrap.
+   * @param description  A description of the callable, or null if there
+   *                     is no description.
    * @return The callable provided, wrapped if tracing, 'callable' if not.
    */
   public <V> Callable<V> wrap(Callable<V> callable, String description) {
@@ -437,6 +452,9 @@ public class Tracer implements Closeable {
   /**
    * Wrap the runnable in a TraceRunnable, if tracing
    *
+   * @param runnable      The runnable to wrap.
+   * @param description   A description of the runnable, or null if there is
+   *                      no description.
    * @return The runnable provided, wrapped if tracing, 'runnable' if not.
    */
   public Runnable wrap(Runnable runnable, String description) {
@@ -500,6 +518,8 @@ public class Tracer implements Closeable {
    *
    * Note that if the current Samplers change, those changes will not be
    * reflected in this array.  In other words, this array may be stale.
+   *
+   * @return The current samplers.
    */
   public Sampler[] getSamplers() {
     return curSamplers;
@@ -534,9 +554,10 @@ public class Tracer implements Closeable {
   }
 
   /**
-   * Remove a SpanReceiver.
+   * Remove a Sampler.
    *
    * @param sampler       The sampler to remove.
+   * @return              True only if the sampler was removed.
    */
   public synchronized boolean removeSampler(Sampler sampler) {
     if (tracerPool == null) {

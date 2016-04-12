@@ -31,22 +31,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * The HTrace tracer ID.<p/>
+ * <p>The HTrace tracer ID.</p>
  *
- * HTrace tracer IDs are created from format strings.
+ * <p>HTrace tracer IDs are created from format strings.
  * Format strings contain variables which the TracerId class will
- * replace with the correct values at runtime.<p/>
+ * replace with the correct values at runtime.</p>
  *
  * <ul>
  * <li>%{tname}: the tracer name supplied when creating the Tracer.</li>
  * <li>%{pname}: the process name obtained from the JVM.</li>
  * <li>%{ip}: will be replaced with an ip address.</li>
  * <li>%{pid}: the numerical process ID from the operating system.</li>
- * </ul><p/>
+ * </ul>
  *
- * For example, the string "%{pname}/%{ip}" will be replaced with something
+ * <p>For example, the string "%{pname}/%{ip}" will be replaced with something
  * like: DataNode/192.168.0.1, assuming that the process' name is DataNode
- * and its IP address is 192.168.0.1.<p/>
+ * and its IP address is 192.168.0.1.</p>
  *
  *  ID strings can contain backslashes as escapes.
  * For example, "\a" will map to "a".  "\%{ip}" will map to the literal
@@ -162,7 +162,7 @@ public final class TracerId {
   }
 
   /**
-   * Get the best IP address that represents this node.<p/>
+   * <p>Get the best IP address that represents this node.</p>
    *
    * This is complicated since nodes can have multiple network interfaces,
    * and each network interface can have multiple IP addresses.  What we're
@@ -207,7 +207,7 @@ public final class TracerId {
   }
 
   /**
-   * Get the process id from the operating system.<p/>
+   * <p>Get the process id from the operating system.</p>
    *
    * Unfortunately, there is no simple method to get the process id in Java.
    * The approach we take here is to use the shell method (see
@@ -226,8 +226,8 @@ public final class TracerId {
   }
 
   /**
-   * Get the process ID by executing a shell and printing the PPID (parent
-   * process ID).<p/>
+   * <p>Get the process ID by executing a shell and printing the PPID (parent
+   * process ID).</p>
    *
    * This method of getting the process ID doesn't depend on any undocumented
    * features of the virtual machine, and should work on almost any UNIX
@@ -271,8 +271,8 @@ public final class TracerId {
   }
 
   /**
-   * Get the process ID by looking at the name of the managed bean for the
-   * runtime system of the Java virtual machine.<p/>
+   * <p>Get the process ID by looking at the name of the managed bean for the
+   * runtime system of the Java virtual machine.</p>
    *
    * Although this is undocumented, in the Oracle JVM this name is of the form
    * [OS_PROCESS_ID]@[HOSTNAME].

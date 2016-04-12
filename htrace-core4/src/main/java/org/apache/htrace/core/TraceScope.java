@@ -53,6 +53,8 @@ public class TraceScope implements Closeable {
 
   /**
    * Returns the span which this scope is managing.
+   *
+   * @return The span.
    */
   public Span getSpan() {
     return span;
@@ -60,6 +62,8 @@ public class TraceScope implements Closeable {
 
   /**
    * Returns the span ID which this scope is managing.
+   *
+   * @return The span ID.
    */
   public SpanId getSpanId() {
     return span.getSpanId();

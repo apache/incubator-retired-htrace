@@ -29,10 +29,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 /**
  * Base interface for gathering and reporting statistics about a block of
  * execution.
- * <p/>
- * Spans should form a directed acyclic graph structure.  It should be possible
- * to keep following the parents of a span until you arrive at a span with no
- * parents.<p/>
+ *
+ * <p>Spans should form a directed acyclic graph structure.  It should be
+ * possible to keep following the parents of a span until you arrive at a
+ * span with no parents.</p>
  */
 @JsonSerialize(using = Span.SpanSerializer.class)
 public interface Span {
@@ -42,44 +42,53 @@ public interface Span {
   void stop();
 
   /**
-   * Get the start time, in milliseconds
+   * Get the span start time.
+   *
+   * @return    The start time, in approximate milliseconds since the epoch.
    */
   long getStartTimeMillis();
 
   /**
-   * Get the stop time, in milliseconds
+   * Get the span stop time.
+   *
+   * @return    The stop time, in approximate milliseconds since the epoch.
    */
   long getStopTimeMillis();
 
   /**
    * Return the total amount of time elapsed since start was called, if running,
    * or difference between stop and start
+   *
+   * @return    The elapsed time in milliseconds.
    */
   long getAccumulatedMillis();
 
   /**
    * Has the span been started and not yet stopped?
+   *
+   * @return    True if the span is still running (has no stop time).
    */
   boolean isRunning();
 
   /**
-   * Return a textual description of this span.<p/>
+   * Return a textual description of this span.
    *
-   * Will never be null.
+   * @return    The description of this span.  Will never be null.
    */
   String getDescription();
 
   /**
-   * A pseudo-unique (random) number assigned to this span instance.<p/>
+   * A pseudo-unique (random) number assigned to this span instance.
    *
-   * The spanId is immutable and cannot be changed.  It is safe to access this
-   * from multiple threads.
+   * @return    The spanID.  This object is immutable and is safe to access
+   *            from multiple threads.
    */
   SpanId getSpanId();
 
   /**
    * Create a child span of this span with the given description
    * @deprecated Since 4.0.0. Use {@link MilliSpan.Builder}
+   * @return A new child span.
    */
   @Deprecated
   Span child(String description);
@@ -88,57 +97,71 @@ public interface Span {
   String toString();
 
   /**
-   * Returns the parent IDs of the span.<p/>
+   * Returns the parent IDs of the span.
    *
-   * The array will be empty if there are no parents.
+   * @return The array of parents, or an empty array if there are no parents.
    */
   SpanId[] getParents();
 
   /**
-   * Set the parents of this span.<p/>
+   * Set the parents of this span.
    *
-   * Any existing parents will be cleared by this call.
+   * <p>Any existing parents will be cleared by this call.</p>
+   *
+   * @param parents     The parents to set.
    */
   void setParents(SpanId[] parents);
 
   /**
    * Add a data annotation associated with this span
+   *
+   * @param key         The key to set.
+   * @param value       The value to set.
    */
   void addKVAnnotation(String key, String value);
 
   /**
    * Add a timeline annotation associated with this span
+   *
+   * @param msg         The annotation to set.  It will be associated with
+   *                    the current time.
    */
   void addTimelineAnnotation(String msg);
 
   /**
-   * Get data associated with this span (read only)<p/>
+   * Get the key-value annotations associated with this span.
    *
-   * Will never be null.
+   * @return            The annotation map in read-only form.
+   *                    Will never be null.
    */
   Map<String, String> getKVAnnotations();
 
   /**
-   * Get any timeline annotations (read only)<p/>
+   * Get the timeline annotation list.
    *
-   * Will never be null.
+   * @return            The annotation list in read-only form.
+   *                    Will never be null.
    */
   List<TimelineAnnotation> getTimelineAnnotations();
 
   /**
-   * Return a unique id for the process from which this Span originated.<p/>
+   * Return a unique id for the process from which this Span originated.
    *
-   * Will never be null.
+   * @return            The tracer id.  Will never be null.
    */
   String getTracerId();
 
   /**
-   * Set the process id of a span.
+   * Set the tracer id of a span.
+   *
+   * @param s           The tracer ID to set.
    */
   void setTracerId(String s);
 
   /**
    * Serialize to Json
+   *
+   * @return            A JSON string with the span data.
    */
   String toJson();
 

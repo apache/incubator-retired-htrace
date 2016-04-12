@@ -83,6 +83,8 @@ public class TracerPool {
 
   /**
    * Get the global tracer pool.
+   *
+   * @return The tracer pool.
    */
   public static TracerPool getGlobalTracerPool() {
     return GLOBAL;
@@ -97,6 +99,8 @@ public class TracerPool {
 
   /**
    * Return the name of this TracerPool.
+   *
+   * @return The name.
    */
   public String getName() {
     return name;
@@ -107,6 +111,8 @@ public class TracerPool {
    *
    * Note that if the current span receivers change, those changes will not be
    * reflected in this array.  In other words, this array may be stale.
+   *
+   * @return An array of the current span receivers.
    */
   public SpanReceiver[] getReceivers() {
     return curReceivers;
@@ -251,6 +257,8 @@ public class TracerPool {
    *
    * Note that if the current Tracers change, those changes will not be
    * reflected in this array.  In other words, this array may be stale.
+   *
+   * @return The current array of tracers.
    */
   public synchronized Tracer[] getTracers() {
     return curTracers.toArray(new Tracer[curTracers.size()]);

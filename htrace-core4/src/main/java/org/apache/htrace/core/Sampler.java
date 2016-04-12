@@ -22,11 +22,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * Extremely simple callback to determine the frequency that an action should be
- * performed.
- * <p/>
- * For example, the next() function may look like this:
- * <p/>
+ * Extremely simple callback to determine the frequency that an action should
+ * be performed.
+ *
+ * <p>For example, the next() function may look like this:</p>
  * <pre>
  * <code>
  * public boolean next() {
@@ -34,7 +33,8 @@ import org.apache.commons.logging.LogFactory;
  * }
  * </code>
  * </pre>
- * This would trace 50% of all gets, 75% of all puts and would not trace any other requests.
+ * <p>This would trace 50% of all gets, 75% of all puts and would not trace any
+ * other requests.</p>
  */
 public abstract class Sampler {
   /**
