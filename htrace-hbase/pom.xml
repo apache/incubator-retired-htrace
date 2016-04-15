@@ -102,9 +102,6 @@ language governing permissions and limitations under the License. -->
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionalparam>-Xdoclint:none</additionalparam>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -242,6 +239,12 @@ language governing permissions and limitations under the License. -->
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>doclint-disable</id>
+      <activation><jdk>[1.8,)</jdk></activation>
+      <properties>
+         <additionalparam>-Xdoclint:none</additionalparam>
+      </properties>
+    </profile>
   </profiles>
-
 </project>

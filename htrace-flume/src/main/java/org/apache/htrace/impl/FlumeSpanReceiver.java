@@ -247,11 +247,9 @@ public class FlumeSpanReceiver extends SpanReceiver {
   }
 
   /**
-   * Close the receiver.
-   * <p/>
-   * This tries to shutdown thread pool.
+   * Close the receiver and shut down the thread pool.
    *
-   * @throws IOException
+   * @throws IOException On error.
    */
   @Override
   public void close() throws IOException {
