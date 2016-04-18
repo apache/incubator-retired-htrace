@@ -30,15 +30,15 @@ public class TraceRunnable implements Runnable {
     this.tracer = tracer;
     this.parent = parent;
     this.runnable = runnable;
-    if (description == null) {
-      this.description = Thread.currentThread().getName();
-    } else {
-      this.description = description;
-    }
+    this.description = description;
   }
 
   @Override
   public void run() {
+    String description = this.description;
+    if (description == null) {
+      description = Thread.currentThread().getName();
+    }
     try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
       runnable.run();
     }

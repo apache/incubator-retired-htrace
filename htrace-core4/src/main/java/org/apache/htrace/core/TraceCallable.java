@@ -32,15 +32,15 @@ public class TraceCallable<V> implements Callable<V> {
     this.tracer = tracer;
     this.impl = impl;
     this.parent = parent;
-    if (description == null) {
-      this.description = Thread.currentThread().getName();
-    } else {
-      this.description = description;
-    }
+    this.description = description;
   }
 
   @Override
   public V call() throws Exception {
+    String description = this.description;
+    if (description == null) {
+      description = Thread.currentThread().getName();
+    }
     try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
       return impl.call();
     }

@@ -465,6 +465,10 @@ public class Tracer implements Closeable {
     return new TraceRunnable(this, parentScope, runnable, description);
   }
 
+  public TraceExecutorService newTraceExecutorService(ExecutorService impl) {
+    return newTraceExecutorService(impl, null);
+  }
+
   public TraceExecutorService newTraceExecutorService(ExecutorService impl,
                                                       String scopeName) {
     return new TraceExecutorService(this, scopeName, impl);
