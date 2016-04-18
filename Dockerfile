@@ -32,10 +32,10 @@ RUN curl -sSL http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.b
 
 # Java dependencies
 RUN apt-get install -y software-properties-common && \
-    echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+    echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
     add-apt-repository -y ppa:webupd8team/java && \
     apt-get update && \
-    apt-get install -y oracle-java7-installer oracle-java7-set-default
+    apt-get install -y oracle-java8-installer oracle-java8-set-default
 
 RUN curl -sSL http://archive.apache.org/dist/maven/maven-3/3.0.4/binaries/apache-maven-3.0.4-bin.tar.gz | tar -C /usr/share -xz && \
     mv /usr/share/apache-maven-3.0.4 /usr/share/maven && \
@@ -45,7 +45,7 @@ RUN curl -sSL http://archive.apache.org/dist/ant/binaries/apache-ant-1.9.6-bin.t
     mv /usr/share/apache-ant-1.9.6 /usr/share/ant && \
     ln -s /usr/share/ant/bin/ant /usr/bin/ant
 
-ENV JAVA_HOME /usr/lib/jvm/java-7-oracle
+ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 ENV MAVEN_HOME /usr/share/maven
 ENV ANT_HOME /ust/share/ant
 
