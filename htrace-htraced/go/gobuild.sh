@@ -132,15 +132,15 @@ install)
     # Inject the release and git version into the htraced ldflags.
     echo "Building ${RELEASE_VERSION} [${GIT_VERSION}]"
     FLAGS="-X main.RELEASE_VERSION ${RELEASE_VERSION} -X main.GIT_VERSION ${GIT_VERSION}"
-    go install ${TAGS} -ldflags "${FLAGS}" -v org/apache/htrace/... "$@" \
+    go install ${TAGS} -ldflags "${FLAGS}" -v htrace/... "$@" \
         || die "go install failed."
     # Set the RPATH to make bundling leveldb and snappy easier.
     set_rpath "${GOBIN}/htraced"
     ;;
 bench)
-    go test org/apache/htrace/... ${TAGS} -test.bench=. "$@"
+    go test htrace/... ${TAGS} -test.bench=. "$@"
     ;;
 *)
-    go ${ACTION} org/apache/htrace/... ${TAGS} "$@"
+    go ${ACTION} htrace/... ${TAGS} "$@"
     ;;
 esac
