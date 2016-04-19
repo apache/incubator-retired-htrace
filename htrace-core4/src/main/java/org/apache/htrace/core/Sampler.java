@@ -107,7 +107,7 @@ public abstract class Sampler {
         ctor = cls.getConstructor(HTraceConfiguration.class);
       } catch (NoSuchMethodException e) {
         throwError("Cannot find a constructor for class " +
-            str + "which takes an HTraceConfiguration.");
+            str + " which takes an HTraceConfiguration.");
       }
       Sampler sampler = null;
       try {

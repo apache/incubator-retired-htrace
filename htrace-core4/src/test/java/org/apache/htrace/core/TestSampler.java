@@ -81,6 +81,10 @@ public class TestSampler {
     samplers = getSamplersFromConf(HTraceConfiguration.
         fromKeyValuePairs("sampler.classes", "NonExistentSampler"));
     Assert.assertEquals(0, samplers.length);
+    
+    samplers = getSamplersFromConf(HTraceConfiguration.
+        fromKeyValuePairs("sampler.classes", "java.lang.String"));
+    Assert.assertEquals(0, samplers.length);
 
     samplers = getSamplersFromConf(HTraceConfiguration.EMPTY);
     Assert.assertEquals(0, samplers.length);
