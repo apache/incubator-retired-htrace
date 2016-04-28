@@ -18,7 +18,7 @@ language governing permissions and limitations under the License. -->
   <parent>
     <artifactId>htrace</artifactId>
     <groupId>org.apache.htrace</groupId>
-    <version>4.1.0-incubating-SNAPSHOT</version>
+    <version>4.2.0-incubating-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -237,7 +237,7 @@ language governing permissions and limitations under the License. -->
             <configuration>
               <group>Application</group>
               <needarch>true</needarch>
-              <release>4.1.0</release>
+              <release>4.2.0</release>
               <defaultDirmode>755</defaultDirmode>
               <defaultFilemode>644</defaultFilemode>
               <defaultUsername>root</defaultUsername>
@@ -266,7 +266,7 @@ language governing permissions and limitations under the License. -->
                   <directory>/usr/local/htraced/java</directory>
                   <sources>
                     <source>
-                      <location>target/htrace-htraced-4.1.0-incubating-SNAPSHOT.jar</location>
+                      <location>target/${project.artifactId}-${project.version}.jar</location>
                     </source>
                   </sources>
                 </mapping>

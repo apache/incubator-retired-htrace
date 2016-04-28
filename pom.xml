@@ -21,7 +21,7 @@ language governing permissions and limitations under the License. -->
 
   <groupId>org.apache.htrace</groupId>
   <artifactId>htrace</artifactId>
-  <version>4.1.0-incubating-SNAPSHOT</version>
+  <version>4.2.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HTrace</name>
   <description>A distributed tracing framework.</description>
