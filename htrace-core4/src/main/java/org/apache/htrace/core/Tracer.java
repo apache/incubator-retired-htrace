@@ -446,7 +446,7 @@ public class Tracer implements Closeable {
     if (parentScope == null) {
       return callable;
     }
-    return new TraceCallable<V>(this, parentScope, callable, description);
+    return new TraceCallable<V>(this, parentScope.getSpanId(), callable, description);
   }
 
   /**

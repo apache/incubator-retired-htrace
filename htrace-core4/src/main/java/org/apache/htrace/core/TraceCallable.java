@@ -24,14 +24,14 @@ import java.util.concurrent.Callable;
 public class TraceCallable<V> implements Callable<V> {
   private final Tracer tracer;
   private final Callable<V> impl;
-  private final TraceScope parent;
+  private final SpanId parentId;
   private final String description;
 
-  TraceCallable(Tracer tracer, TraceScope parent, Callable<V> impl,
+  public TraceCallable(Tracer tracer, SpanId parentId, Callable<V> impl,
       String description) {
     this.tracer = tracer;
     this.impl = impl;
-    this.parent = parent;
+    this.parentId = parentId;
     this.description = description;
   }
 
@@ -41,7 +41,7 @@ public class TraceCallable<V> implements Callable<V> {
     if (description == null) {
       description = Thread.currentThread().getName();
     }
-    try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
+    try (TraceScope chunk = tracer.newScope(description, parentId)) {
       return impl.call();
     }
   }

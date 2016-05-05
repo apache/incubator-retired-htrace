@@ -66,6 +66,28 @@ public class TestTraceExecutor {
     }
   }
 
+  @Test
+  public void testWrappingFromSpan() throws Exception {
+    HTraceConfiguration conf = HTraceConfiguration.fromKeyValuePairs("sampler.classes", "AlwaysSampler");
+
+    ExecutorService es = Executors.newSingleThreadExecutor();
+    try (Tracer tracer = new Tracer.Builder("TestTraceExecutor").conf(conf).build()) {
+      SpanId random = SpanId.fromRandom();
+      try (TraceScope parentScope = tracer.newScope("parent")) {
+        Callable<SpanId> callable = new TraceCallable<SpanId>(tracer, random, new Callable<SpanId>() {
+          @Override
+          public SpanId call() throws Exception {
+            return Tracer.getCurrentSpan().getParents()[0];
+          }
+        }, "child");
+        SpanId result = es.submit(callable).get(WAIT_TIME_SECONDS, TimeUnit.SECONDS);
+        assertEquals(random, result);
+      }
+    } finally {
+      es.shutdown();
+    }
+  }
+
   /*
    * Inspired by org.apache.solr.util.DefaultSolrThreadFactory
    */

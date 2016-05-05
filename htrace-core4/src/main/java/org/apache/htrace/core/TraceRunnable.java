@@ -21,14 +21,23 @@ package org.apache.htrace.core;
  */
 public class TraceRunnable implements Runnable {
   private final Tracer tracer;
-  private final TraceScope parent;
+  private final SpanId parentId;
   private final Runnable runnable;
   private final String description;
 
+  /**
+   * @deprecated Use {@link #TraceRunnable(Tracer, SpanId, Runnable, String)} instead.
+   */
+  @Deprecated
   public TraceRunnable(Tracer tracer, TraceScope parent,
       Runnable runnable, String description) {
+    this(tracer, parent.getSpanId(), runnable, description);
+  }
+
+  public TraceRunnable(Tracer tracer, SpanId parentId,
+      Runnable runnable, String description) {
     this.tracer = tracer;
-    this.parent = parent;
+    this.parentId = parentId;
     this.runnable = runnable;
     this.description = description;
   }
@@ -39,7 +48,7 @@ public class TraceRunnable implements Runnable {
     if (description == null) {
       description = Thread.currentThread().getName();
     }
-    try (TraceScope chunk = tracer.newScope(description, parent.getSpan().getSpanId())) {
+    try (TraceScope chunk = tracer.newScope(description, parentId)) {
       runnable.run();
     }
   }
