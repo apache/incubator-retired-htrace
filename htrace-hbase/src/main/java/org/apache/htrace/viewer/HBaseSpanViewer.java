@@ -205,8 +205,10 @@ public class HBaseSpanViewer {
   }
 
   /**
-   * Run basic test.
-   * @throws IOException
+   * Run basic test for retrieving spans from Stored Format.
+   *
+   * @param args Default Arguments which passed to main method
+   * @throws IOException is thrown if error occur while Spans are De-serialized from byte Streams
    */
   public static void main(String[] args) throws IOException {
     HBaseSpanViewer viewer = new HBaseSpanViewer(HBaseConfiguration.create());

@@ -86,7 +86,10 @@ public class HBaseSpanViewerServer implements Tool {
   }
 
   /**
-   * @throws IOException
+   * Runs Embedded Jetty server which exposes traces and spans Servlets exposed over HTTP protocol.
+   *
+   * @param args Default Arguments which passed to main method
+   * @throws Exception Which are propagated from Embedded Jetty Server to Hadoop tool runner.
    */
   public static void main(String[] args) throws Exception {
     ToolRunner.run(HBaseConfiguration.create(), new HBaseSpanViewerServer(), args);

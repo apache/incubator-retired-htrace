@@ -101,9 +101,9 @@ public class HBaseSpanReceiver extends SpanReceiver {
 
   /**
    * The thread factory used to create new ExecutorService.
-   * <p/>
-   * This will be the same factory for the lifetime of this object so that
-   * no thread names will ever be duplicated.
+   *
+   * <p>This will be the same factory for the lifetime of this object so that
+   * no thread names will ever be duplicated.</p>
    */
   private final ThreadFactory tf = new ThreadFactory() {
     private final AtomicLong receiverIdx = new AtomicLong(0);
@@ -301,10 +301,10 @@ public class HBaseSpanReceiver extends SpanReceiver {
 
   /**
    * Close the receiver.
-   * <p/>
-   * This tries to shutdown thread pool.
    *
-   * @throws IOException
+   * <p>This tries to shutdown thread pool.</p>
+   *
+   * @throws IOException If a I/O Stream related error occurs and exception is thrown.
    */
   @Override
   public void close() throws IOException {
@@ -339,7 +339,9 @@ public class HBaseSpanReceiver extends SpanReceiver {
    * Run basic test. Adds span to an existing htrace table in an existing hbase setup.
    * Requires a running hbase to send the traces too with an already created trace
    * table (Default table name is 'htrace' with column families 's' and 'i').
-   * @throws IOException
+   *
+   * @param args Default arguments which passed to main method
+   * @throws InterruptedException  Thread.sleep() can cause interruption in current thread.
    */
   public static void main(String[] args) throws Exception {
     Tracer tracer = new Tracer.Builder().
