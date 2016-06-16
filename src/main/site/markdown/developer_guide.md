@@ -236,57 +236,8 @@ available, but they are all integrated into libhtrace.so, so no additional
 libraries are needed.
 
 ## Configuration
-Clearly, HTrace requires configuration.  We need to control which SpanReceiver
-is used, what the sampling rate is, and many other things besides.  Luckily, as
-we discussed earlier, the Tracer objects maintain this configuration
-information for us.  When we ask for a new trace scope, the Tracer knows what
-configuration to use.
-
-This configuration comes from the HTraceConfiguration object that we supplied
-to the Tracer#Builder earlier.  In general, we want to configure HTrace the
-same way we configure anything else in our distributed system.  So we normally
-create a subclass of HTraceConfiguration that accesses the appropriate
-information in our existing configuration system.
-
-To make this a little more concrete, let`s suppose we are writing Bob`s
-Distributed System.  Being a pragmatic (not to mention lazy) guy, Bob has
-decided to just use Java configuration properties for configuration.
-So our Tracer#Builder invoation would look something like this:
-
-    this.tracer = new Tracer.Builder("Bob").
-        conf(new HTraceConfiguration() {
-            @Override
-            public String get(String key) {
-              return System.getProperty("htrace." + key);
-            }
-
-            @Override
-            public String get(String key, String defaultValue) {
-              String ret = get(key);
-              return (ret != null) ? ret : defaultValue;
-            }
-        }).
-        build();
-
-You can see that this configuration object maps every property starting in
-"htrace." to an htrace property.  So, for example, you would set the Java
-system property value "htrace.span.receiver.classes" in order to control the
-HTrace configuration key "span.receiver.classes".
-
-Of course, Bob probably should have been less lazy, and used a real
-configuration system instead of using Java system properties.  This is just a
-toy example to illustrate how to integrate with an existing configuration
-system.
-
-Bob might also have wanted to use different prefixes for different Tracer
-objects.  For example, in Hadoop you can configure the FsShell Tracer
-separately from the NameNode Tracer, by setting
-"fs.shell.htrace.span.receiver.classes".  This is easy to control by changing
-the HTraceConfiguration object that you pass to Tracer#Builder.
-
-Note that in C and C++, this system is a little different, based on explicitly
-creating a configuration object prior to creating a tracer, rather than using a
-callback-based system.
+Please see the [configuration documentation](configuration.html), 
+which also includes an entire  table of key, value configuration options.
 
 ## TracerPool
 SpanReceiver objects often need to make a network connection to a remote
