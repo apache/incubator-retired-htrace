@@ -24,12 +24,12 @@ public class KuduClientConfiguration {
 
   private String host;
   private String port;
-  private int workerCount;
-  private int bossCount;
-  private boolean isStatisticsEnabled;
-  private long adminOperationTimeout;
-  private long operationTimeout;
-  private long socketReadTimeout;
+  private Integer workerCount;
+  private Integer bossCount;
+  private Boolean isStatisticsEnabled;
+  private Long adminOperationTimeout;
+  private Long operationTimeout;
+  private Long socketReadTimeout;
 
   public KuduClientConfiguration(String host, String port) {
     this.host = host;
@@ -63,22 +63,22 @@ public class KuduClientConfiguration {
   public KuduClient buildClient() {
     KuduClientBuilder builder = new KuduClient
             .KuduClientBuilder(host.concat(":").concat(port));
-    if (Integer.valueOf(workerCount) != null) {
+    if (workerCount != null) {
       builder.workerCount(workerCount);
     }
-    if (Integer.valueOf(bossCount) != null) {
+    if (bossCount != null) {
       builder.bossCount(bossCount);
     }
-    if (!Boolean.valueOf(isStatisticsEnabled)) {
+    if (isStatisticsEnabled != null && isStatisticsEnabled == false) {
       builder.disableStatistics();
     }
-    if (Long.valueOf(adminOperationTimeout) != null) {
+    if (adminOperationTimeout != null) {
       builder.defaultAdminOperationTimeoutMs(adminOperationTimeout);
     }
-    if (Long.valueOf(operationTimeout) != null) {
+    if (operationTimeout != null) {
       builder.defaultOperationTimeoutMs(operationTimeout);
     }
-    if (Long.valueOf(socketReadTimeout) != null) {
+    if (socketReadTimeout != null) {
       builder.defaultSocketReadTimeoutMs(socketReadTimeout);
     }
     return builder.build();

@@ -17,7 +17,7 @@
 
 package org.apache.htrace.impl;
 
-public class KuduConstants {
+public class KuduReceiverConstants {
 
   public static final String KUDU_MASTER_HOST_KEY = "htrace.kudu.master.host";
   public static final String DEFAULT_KUDU_MASTER_HOST = "127.0.0.1";

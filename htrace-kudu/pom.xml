@@ -18,7 +18,7 @@ language governing permissions and limitations under the License. -->
   <parent>
     <artifactId>htrace</artifactId>
     <groupId>org.apache.htrace</groupId>
-    <version>4.1.0-incubating-SNAPSHOT</version>
+    <version>4.2.0-incubating-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -31,8 +31,8 @@ language governing permissions and limitations under the License. -->
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <kudu.version>1.0.0-SNAPSHOT</kudu.version>
-    <hadoop.version>2.6.0-cdh5.4.7</hadoop.version>
+    <kudu.version>0.9.1</kudu.version>
+    <commons.version>1.3.2</commons.version>
     <createDependencyReducedPom>true</createDependencyReducedPom>
   </properties>
 
@@ -147,7 +147,6 @@ language governing permissions and limitations under the License. -->
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
     <!-- KUDU specific deps. -->
     <dependency>
       <groupId>org.kududb</groupId>
@@ -155,9 +154,16 @@ language governing permissions and limitations under the License. -->
       <version>${kudu.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
-      <version>${hadoop.version}</version>
+      <groupId>org.kududb</groupId>
+      <artifactId>kudu-client</artifactId>
+      <version>${kudu.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons.version}</version>
     </dependency>
   </dependencies>
 

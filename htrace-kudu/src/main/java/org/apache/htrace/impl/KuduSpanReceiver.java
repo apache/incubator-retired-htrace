@@ -74,44 +74,50 @@ public class KuduSpanReceiver extends SpanReceiver {
 
   public KuduSpanReceiver(HTraceConfiguration conf) {
     this.clientConf =
-            new KuduClientConfiguration(conf.get(KuduConstants.KUDU_MASTER_HOST_KEY,
-                    KuduConstants.DEFAULT_KUDU_MASTER_HOST),
-                    conf.get(KuduConstants.KUDU_MASTER_PORT_KEY,
-                            KuduConstants.DEFAULT_KUDU_MASTER_PORT));
-    this.clientConf.setBossCount(conf.getInt(KuduConstants.KUDU_CLIENT_BOSS_COUNT_KEY,
-            Integer.valueOf(null)));
-    this.clientConf.setWorkerCount(conf.getInt(KuduConstants.KUDU_CLIENT_WORKER_COUNT_KEY,
-            Integer.valueOf(null)));
-    this.clientConf.setIsStatisticsEnabled(conf.getBoolean(KuduConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY,
-            Boolean.valueOf(null)));
-    this.clientConf
-            .setAdminOperationTimeout(Long.valueOf(conf.get(KuduConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY,
-                    String.valueOf(null))));
-    this.clientConf
-            .setOperationTimeout(Long.valueOf(conf.get(KuduConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY,
-                    String.valueOf(null))));
-    this.clientConf
-            .setSocketReadTimeout(Long.valueOf(conf.get(KuduConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY,
-                    String.valueOf(null))));
-    this.queue = new ArrayBlockingQueue<Span>(conf.getInt(KuduConstants.SPAN_BLOCKING_QUEUE_SIZE_KEY,
-            KuduConstants.DEFAULT_SPAN_BLOCKING_QUEUE_SIZE));
-    this.table = conf.get(KuduConstants.KUDU_TABLE_KEY, KuduConstants.DEFAULT_KUDU_TABLE);
-    this.column_span_id = conf.get(KuduConstants.KUDU_COLUMN_SPAN_ID_KEY,
-            KuduConstants.DEFAULT_KUDU_COLUMN_SPAN_ID);
-    this.column_span = conf.get(KuduConstants.KUDU_COLUMN_SPAN_KEY,
-            KuduConstants.DEFAULT_KUDU_COLUMN_SPAN);
-    this.column_root_span = conf.get(KuduConstants.KUDU_COLUMN_ROOT_SPAN_KEY,
-            KuduConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN);
-    this.column_root_span_start_time = conf.get(KuduConstants.KUDU_COLUMN_ROOT_SPAN_START_TIME_KEY,
-            KuduConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN_START_TIME);
-    this.maxSpanBatchSize = conf.getInt(KuduConstants.MAX_SPAN_BATCH_SIZE_KEY,
-            KuduConstants.DEFAULT_MAX_SPAN_BATCH_SIZE);
+            new KuduClientConfiguration(conf.get(KuduReceiverConstants.KUDU_MASTER_HOST_KEY,
+                    KuduReceiverConstants.DEFAULT_KUDU_MASTER_HOST),
+                    conf.get(KuduReceiverConstants.KUDU_MASTER_PORT_KEY,
+                            KuduReceiverConstants.DEFAULT_KUDU_MASTER_PORT));
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_BOSS_COUNT_KEY) != null) {
+      this.clientConf.setBossCount(Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_BOSS_COUNT_KEY)));
+    }
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_WORKER_COUNT_KEY) != null) {
+      this.clientConf.setWorkerCount(Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_WORKER_COUNT_KEY)));
+    }
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY) != null) {
+      this.clientConf.setIsStatisticsEnabled(Boolean.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY)));
+    }
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY) != null) {
+      this.clientConf
+              .setAdminOperationTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY)));
+    }
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY) != null) {
+      this.clientConf
+              .setOperationTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY)));
+    }
+    if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY) != null) {
+      this.clientConf
+              .setSocketReadTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY)));
+    }
+    this.queue = new ArrayBlockingQueue<Span>(conf.getInt(KuduReceiverConstants.SPAN_BLOCKING_QUEUE_SIZE_KEY,
+            KuduReceiverConstants.DEFAULT_SPAN_BLOCKING_QUEUE_SIZE));
+    this.table = conf.get(KuduReceiverConstants.KUDU_TABLE_KEY, KuduReceiverConstants.DEFAULT_KUDU_TABLE);
+    this.column_span_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_ID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_ID);
+    this.column_span = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN);
+    this.column_root_span = conf.get(KuduReceiverConstants.KUDU_COLUMN_ROOT_SPAN_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN);
+    this.column_root_span_start_time = conf.get(KuduReceiverConstants.KUDU_COLUMN_ROOT_SPAN_START_TIME_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN_START_TIME);
+    this.maxSpanBatchSize = conf.getInt(KuduReceiverConstants.MAX_SPAN_BATCH_SIZE_KEY,
+            KuduReceiverConstants.DEFAULT_MAX_SPAN_BATCH_SIZE);
     if (this.service != null) {
       this.service.shutdownNow();
       this.service = null;
     }
-    int numThreads = conf.getInt(KuduConstants.NUM_PARALLEL_THREADS_KEY,
-            KuduConstants.DEFAULT_NUM_PARALLEL_THREADS);
+    int numThreads = conf.getInt(KuduReceiverConstants.NUM_PARALLEL_THREADS_KEY,
+            KuduReceiverConstants.DEFAULT_NUM_PARALLEL_THREADS);
     this.service = Executors.newFixedThreadPool(numThreads, threadFactory);
     for (int i = 0; i < numThreads; i++) {
       this.service.submit(new KuduSpanReceiver.WriteSpanRunnable());
