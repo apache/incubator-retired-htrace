@@ -46,7 +46,7 @@ import java.util.List;
 public class TestKuduSpanReceiver extends BaseKuduTest {
 
   private static final String BIN_DIR_PROP = "binDir";
-  private static final String BIN_DIR_PROP_DEFAULT = "/home/djkevincr/poc/incubator-kudu/build/release/bin";
+  private static final String BIN_DIR_PROP_DEFAULT = "../build/release/bin";
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
