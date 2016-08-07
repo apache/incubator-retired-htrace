@@ -22,20 +22,35 @@ import org.kududb.client.KuduClient.KuduClientBuilder;
 
 public class KuduClientConfiguration {
 
-  private String host;
-  private String port;
-  private Integer workerCount;
-  private Integer bossCount;
-  private Boolean isStatisticsEnabled;
-  private Long adminOperationTimeout;
-  private Long operationTimeout;
-  private Long socketReadTimeout;
+  private final String host;
+  private final String port;
+  private final Integer workerCount;
+  private final Integer bossCount;
+  private final Boolean isStatisticsEnabled;
+  private final Long adminOperationTimeout;
+  private final Long operationTimeout;
+  private final Long socketReadTimeout;
 
-  public KuduClientConfiguration(String host, String port) {
+  public KuduClientConfiguration(String host,
+                                 String port,
+                                 Integer workerCount,
+                                 Integer bossCount,
+                                 Boolean isStatisticsEnabled,
+                                 Long adminOperationTimeout,
+                                 Long operationTimeout,
+                                 Long socketReadTimeout) {
+
     this.host = host;
     this.port = port;
+    this.workerCount = workerCount;
+    this.bossCount = bossCount;
+    this.isStatisticsEnabled = isStatisticsEnabled;
+    this.adminOperationTimeout = adminOperationTimeout;
+    this.operationTimeout = operationTimeout;
+    this.socketReadTimeout = socketReadTimeout;
   }
 
+  /*
   public void setWorkerCount(int workerCount) {
     this.workerCount = workerCount;
   }
@@ -59,6 +74,8 @@ public class KuduClientConfiguration {
   public void setSocketReadTimeout(long socketReadTimeout) {
     this.socketReadTimeout = socketReadTimeout;
   }
+
+  */
 
   public KuduClient buildClient() {
     KuduClientBuilder builder = new KuduClient

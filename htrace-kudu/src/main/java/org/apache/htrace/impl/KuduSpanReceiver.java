@@ -23,8 +23,6 @@ import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TimelineAnnotation;
-import org.apache.htrace.protobuf.generated.SpanProtos;
-import org.kududb.client.Bytes;
 import org.kududb.client.KuduClient;
 import org.kududb.client.KuduSession;
 import org.kududb.client.KuduTable;
@@ -65,51 +63,113 @@ public class KuduSpanReceiver extends SpanReceiver {
       return thread;
     }
   };
+
   private ExecutorService service;
-  private String table;
-  private String column_span_id;
-  private String column_span;
-  private String column_root_span;
-  private String column_root_span_start_time;
+
+  private String table_span;
+  private String column_span_trace_id;
+  private String column_span_start_time;
+  private String column_span_stop_time;
+  private String column_span_span_id;
+  private String column_span_process_id;
+  private String column_span_parent_id;
+  private String column_span_description;
+  private String column_span_parent;
+
+  private String table_timeline;
+  private String column_timeline_timeline_id;
+  private String column_timeline_time;
+  private String column_timeline_message;
+  private String column_timeline_span_id;
 
   public KuduSpanReceiver(HTraceConfiguration conf) {
-    this.clientConf =
-            new KuduClientConfiguration(conf.get(KuduReceiverConstants.KUDU_MASTER_HOST_KEY,
-                    KuduReceiverConstants.DEFAULT_KUDU_MASTER_HOST),
-                    conf.get(KuduReceiverConstants.KUDU_MASTER_PORT_KEY,
-                            KuduReceiverConstants.DEFAULT_KUDU_MASTER_PORT));
+
+    String masterHost;
+    String masterPort;
+    Integer workerCount;
+    Integer bossCount;
+    Boolean isStatisticsEnabled;
+    Long adminOperationTimeout;
+    Long operationTimeout;
+    Long socketReadTimeout;
+
+    masterHost = conf.get(KuduReceiverConstants.KUDU_MASTER_HOST_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_MASTER_HOST);
+    masterPort = conf.get(KuduReceiverConstants.KUDU_MASTER_PORT_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_MASTER_PORT);
+
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_BOSS_COUNT_KEY) != null) {
-      this.clientConf.setBossCount(Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_BOSS_COUNT_KEY)));
+      bossCount = Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_BOSS_COUNT_KEY));
+    } else {
+      bossCount = null;
     }
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_WORKER_COUNT_KEY) != null) {
-      this.clientConf.setWorkerCount(Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_WORKER_COUNT_KEY)));
+      workerCount = Integer.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_WORKER_COUNT_KEY));
+    } else {
+      workerCount = null;
     }
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY) != null) {
-      this.clientConf.setIsStatisticsEnabled(Boolean.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY)));
+      isStatisticsEnabled = Boolean.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_STATISTICS_ENABLED_KEY));
+    } else {
+      isStatisticsEnabled = null;
     }
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY) != null) {
-      this.clientConf
-              .setAdminOperationTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY)));
+      adminOperationTimeout = Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_ADMIN_OPERATION_KEY));
+    } else {
+      adminOperationTimeout = null;
     }
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY) != null) {
-      this.clientConf
-              .setOperationTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY)));
+      operationTimeout = Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_OPERATION_KEY));
+    } else {
+      operationTimeout = null;
     }
     if (conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY) != null) {
-      this.clientConf
-              .setSocketReadTimeout(Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY)));
+      socketReadTimeout = Long.valueOf(conf.get(KuduReceiverConstants.KUDU_CLIENT_TIMEOUT_SOCKET_READ_KEY));
+    } else {
+      socketReadTimeout = null;
     }
+
+    this.clientConf = new KuduClientConfiguration(masterHost,
+            masterPort,
+            workerCount,
+            bossCount,
+            isStatisticsEnabled,
+            adminOperationTimeout,
+            operationTimeout,
+            socketReadTimeout);
+
     this.queue = new ArrayBlockingQueue<Span>(conf.getInt(KuduReceiverConstants.SPAN_BLOCKING_QUEUE_SIZE_KEY,
             KuduReceiverConstants.DEFAULT_SPAN_BLOCKING_QUEUE_SIZE));
-    this.table = conf.get(KuduReceiverConstants.KUDU_TABLE_KEY, KuduReceiverConstants.DEFAULT_KUDU_TABLE);
-    this.column_span_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_ID_KEY,
-            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_ID);
-    this.column_span = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_KEY,
-            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN);
-    this.column_root_span = conf.get(KuduReceiverConstants.KUDU_COLUMN_ROOT_SPAN_KEY,
-            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN);
-    this.column_root_span_start_time = conf.get(KuduReceiverConstants.KUDU_COLUMN_ROOT_SPAN_START_TIME_KEY,
-            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_ROOT_SPAN_START_TIME);
+
+    this.table_span = conf.get(KuduReceiverConstants.KUDU_SPAN_TABLE_KEY, KuduReceiverConstants.DEFAULT_KUDU_SPAN_TABLE);
+    this.table_timeline= conf.get(KuduReceiverConstants.KUDU_SPAN_TIMELINE_ANNOTATION_TABLE_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_SPAN_TIMELINE_ANNOTATION_TABLE);
+
+    this.column_span_trace_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_TRACE_ID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_TRACE_ID);
+    this.column_span_start_time = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_START_TIME_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_START_TIME);
+    this.column_span_stop_time = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_STOP_TIME_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_STOP_TIME);
+    this.column_span_span_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_SPAN_ID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_SPAN_ID);
+    this.column_span_process_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_PROCESS_ID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PROCESS_ID);
+    this.column_span_parent_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_PARENT_ID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID);
+    this.column_span_description = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_DESCRIPTION_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_DESCRIPTION);
+    this.column_span_parent = conf.get(KuduReceiverConstants.KUDU_COLUMN_SPAN_PARENT_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT);
+    this.column_timeline_time = conf.get(KuduReceiverConstants.KUDU_COLUMN_TIMELINE_TIME_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_TIME);
+    this.column_timeline_message = conf.get(KuduReceiverConstants.KUDU_COLUMN_TIMELINE_MESSAGE_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_MESSAGE);
+    this.column_timeline_span_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_TIMELINE_SPANID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_SPANID);
+    this.column_timeline_timeline_id = conf.get(KuduReceiverConstants.KUDU_COLUMN_TIMELINE_TIMELINEID_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_TIMELINEID);
+
     this.maxSpanBatchSize = conf.getInt(KuduReceiverConstants.MAX_SPAN_BATCH_SIZE_KEY,
             KuduReceiverConstants.DEFAULT_MAX_SPAN_BATCH_SIZE);
     if (this.service != null) {
@@ -159,9 +219,6 @@ public class KuduSpanReceiver extends SpanReceiver {
 
     @Override
     public void run() {
-      SpanProtos.Span.Builder sbuilder = SpanProtos.Span.newBuilder();
-      SpanProtos.TimelineAnnotation.Builder tlbuilder =
-              SpanProtos.TimelineAnnotation.newBuilder();
       List<Span> dequeuedSpans = new ArrayList<Span>(maxSpanBatchSize);
       long errorCount = 0;
       while (running.get() || queue.size() > 0) {
@@ -188,35 +245,35 @@ public class KuduSpanReceiver extends SpanReceiver {
         }
         try {
           for (Span span : dequeuedSpans) {
-            sbuilder.clear()
-                    .setTraceId(span.getSpanId().getHigh())
-                    .setStart(span.getStartTimeMillis())
-                    .setStop(span.getStopTimeMillis())
-                    .setSpanId(span.getSpanId().getLow())
-                    .setProcessId(span.getTracerId())
-                    .setDescription(span.getDescription());
-
+            KuduTable tableSpan = client.openTable(table_span);
+            Insert spanInsert = tableSpan.newInsert();
+            PartialRow spanRow = spanInsert.getRow();
+            spanRow.addLong(column_span_trace_id,span.getSpanId().getHigh());
+            spanRow.addLong(column_span_start_time,span.getStartTimeMillis());
+            spanRow.addLong(column_span_stop_time,span.getStopTimeMillis());
+            spanRow.addLong(column_span_span_id,span.getSpanId().getLow());
+            spanRow.addString(column_span_process_id,span.getTracerId());
             if (span.getParents().length == 0) {
-              sbuilder.setParentId(0);
+              spanRow.addLong(column_span_parent_id,0);
+              spanRow.addBoolean(column_span_parent,false);
             } else if (span.getParents().length > 0) {
-              sbuilder.setParentId(span.getParents()[0].getLow());
+              spanRow.addLong(column_span_parent_id,span.getParents()[0].getLow());
+              spanRow.addBoolean(column_span_parent,true);
             }
+            spanRow.addString(column_span_description,span.getDescription());
+            this.session.apply(spanInsert);
+            long annotationCounter = 0;
             for (TimelineAnnotation ta : span.getTimelineAnnotations()) {
-              sbuilder.addTimeline(tlbuilder.clear()
-                      .setTime(ta.getTime())
-                      .setMessage(ta.getMessage())
-                      .build());
+              annotationCounter++;
+              KuduTable tableTimeline = client.openTable(table_timeline);
+              Insert timelineInsert = tableTimeline.newInsert();
+              PartialRow timelineRow = timelineInsert.getRow();
+              timelineRow.addLong(column_timeline_timeline_id,span.getSpanId().getHigh()+annotationCounter);
+              timelineRow.addLong(column_timeline_time,ta.getTime());
+              timelineRow.addString(column_timeline_message,ta.getMessage());
+              timelineRow.addLong(column_timeline_span_id,span.getSpanId().getHigh());
+              this.session.apply(timelineInsert);
             }
-            KuduTable tableRef = client.openTable(table);
-            Insert insert = tableRef.newInsert();
-            PartialRow row = insert.getRow();
-            row.addBinary(column_span_id, Bytes.fromLong(span.getSpanId().getHigh()));
-            row.addBinary(column_span, sbuilder.build().toByteArray());
-            if (span.getParents().length == 0) {
-              row.addBinary(column_root_span_start_time, Bytes.fromLong(span.getStartTimeMillis()));
-              row.addBinary(column_root_span, sbuilder.build().toByteArray());
-            }
-            this.session.apply(insert);
           }
           dequeuedSpans.clear();
           errorCount = 0;
