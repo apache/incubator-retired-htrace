@@ -50,33 +50,6 @@ public class KuduClientConfiguration {
     this.socketReadTimeout = socketReadTimeout;
   }
 
-  /*
-  public void setWorkerCount(int workerCount) {
-    this.workerCount = workerCount;
-  }
-
-  public void setBossCount(int bossCount) {
-    this.bossCount = bossCount;
-  }
-
-  public void setIsStatisticsEnabled(boolean isStatisticsEnabled) {
-    this.isStatisticsEnabled = isStatisticsEnabled;
-  }
-
-  public void setAdminOperationTimeout(long adminOperationTimeout) {
-    this.adminOperationTimeout = adminOperationTimeout;
-  }
-
-  public void setOperationTimeout(long operationTimeout) {
-    this.operationTimeout = operationTimeout;
-  }
-
-  public void setSocketReadTimeout(long socketReadTimeout) {
-    this.socketReadTimeout = socketReadTimeout;
-  }
-
-  */
-
   public KuduClient buildClient() {
     KuduClientBuilder builder = new KuduClient
             .KuduClientBuilder(host.concat(":").concat(port));
