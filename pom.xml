@@ -37,14 +37,6 @@ language governing permissions and limitations under the License. -->
     <module>htrace-htraced</module>
   </modules>
 
-  <licenses>
-    <license>
-      <name>The Apache Software License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-      <comments>A business-friendly OSS license</comments>
-    </license>
-  </licenses>
   <scm>
     <connection>scm:git:http://git-wip-us.apache.org/repos/asf/incubator-htrace.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-htrace.git</developerConnection>
