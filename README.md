@@ -25,5 +25,12 @@ For help on building the software, see [BUILDING.txt](./BUILDING.txt).
 For details about integrating HTrace into an application, see the [developer
 guide](./src/main/site/markdown/developer_guide.md)
 
+If you have an idea or a patch to improve HTrace, file a [JIRA issue at the bug
+tracker] (https://issues.apache.org/jira/browse/htrace) or post to our [mailing
+list] (http://htrace.incubator.apache.org/mail-lists.html).
+
+<b>NOTE</b>: Please create a JIRA issue for each pull request.  If you just create a
+pull request but no JIRA, we might not notice your patch!
+
 See the [release guide](./src/main/site/markdown/building.md) for
 information about making an HTrace release.
