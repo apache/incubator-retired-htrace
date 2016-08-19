@@ -48,7 +48,7 @@ import java.util.List;
 public class TestKuduSpanReceiver extends BaseKuduTest {
 
   private static final String BIN_DIR_PROP = "binDir";
-  private static final String BIN_DIR_PROP_DEFAULT = "./build/release/bin";
+  private static final String BIN_DIR_PROP_DEFAULT = "../build/release/bin";
   //set kudu binary location and enable test execution from here
   private static final boolean TEST_ENABLE = false;
 
@@ -83,10 +83,10 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
     span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_SPAN_ID,
             Type.INT64)
             .build());
-    span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PROCESS_ID,
-            Type.STRING)
+    span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_HIGH,
+            Type.INT64)
             .build());
-    span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID,
+    span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_LOW,
             Type.INT64)
             .build());
     span_columns.add(new ColumnSchema.ColumnSchemaBuilder(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT,
@@ -137,6 +137,7 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
                     KuduReceiverConstants.KUDU_MASTER_PORT_KEY, BaseKuduTest.getMasterAddresses().split(":")[1]))
             .build();
     TraceScope scope = tracer.newScope("testKuduScope");
+    scope.addTimelineAnnotation("test");
     Span testSpan = scope.getSpan();
     scope.close();
     tracer.close();
@@ -147,6 +148,8 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
     spanColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_DESCRIPTION);
     spanColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_START_TIME);
     spanColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_STOP_TIME);
+    spanColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_HIGH);
+    spanColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_LOW);
     KuduScanner scanner = client.newScannerBuilder(client.openTable(KuduReceiverConstants.DEFAULT_KUDU_SPAN_TABLE))
             .setProjectedColumnNames(spanColumns)
             .build();
@@ -157,11 +160,18 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
         RowResult result = results.next();
         long traceId = result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_TRACE_ID);
         MilliSpan.Builder builder = new MilliSpan.Builder()
-                .spanId(new SpanId(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_TRACE_ID),
-                        result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_SPAN_ID)))
+                .spanId(new SpanId(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_SPAN_ID),
+                        result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_TRACE_ID)))
                 .description(result.getString(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_DESCRIPTION))
                 .begin(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_START_TIME))
                 .end(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_STOP_TIME));
+        if (!(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_HIGH) == 0 &&
+                result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_LOW) == 0)) {
+          SpanId[] parents = new SpanId[1];
+          parents[0] = new SpanId(result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_HIGH),
+                  result.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_LOW));
+          builder.parents(parents);
+        }
         List<String> timelineColumns = new ArrayList<>();
         timelineColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_TIME);
         timelineColumns.add(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_MESSAGE);
@@ -177,7 +187,7 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
         while (timelineScanner.hasMoreRows()) {
           RowResultIterator timelineResults = timelineScanner.nextRows();
           while (timelineResults.hasNext()) {
-            RowResult timelineRow = results.next();
+            RowResult timelineRow = timelineResults.next();
             timelineList.add(new TimelineAnnotation
                     (timelineRow.getLong(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_TIME),
                             timelineRow.getString(KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_MESSAGE)));
@@ -193,6 +203,10 @@ public class TestKuduSpanReceiver extends BaseKuduTest {
     Assert.assertEquals(testSpan.getStartTimeMillis(), dbSpan.getStartTimeMillis());
     Assert.assertEquals(testSpan.getStopTimeMillis(), dbSpan.getStopTimeMillis());
     Assert.assertEquals(testSpan.getDescription(), dbSpan.getDescription());
+    Assert.assertEquals(testSpan.getTimelineAnnotations().get(0).getMessage(),
+            dbSpan.getTimelineAnnotations().get(0).getMessage());
+    Assert.assertEquals(testSpan.getTimelineAnnotations().get(0).getTime(),
+            dbSpan.getTimelineAnnotations().get(0).getTime());
     syncClient.deleteTable(KuduReceiverConstants.DEFAULT_KUDU_SPAN_TABLE);
     syncClient.deleteTable(KuduReceiverConstants.DEFAULT_KUDU_SPAN_TIMELINE_ANNOTATION_TABLE);
   }

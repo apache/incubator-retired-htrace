@@ -23,7 +23,7 @@ import org.kududb.client.KuduClient.KuduClientBuilder;
 public class KuduClientConfiguration {
 
   private final String host;
-  private final String port;
+  private final Integer port;
   private final Integer workerCount;
   private final Integer bossCount;
   private final Boolean isStatisticsEnabled;
@@ -32,7 +32,7 @@ public class KuduClientConfiguration {
   private final Long socketReadTimeout;
 
   public KuduClientConfiguration(String host,
-                                 String port,
+                                 Integer port,
                                  Integer workerCount,
                                  Integer bossCount,
                                  Boolean isStatisticsEnabled,
@@ -52,7 +52,7 @@ public class KuduClientConfiguration {
 
   public KuduClient buildClient() {
     KuduClientBuilder builder = new KuduClient
-            .KuduClientBuilder(host.concat(":").concat(port));
+            .KuduClientBuilder(host.concat(":").concat(port.toString()));
     if (workerCount != null) {
       builder.workerCount(workerCount);
     }
