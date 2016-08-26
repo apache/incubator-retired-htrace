@@ -88,6 +88,7 @@ public interface Span {
   /**
    * Create a child span of this span with the given description
    * @deprecated Since 4.0.0. Use {@link MilliSpan.Builder}
+   * @param description The description to set on the child span.
    * @return A new child span.
    */
   @Deprecated

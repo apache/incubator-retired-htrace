@@ -26,6 +26,10 @@ public class TraceRunnable implements Runnable {
   private final String description;
 
   /**
+   * @param tracer The Tracer to use for tracing.
+   * @param parent The TraceScope to read parent span ID from.
+   * @param runnable The Runnable that will be executed.
+   * @param description An optional description to set on the trace when executing.
    * @deprecated Use {@link #TraceRunnable(Tracer, SpanId, Runnable, String)} instead.
    */
   @Deprecated
