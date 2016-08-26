@@ -17,15 +17,23 @@
 package org.apache.htrace.core;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.htrace.core.Tracer.Builder;
 import org.junit.Test;
 
 public class TestTraceExecutor {
@@ -85,6 +93,64 @@ public class TestTraceExecutor {
       }
     } finally {
       es.shutdown();
+    }
+  }
+
+  @Test
+  public void testScheduledExecutor() throws Exception {
+    final int TASK_COUNT = 3;
+    final int DELAY = 500;
+
+    HTraceConfiguration conf = HTraceConfiguration.fromKeyValuePairs(
+        Tracer.SAMPLER_CLASSES_KEY, AlwaysSampler.class.getName());
+
+    ScheduledExecutorService ses = null;
+    Builder builder = new Tracer.Builder("TestTraceExecutor").conf(conf);
+    try (Tracer tracer = builder.build()) {
+      final ThreadFactory tf = new NamingThreadFactory();
+      ses = Executors.newScheduledThreadPool(TASK_COUNT, tf);
+      ses = tracer.newTraceExecutorService(ses);
+
+      final CountDownLatch startLatch = new CountDownLatch(TASK_COUNT);
+      final CountDownLatch continueLatch = new CountDownLatch(1);
+      Callable<String> task = new Callable<String>() {
+        @Override
+        public String call() throws InterruptedException {
+          startLatch.countDown();
+          // Prevent any task from exiting until every task has started
+          assertTrue(continueLatch.await(WAIT_TIME_SECONDS, TimeUnit.SECONDS));
+          // Annotate on the presumed child trace
+          Tracer.getCurrentSpan().addTimelineAnnotation(
+              Thread.currentThread().getName());
+          return Tracer.getCurrentSpan().getDescription();
+        }
+      };
+
+      try (TraceScope scope = tracer.newScope("TestRunnable")) {
+        Collection<Future<String>> futures = new ArrayList<>();
+
+        for (int i = 0; i < TASK_COUNT; i++) {
+          futures.add(ses.schedule(task, DELAY, TimeUnit.MILLISECONDS));
+        }
+
+        // Wait for all tasks to start
+        assertTrue(startLatch.await(WAIT_TIME_SECONDS, TimeUnit.SECONDS));
+        continueLatch.countDown();
+        // Collect the expected results
+        Collection<String> results = new HashSet<>();
+        for (Future<String> future : futures) {
+          results.add(future.get(WAIT_TIME_SECONDS, TimeUnit.SECONDS));
+        }
+
+        assertTrue("Timeline Annotations should have gone to child traces.",
+            Tracer.getCurrentSpan().getTimelineAnnotations().isEmpty());
+        assertEquals("Duplicated child span descriptions.", TASK_COUNT,
+            results.size());
+      }
+    } finally {
+      if (ses != null) {
+        ses.shutdown();
+      }
     }
   }
 

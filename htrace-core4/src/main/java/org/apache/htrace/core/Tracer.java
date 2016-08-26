@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -472,6 +473,16 @@ public class Tracer implements Closeable {
   public TraceExecutorService newTraceExecutorService(ExecutorService impl,
                                                       String scopeName) {
     return new TraceExecutorService(this, scopeName, impl);
+  }
+
+  public ScheduledTraceExecutorService newTraceExecutorService(
+      ScheduledExecutorService impl) {
+    return newTraceExecutorService(impl, null);
+  }
+
+  public ScheduledTraceExecutorService newTraceExecutorService(
+      ScheduledExecutorService impl, String scopeName) {
+    return new ScheduledTraceExecutorService(this, scopeName, impl);
   }
 
   public TracerPool getTracerPool() {
