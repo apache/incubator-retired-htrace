@@ -103,11 +103,11 @@ public class ScribeTransport implements Transport {
    * Here is a little ascii art which shows the above transformation:
    * <pre>
    *  +------------+   +------------+   +------------+              +-----------------+
-   *  | HTrace Span|-->|Zipkin Span |-->| (LogEntry) | ===========> | Zipkin Collector|
+   *  | HTrace Span|--&gt;|Zipkin Span |--&gt;| (LogEntry) | ===========&gt; | Zipkin Collector|
    *  +------------+   +------------+   +------------+ (Scribe RPC) +-----------------+
    *  </pre>
    * @param spans to be sent. The raw bytes are being sent.
-   * @throws IOException
+   * @throws IOException if there is a problem sending the span entries
    */
   @Override
   public void send(List<byte[]> spans) throws IOException {

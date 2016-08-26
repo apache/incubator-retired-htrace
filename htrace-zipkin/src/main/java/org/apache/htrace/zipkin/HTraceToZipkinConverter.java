@@ -36,15 +36,15 @@ import java.util.Map;
  * This class is responsible for converting a HTrace.Span to a Zipkin.Span object. To use the Zipkin
  * infrastructure (collector, front end), we need to store the Span information in a zipkin specific
  * format. This class transforms a HTrace:Span object to a Zipkin:Span object.
- * <p/>
+ * <p>
  * This is how both Span objects are related:
- * <table>
- * <col width="50%"/> <col width="50%"/> <thead>
+ * <table summary="Mapping between HTrace and Zipkin Span opbjects.">
+ * <thead>
  * <tr>
- * <th>HTrace:Span</th>
- * <th>Zipkin:Span</th>
+ * <th style="width: 50%">HTrace:Span</th>
+ * <th style="width: 50%">Zipkin:Span</th>
  * </tr>
- * <thead> <tbody>
+ * </thead> <tbody>
  * <tr>
  * <td>TraceId</td>
  * <td>TraceId</td>
@@ -71,7 +71,6 @@ import java.util.Map;
  * </tr>
  * </tbody>
  * </table>
- * <p/>
  */
 public class HTraceToZipkinConverter {
   private static final Log LOG = LogFactory.getLog(HTraceToZipkinConverter.class);

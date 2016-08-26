@@ -219,7 +219,7 @@ language governing permissions and limitations under the License. -->
       <id>doclint-disable</id>
       <activation><jdk>[1.8,)</jdk></activation>
       <properties>
-         <additionalparam>-Xdoclint:none</additionalparam>
+         <additionalparam>-Xdoclint:all,-Xdoclint:-missing</additionalparam>
       </properties>
     </profile>
   </profiles>
