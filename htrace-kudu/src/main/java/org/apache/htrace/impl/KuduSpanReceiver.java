@@ -44,8 +44,6 @@ public class KuduSpanReceiver extends SpanReceiver {
   private String column_span_start_time;
   private String column_span_stop_time;
   private String column_span_span_id;
-  private String column_span_parent_id_low;
-  private String column_span_parent_id_high;
   private String column_span_description;
   private String column_span_parent;
 
@@ -54,6 +52,15 @@ public class KuduSpanReceiver extends SpanReceiver {
   private String column_timeline_time;
   private String column_timeline_message;
   private String column_timeline_span_id;
+
+  private String table_span_parent;
+  private String column_parent_id_low;
+  private String column_parent_id_high;
+  private String column_parent_child_span_id;
+
+  private KuduTable tableSpan;
+  private KuduTable tableTimeline;
+  private KuduTable tableParent;
 
   public KuduSpanReceiver(HTraceConfiguration conf) {
 
@@ -114,13 +121,18 @@ public class KuduSpanReceiver extends SpanReceiver {
     this.table_span = conf.get(KuduReceiverConstants.KUDU_SPAN_TABLE_KEY, KuduReceiverConstants.DEFAULT_KUDU_SPAN_TABLE);
     this.table_timeline = conf.get(KuduReceiverConstants.KUDU_SPAN_TIMELINE_ANNOTATION_TABLE_KEY,
             KuduReceiverConstants.DEFAULT_KUDU_SPAN_TIMELINE_ANNOTATION_TABLE);
+    this.table_span_parent = conf.get(KuduReceiverConstants.KUDU_SPAN_PARENT_TABLE_KEY,
+            KuduReceiverConstants.DEFAULT_KUDU_SPAN_PARENT_TABLE);
     //default column names have used
     this.column_span_trace_id = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_TRACE_ID;
     this.column_span_start_time = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_START_TIME;
     this.column_span_stop_time = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_STOP_TIME;
     this.column_span_span_id = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_SPAN_ID;
-    this.column_span_parent_id_low = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_LOW;
-    this.column_span_parent_id_high = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT_ID_HIGH;
+
+    this.column_parent_id_low = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_PARENT_ID_LOW;
+    this.column_parent_id_high = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_PARENT_ID_HIGH;
+    this.column_parent_child_span_id = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_PARENT_CHILD_SPANID;
+
     this.column_span_description = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_DESCRIPTION;
     this.column_span_parent = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_SPAN_PARENT;
     this.column_timeline_time = KuduReceiverConstants.DEFAULT_KUDU_COLUMN_TIMELINE_TIME;
@@ -133,6 +145,13 @@ public class KuduSpanReceiver extends SpanReceiver {
         client = clientConf.buildClient();
       }
       session = client.newSession();
+    }
+    try {
+      tableSpan = client.openTable(table_span);
+      tableTimeline = client.openTable(table_timeline);
+      tableParent = client.openTable(table_span_parent);
+    } catch (java.lang.Exception ex) {
+      LOG.warn("Failed to open kudu tables to store Spans. " + ex.getMessage());
     }
   }
 
@@ -153,7 +172,6 @@ public class KuduSpanReceiver extends SpanReceiver {
   @Override
   public void receiveSpan(Span span) {
    try {
-      KuduTable tableSpan = client.openTable(table_span);
       Insert spanInsert = tableSpan.newInsert();
       PartialRow spanRow = spanInsert.getRow();
       spanRow.addLong(column_span_trace_id, span.getSpanId().getLow());
@@ -161,12 +179,16 @@ public class KuduSpanReceiver extends SpanReceiver {
       spanRow.addLong(column_span_stop_time, span.getStopTimeMillis());
       spanRow.addLong(column_span_span_id, span.getSpanId().getHigh());
       if (span.getParents().length == 0) {
-        spanRow.addLong(column_span_parent_id_low, 0);
-        spanRow.addLong(column_span_parent_id_high, 0);
         spanRow.addBoolean(column_span_parent, true);
       } else if (span.getParents().length > 0) {
-        spanRow.addLong(column_span_parent_id_low, span.getParents()[0].getLow());
-        spanRow.addLong(column_span_parent_id_high, span.getParents()[0].getHigh());
+        for (int i = 0; i < span.getParents().length; i++) {
+          Insert parentInsert = tableParent.newInsert();
+          PartialRow parentRow = parentInsert.getRow();
+          parentRow.addLong(column_parent_id_low, span.getParents()[i].getLow());
+          parentRow.addLong(column_parent_id_high, span.getParents()[i].getHigh());
+          parentRow.addLong(column_parent_child_span_id, span.getSpanId().getLow());
+          session.apply(parentInsert);
+        }
         spanRow.addBoolean(column_span_parent, false);
       }
       spanRow.addString(column_span_description, span.getDescription());
@@ -174,7 +196,6 @@ public class KuduSpanReceiver extends SpanReceiver {
       long annotationCounter = 0;
       for (TimelineAnnotation ta : span.getTimelineAnnotations()) {
         annotationCounter++;
-        KuduTable tableTimeline = client.openTable(table_timeline);
         Insert timelineInsert = tableTimeline.newInsert();
         PartialRow timelineRow = timelineInsert.getRow();
         timelineRow.addLong(column_timeline_timeline_id, span.getSpanId().getLow() + annotationCounter);
