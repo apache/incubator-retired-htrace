@@ -75,7 +75,6 @@ language governing permissions and limitations under the License. -->
           <execution>
             <phase>package</phase>
             <configuration>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
               <relocations>
                 <relocation>
                   <pattern>org.apache.commons.logging</pattern>
