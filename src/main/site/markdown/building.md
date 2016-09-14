@@ -55,9 +55,9 @@ Create the release branch:
 
    git checkout -b 4.0
 
-Create the release tag via git
+Create an annotated (signed) release tag via git.
 
-    git tag -s 4.0.0RC0 -m '4.0 release candidate 0' -u 9CD4D9D3
+    git tag -s 4.0.0RC0 -m '4.0.0 release candidate 0'
 
 For some reason, I get a message about needing a password.  But no password
 is actually asked for.  Perhaps it is supplied by the window manager via its
@@ -70,9 +70,15 @@ Push branch-X.Y.Z and the newly created tag to the remote repo.
 Upload the build to Sonatype's servers.
 
     git clean -fdqx .
-    mvn clean deploy -Psign,src,dist -DskipTests
+    mvn clean deploy -Pdist -DskipTests
+
+The above referenced profiles are not in the htrace profile but in the
+parent apache profile. Here is a pointer to the parent profile:
+[Apache-18.pom](https://repository.apache.org/service/local/repo_groups/public/content/org/apache/apache/18/apache-18.pom)
 
 This will take a while because it needs to upload to the servers.
+It will ask you for your key password unless you set up a
+gpg-agent for your local session.
 
 Log into repository.apache.org and go to
 https://repository.apache.org/#stagingRepositories
