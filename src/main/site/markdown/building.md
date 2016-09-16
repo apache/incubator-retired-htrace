@@ -91,15 +91,16 @@ Generate the source tarball via:
 
 Generate the side files.
 
-    gpg --print-mds /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz > \
-    /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz.mds
-    gpg --armor --output /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz.asc \
-      --detach-sig /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.gz
+     cd target
+     gpg --print-mds htrace-4.0.0-incubating-src.tar.gz htrace-4.0.0-incubating-src.tar.gz.mds
+     gpg --armor --output htrace-4.0.0-incubating-src.tar.gz.asc \
+       --detach-sign htrace-4.0.0-incubating-src.tar.gz
 
-rsync up to your public_html directory in people.apache.org.
+sftp up to your public_html directory in home.apache.org
 
-    rsync -avi /home/cmccabe/src/htrace2d/target/htrace-4.0.0-incubating-src.tar.* \
-    people.apache.org:~/public_html/htrace/releases/4.0.0
+     cd target
+     echo 'put htrace-4.0.0-incubating-src.tar.gz*' | \
+       sftp home.apache.org:public_html/htrace-4.2.0-incubating-rc0
 
 Generate release notes via JIRA at
 https://issues.apache.org/jira/browse/HTRACE/
