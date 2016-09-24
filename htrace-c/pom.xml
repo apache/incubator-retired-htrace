@@ -104,6 +104,15 @@
           </plugin>
         </plugins>
       </build>
+      <dependencies>
+        <!-- Module deps. -->
+        <dependency>
+          <groupId>org.apache.htrace</groupId>
+          <artifactId>htrace-htraced</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>
