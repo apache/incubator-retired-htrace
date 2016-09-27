@@ -49,6 +49,109 @@ namespace htrace {
   class Scope;
   class Tracer;
 
+  class SpanId {
+  public:
+    SpanId() {
+      id_.low = 0;
+      id_.high = 0;
+    }
+
+    SpanId(uint64_t high, uint64_t low) {
+      id_.high = high;
+      id_.low = low;
+    }
+
+    SpanId(const struct htrace_span_id *other) {
+      id_.high = other->high;
+      id_.low = other->low;
+    }
+
+    SpanId(const SpanId &other) {
+      id_.high = other.id_.high;
+      id_.low = other.id_.low;
+    }
+
+    /**
+     * Convert an input string into a span id.
+     *
+     * @param input             The input string.
+     *
+     * @return                  The empty string, if parsing was successful.  A
+     *                          failure error message, if parsing failed.
+     *                          If parsing is successful the current ID object
+     *                          will be modified.
+     */
+    std::string FromString(const std::string &input) {
+      char err[512];
+      err[0] = '\0';
+      htrace_span_id_parse(&id_, input.c_str(), err, sizeof(err));
+      if (err[0]) {
+        return std::string(err);
+      }
+      return "";
+    }
+
+    SpanId &operator=(const SpanId &other) {
+      id_.high = other.id_.high;
+      id_.low = other.id_.low;
+      return *this;
+    }
+
+    bool operator<(const SpanId &other) const {
+      return (htrace_span_id_compare(&id_, &other.id_) < 0);
+    }
+
+    bool operator==(const SpanId &other) const {
+      return ((id_.high == other.id_.high) &&
+          (id_.low == other.id_.low));
+    }
+
+    bool operator!=(const SpanId &other) const {
+      return (!((*this) == other));
+    }
+
+    uint64_t GetHigh() {
+      return id_.high;
+    }
+
+    void SetHigh(uint64_t high) {
+      id_.high = high;
+    }
+
+    uint64_t GetLow() {
+      return id_.low;
+    }
+
+    void SetLow(uint64_t low) {
+      id_.low = low;
+    }
+
+    void Clear() {
+      htrace_span_id_clear(&id_);
+    }
+
+    /**
+     * Convert the SpanId to a human-readable string.
+     */
+    std::string ToString() const {
+      char str[HTRACE_SPAN_ID_STRING_LENGTH + 1];
+      if (!htrace_span_id_to_str(&id_, str, sizeof(str))) {
+        // This should not happen, because the buffer we supplied is long
+        // enough.
+        return "(error converting ID to string)";
+      }
+      return std::string(str);
+    }
+
+  private:
+    struct htrace_span_id id_;
+  };
+
+  std::ostream &operator<<(std::ostream &oss, const SpanId &spanId) {
+    oss << spanId.ToString();
+    return oss;
+  }
+
   /**
    * An HTrace Configuration object.
    *
@@ -219,6 +322,12 @@ namespace htrace {
     ~Scope() {
       htrace_scope_close(scope_);
       scope_ = NULL;
+    }
+
+    SpanId GetSpanId() const {
+      htrace_span_id id;
+      htrace_scope_get_span_id(scope_, &id);
+      return SpanId(&id);
     }
 
   private:

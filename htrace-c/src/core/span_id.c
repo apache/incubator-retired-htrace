@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "core/htrace.h"
 #include "core/span_id.h"
 #include "util/cmp.h"
 #include "util/log.h"

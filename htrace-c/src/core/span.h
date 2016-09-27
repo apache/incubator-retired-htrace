@@ -27,6 +27,7 @@
  * This is an internal header, not intended for external use.
  */
 
+#include "core/htrace.h" /* for struct span_id */
 #include "core/span_id.h"
 
 #include <stdint.h>

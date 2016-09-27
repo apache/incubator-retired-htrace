@@ -48,7 +48,13 @@ static const char * const PUBLIC_SYMS[] = {
     "htrace_start_span",
     "htracer_create",
     "htracer_free",
-    "htracer_tname"
+    "htracer_tname",
+    "htrace_span_id_clear",
+    "htrace_span_id_compare",
+    "htrace_span_id_parse",
+    "htrace_span_id_to_str",
+    "htrace_span_id_copy",
+    "htrace_scope_get_span_id",
 };
 
 #define PUBLIC_SYMS_SIZE (sizeof(PUBLIC_SYMS) / sizeof(PUBLIC_SYMS[0]))

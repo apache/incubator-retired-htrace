@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "core/htrace.h"
 #include "core/span.h"
 #include "receiver/receiver.h"
 #include "sampler/sampler.h"

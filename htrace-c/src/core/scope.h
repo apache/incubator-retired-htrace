@@ -55,17 +55,6 @@ struct htrace_scope {
     struct htrace_span *span;
 };
 
-/**
- * Get the span id of an HTrace scope.
- *
- * @param scope     The trace scope, or NULL.
- * @param id        (out param) The htrace span ID object to modify.
- *                      It will be set to the invalid span ID if the scope
- *                      is null or has no span.
- */
-void htrace_scope_get_span_id(const struct htrace_scope *scope,
-                              struct htrace_span_id *id);
-
 #endif
 
 // vim: ts=4:sw=4:et

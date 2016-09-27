@@ -20,6 +20,7 @@
 #define APACHE_HTRACE_HTRACE_H
 
 #include <stdint.h> /* for uint64_t, etc. */
+#include <unistd.h> /* for size_t, etc. */
 
 /**
  * The public API for the HTrace C client.
@@ -168,6 +169,11 @@ extern  "C" {
  * inclusive.  It is _not_ a percentage.
  */
 #define HTRACE_PROB_SAMPLER_FRACTION_KEY "prob.sampler.fraction"
+
+/**
+ * The length of an HTrace span ID in hexadecimal string form.
+ */
+#define HTRACE_SPAN_ID_STRING_LENGTH 32
 
     // Forward declarations
     struct htrace_conf;
@@ -341,6 +347,83 @@ extern  "C" {
      *                      Then the scope and the span will be freed.
      */
     void htrace_scope_close(struct htrace_scope *scope);
+
+    /**
+     * The HTrace span id.
+     */
+    struct htrace_span_id {
+        uint64_t high;
+        uint64_t low;
+    };
+
+    /**
+     * Set a span ID to the invalid span ID by clearing it.
+     *
+     * @param id            The span ID to clear.
+     */
+    void htrace_span_id_clear(struct htrace_span_id *id);
+
+    /**
+     * Compare two span IDs.
+     *
+     * @param a             The first span ID.
+     * @param b             The second span ID.
+     *
+     * @return              A number less than 0 if the first span ID is less;
+     *                      A number greater than 0 if the first span ID is greater;
+     *                      0 if the span IDs are equal.
+     */
+    int htrace_span_id_compare(const struct htrace_span_id *a,
+                               const struct htrace_span_id *b);
+
+    /**
+     * Parse a string containing an HTrace span ID.
+     *
+     * @param id            The HTrace span ID to fill in.
+     * @param str           The string to parse.
+     * @param err           (out parameter) a buffer into which we will
+     *                      write an error message, if parsing fails.
+     *                      If this is unchanged, there was no error.
+     * @param err_len       The length of the err buffer.
+     *
+     */
+    void htrace_span_id_parse(struct htrace_span_id *id, const char *str,
+                             char *err, size_t err_len);
+
+    /**
+     * Write an HTrace span ID to a string.
+     *
+     * @param id            The HTrace span ID.
+     * @param str           Where to put the string.
+     * @param len           The length of the string buffer.
+     *
+     * @return              1 on success; 0 if the length was not long enough, or
+     *                          there was an internal snprintf error.
+     */
+    int htrace_span_id_to_str(const struct htrace_span_id *id,
+                              char *str, size_t len);
+
+    /**
+     * Copy an htrace span ID.
+     *
+     * dst and src can be the same.
+     *
+     * @param dst           The destination span ID.
+     * @param src           The source span ID.
+     */
+    void htrace_span_id_copy(struct htrace_span_id *dst,
+                             const struct htrace_span_id *src);
+
+    /**
+     * Get the span id of an HTrace scope.
+     *
+     * @param scope     The trace scope, or NULL.
+     * @param id        (out param) The htrace span ID object to modify.
+     *                      It will be set to the invalid span ID if the scope
+     *                      is null or has no span.
+     */
+    void htrace_scope_get_span_id(const struct htrace_scope *scope,
+                                  struct htrace_span_id *id);
 
 #pragma GCC visibility pop // End publicly visible symbols
 
