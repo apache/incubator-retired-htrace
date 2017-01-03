@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.htrace.core.TimelineAnnotation;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -153,13 +154,9 @@ public class HTraceToZipkinConverter {
     List<BinaryAnnotation> l = new ArrayList<BinaryAnnotation>();
     for (Map.Entry<String, String> e : span.getKVAnnotations().entrySet()) {
       BinaryAnnotation binaryAnn = new BinaryAnnotation();
-      binaryAnn.setAnnotation_type(AnnotationType.BYTES);
+      binaryAnn.setAnnotation_type(AnnotationType.STRING);
       binaryAnn.setKey(e.getKey());
-      try {
-        binaryAnn.setValue(e.getValue().getBytes("UTF-8"));
-      } catch (UnsupportedEncodingException ex) {
-        LOG.error("Error encoding string as UTF-8", ex);
-      }
+      binaryAnn.setValue(e.getValue().getBytes(StandardCharsets.UTF_8));
       binaryAnn.setHost(ep);
       l.add(binaryAnn);
     }
