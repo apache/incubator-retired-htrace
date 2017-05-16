@@ -237,7 +237,7 @@ language governing permissions and limitations under the License. -->
             <configuration>
               <group>Application</group>
               <needarch>true</needarch>
-              <release>4.2.0</release>
+	      <release>${project.version}</release>
               <defaultDirmode>755</defaultDirmode>
               <defaultFilemode>644</defaultFilemode>
               <defaultUsername>root</defaultUsername>
