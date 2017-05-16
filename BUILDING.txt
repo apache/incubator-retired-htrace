@@ -4,7 +4,7 @@ Building HTrace
 Building HTrace requires
 
 * Java 1.7 at least.
-* Apache Maven 3.x
+* Apache Maven 3.0.4
 * Go programming language, version 1.4 or higher (for htrace-htraced)
 * The development package for leveldb (for htrace-htraced)
 
