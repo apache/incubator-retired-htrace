@@ -130,6 +130,16 @@ language governing permissions and limitations under the License. -->
       <artifactId>htrace-core4</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
       <scope>test</scope>
     </dependency>
     <dependency>
