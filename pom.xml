@@ -35,6 +35,7 @@ language governing permissions and limitations under the License. -->
     <module>htrace-hbase</module>
     <module>htrace-flume</module>
     <module>htrace-htraced</module>
+    <module>htrace-kudu</module>
   </modules>
 
   <scm>
